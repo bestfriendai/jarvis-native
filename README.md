@@ -1,6 +1,14 @@
-# Jarvis Mobile - React Native App
+# Jarvis Native - Personal AI Assistant
 
-A production-ready React Native mobile app (iOS + Android) that connects to the claude-dash backend for AI-powered personal productivity.
+Your personal Jarvis on Android & iOS. Full-featured native mobile app with AI, tasks, habits, finance, and calendar.
+
+## 📥 Download APK
+
+**[Download Latest APK](../../releases/latest)** | [All Releases](../../releases) | [Actions](../../actions)
+
+Get the latest build directly from GitHub Releases - no build tools required!
+
+> 🚀 **Auto-builds on every push!** Check the [Actions](../../actions) tab to watch builds in progress.
 
 ## Overview
 
@@ -64,14 +72,24 @@ A production-ready React Native mobile app (iOS + Android) that connects to the 
 
 ## Quick Start
 
-### Prerequisites
+### Download APK directly from GitHub (no build tools needed)
+
+1. Go to the repository on GitHub → **[Releases](../../releases)**
+2. Open the latest release (created by the `Build Android APK` workflow)
+3. Download `jarvis-native.apk` to your phone
+4. Enable "Install unknown apps" when prompted and install the APK
+5. Open the app and configure your backend URL in Settings
+
+### Development Setup
+
+#### Prerequisites
 
 - Node.js 18+ and npm
 - Expo CLI (`npm install -g expo-cli`)
 - iOS Simulator (Mac) or Android Emulator
 - Running claude-dash backend on `localhost:800`
 
-### Installation
+#### Installation
 
 ```bash
 cd /mnt/d/claude\ dash/jarvis-native
