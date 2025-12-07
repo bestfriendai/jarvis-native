@@ -1,0 +1,155 @@
+name: Build Android APK (React Native)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Expo
+        run: npm install -g expo-cli eas-cli
+
+      - name: Create app.json from app.config.js
+        run: |
+          cat > app.json << 'EOF'
+          {
+            "expo": {
+              "name": "Jarvis",
+              "slug": "jarvis-native",
+              "version": "1.0.0",
+              "orientation": "portrait",
+              "icon": "./assets/icon.png",
+              "userInterfaceStyle": "automatic",
+              "splash": {
+                "image": "./assets/splash.png",
+                "resizeMode": "contain",
+                "backgroundColor": "#000000"
+              },
+              "assetBundlePatterns": [
+                "**/*"
+              ],
+              "ios": {
+                "supportsTablet": true,
+                "bundleIdentifier": "com.jarvis.assistant"
+              },
+              "android": {
+                "adaptiveIcon": {
+                  "foregroundImage": "./assets/adaptive-icon.png",
+                  "backgroundColor": "#000000"
+                },
+                "package": "com.jarvis.assistant"
+              },
+              "web": {
+                "favicon": "./assets/favicon.png"
+              }
+            }
+          }
+          EOF
+
+      - name: Prebuild Android
+        run: npx expo prebuild --platform android --clean
+
+      - name: Build Android APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Sign APK (Debug)
+        run: |
+          cd android
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Rename APK
+        run: |
+          mkdir -p release
+          if [ -f android/app/build/outputs/apk/release/app-release-unsigned.apk ]; then
+            cp android/app/build/outputs/apk/release/app-release-unsigned.apk release/jarvis-native.apk
+          elif [ -f android/app/build/outputs/apk/debug/app-debug.apk ]; then
+            cp android/app/build/outputs/apk/debug/app-debug.apk release/jarvis-native.apk
+          fi
+
+      - name: Upload APK as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-native-apk
+          path: release/jarvis-native.apk
+          retention-days: 90
+
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: Jarvis Native v1.0.${{ github.run_number }}
+          files: release/jarvis-native.apk
+          draft: false
+          prerelease: false
+          body: |
+            # 🤖 Jarvis Native APK - Build ${{ github.run_number }}
+
+            **Release Date:** ${{ steps.date.outputs.date }}
+            **Build:** #${{ github.run_number }}
+            **Type:** React Native + Expo
+
+            ## 📥 Installation Instructions
+
+            1. Download `jarvis-native.apk` from the assets below
+            2. Enable "Install from Unknown Sources" on your Android device
+            3. Open the APK file to install
+            4. Launch Jarvis Native and enjoy!
+
+            ## ⚙️ Backend Setup Required
+
+            This app requires the backend API running. Make sure your backend is accessible:
+            - Update `API_URL` in app settings after installation
+            - Default: `http://localhost:800` (for local testing)
+
+            ## 📱 Requirements
+            - Android 7.0 (API 24) or higher
+            - ~60MB storage space
+            - Backend API access
+
+            ## ✨ Features
+            - AI Chat (Claude/GPT)
+            - Task Management
+            - Habit Tracking
+            - Finance Dashboard
+            - Calendar Integration
+            - Voice Input/Output
+
+            ---
+            *Built automatically from commit ${{ github.sha }}*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
