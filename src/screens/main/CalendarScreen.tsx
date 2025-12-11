@@ -31,10 +31,13 @@ export default function CalendarScreen() {
     },
   });
 
-  const { data: syncSettings } = useQuery({
+  const { data: syncSettings = [] } = useQuery({
     queryKey: ['calendar', 'sync'],
     queryFn: calendarApi.getSyncSettings,
   });
+
+  // Get the first Google Calendar sync (if any)
+  const googleSync = syncSettings.find(s => s.provider === 'google');
 
   const triggerSyncMutation = useMutation({
     mutationFn: calendarApi.triggerSync,
@@ -91,16 +94,16 @@ export default function CalendarScreen() {
         />
       </View>
 
-      {syncSettings && (
+      {googleSync && (
         <Card style={styles.syncCard}>
           <Card.Content>
             <View style={styles.syncInfo}>
               <Text variant="bodySmall" style={styles.syncText}>
-                Google Calendar: {syncSettings.enabled ? 'Connected' : 'Not Connected'}
+                Google Calendar: {googleSync.syncEnabled ? 'Connected' : 'Not Connected'}
               </Text>
-              {syncSettings.lastSync && (
+              {googleSync.lastSyncAt && (
                 <Text variant="bodySmall" style={styles.syncText}>
-                  Last sync: {new Date(syncSettings.lastSync).toLocaleString()}
+                  Last sync: {new Date(googleSync.lastSyncAt).toLocaleString()}
                 </Text>
               )}
             </View>

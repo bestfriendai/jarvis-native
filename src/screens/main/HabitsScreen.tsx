@@ -24,20 +24,8 @@ import {
   Switch,
 } from 'react-native-paper';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { habitsApi } from '../../services/habits.api';
+import { habitsApi, Habit, HabitCadence } from '../../services/habits.api';
 import { HabitHeatmap } from '../../components/HabitHeatmap';
-
-interface Habit {
-  id: string;
-  name: string;
-  description?: string;
-  frequency: 'daily' | 'weekly' | 'monthly';
-  isActive: boolean;
-  currentStreak: number;
-  longestStreak: number;
-  completedToday?: boolean;
-  completions?: string[];
-}
 
 export default function HabitsScreen() {
   const queryClient = useQueryClient();
@@ -241,7 +229,7 @@ export default function HabitsScreen() {
             {heatmapHabit && (
               <HabitHeatmap
                 habitId={heatmapHabit.id}
-                completions={heatmapHabit.completions || []}
+                completions={[]}
                 weeks={12}
               />
             )}
@@ -284,23 +272,23 @@ const HabitCard: React.FC<HabitCardProps> = ({
             )}
             <View style={styles.habitMeta}>
               <Chip compact style={styles.frequencyChip}>
-                {habit.frequency}
+                {habit.cadence}
               </Chip>
               <View style={styles.streakContainer}>
                 <Text variant="labelSmall" style={styles.streakLabel}>
-                  Streak: {habit.currentStreak} days
+                  Streak: {habit.currentStreak || 0} days
                 </Text>
               </View>
             </View>
           </View>
           {habit.isActive && (
             <Button
-              mode={habit.completedToday ? 'outlined' : 'contained'}
+              mode={(habit.completionsToday || 0) > 0 ? 'outlined' : 'contained'}
               onPress={() => onLogToday(habit.id)}
               style={styles.logButton}
-              icon={habit.completedToday ? 'check' : 'plus'}
+              icon={(habit.completionsToday || 0) > 0 ? 'check' : 'plus'}
             >
-              {habit.completedToday ? 'Done' : 'Log'}
+              {(habit.completionsToday || 0) > 0 ? 'Done' : 'Log'}
             </Button>
           )}
         </View>
@@ -347,8 +335,8 @@ const HabitFormModal: React.FC<HabitFormModalProps> = ({
   const queryClient = useQueryClient();
   const [name, setName] = useState(habit?.name || '');
   const [description, setDescription] = useState(habit?.description || '');
-  const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'monthly'>(
-    habit?.frequency || 'daily'
+  const [cadence, setCadence] = useState<HabitCadence>(
+    habit?.cadence || 'daily'
   );
 
   const createMutation = useMutation({
@@ -369,7 +357,7 @@ const HabitFormModal: React.FC<HabitFormModalProps> = ({
   });
 
   const handleSubmit = () => {
-    const data = { name, description: description || undefined, frequency };
+    const data = { name, description: description || undefined, cadence };
     if (habit) {
       updateMutation.mutate({ id: habit.id, data });
     } else {
@@ -425,8 +413,8 @@ const HabitFormModal: React.FC<HabitFormModalProps> = ({
                 {(['daily', 'weekly', 'monthly'] as const).map((freq) => (
                   <Chip
                     key={freq}
-                    selected={frequency === freq}
-                    onPress={() => setFrequency(freq)}
+                    selected={cadence === freq}
+                    onPress={() => setCadence(freq)}
                     style={styles.frequencyOption}
                   >
                     {freq.toUpperCase()}
