@@ -1,0 +1,167 @@
+/**
+ * Database Schema Definitions
+ * SQLite table schemas for offline-first data storage
+ */
+
+export const DB_NAME = 'jarvis.db';
+export const DB_VERSION = 1;
+
+/**
+ * SQL statements to create all tables
+ */
+export const CREATE_TABLES = {
+  projects: `
+    CREATE TABLE IF NOT EXISTS projects (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      color TEXT,
+      status TEXT DEFAULT 'active',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      synced INTEGER DEFAULT 0
+    );
+  `,
+
+  tasks: `
+    CREATE TABLE IF NOT EXISTS tasks (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT,
+      status TEXT DEFAULT 'todo',
+      priority TEXT DEFAULT 'medium',
+      effort INTEGER,
+      impact INTEGER,
+      due_date TEXT,
+      completed_at TEXT,
+      project_id TEXT,
+      tags TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      synced INTEGER DEFAULT 0,
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
+    );
+  `,
+
+  habits: `
+    CREATE TABLE IF NOT EXISTS habits (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      cadence TEXT DEFAULT 'daily',
+      target_count INTEGER DEFAULT 1,
+      current_streak INTEGER DEFAULT 0,
+      longest_streak INTEGER DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      synced INTEGER DEFAULT 0
+    );
+  `,
+
+  habit_logs: `
+    CREATE TABLE IF NOT EXISTS habit_logs (
+      id TEXT PRIMARY KEY,
+      habit_id TEXT NOT NULL,
+      date TEXT NOT NULL,
+      completed INTEGER DEFAULT 0,
+      notes TEXT,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE CASCADE,
+      UNIQUE(habit_id, date)
+    );
+  `,
+
+  calendar_events: `
+    CREATE TABLE IF NOT EXISTS calendar_events (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT,
+      start_time TEXT NOT NULL,
+      end_time TEXT NOT NULL,
+      location TEXT,
+      attendees TEXT,
+      is_all_day INTEGER DEFAULT 0,
+      recurring TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      synced INTEGER DEFAULT 0
+    );
+  `,
+
+  finance_transactions: `
+    CREATE TABLE IF NOT EXISTS finance_transactions (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,
+      amount REAL NOT NULL,
+      category TEXT,
+      date TEXT NOT NULL,
+      description TEXT,
+      currency TEXT DEFAULT 'USD',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      synced INTEGER DEFAULT 0
+    );
+  `,
+
+  finance_assets: `
+    CREATE TABLE IF NOT EXISTS finance_assets (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      value REAL NOT NULL,
+      currency TEXT DEFAULT 'USD',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      synced INTEGER DEFAULT 0
+    );
+  `,
+
+  finance_liabilities: `
+    CREATE TABLE IF NOT EXISTS finance_liabilities (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      amount REAL NOT NULL,
+      interest_rate REAL,
+      currency TEXT DEFAULT 'USD',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      synced INTEGER DEFAULT 0
+    );
+  `,
+};
+
+/**
+ * SQL statements to create indexes for better query performance
+ */
+export const CREATE_INDEXES = {
+  tasks_status: 'CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);',
+  tasks_priority: 'CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority);',
+  tasks_project: 'CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);',
+  tasks_due_date: 'CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date);',
+
+  habits_cadence: 'CREATE INDEX IF NOT EXISTS idx_habits_cadence ON habits(cadence);',
+
+  habit_logs_habit: 'CREATE INDEX IF NOT EXISTS idx_habit_logs_habit ON habit_logs(habit_id);',
+  habit_logs_date: 'CREATE INDEX IF NOT EXISTS idx_habit_logs_date ON habit_logs(date);',
+
+  calendar_start: 'CREATE INDEX IF NOT EXISTS idx_calendar_start ON calendar_events(start_time);',
+  calendar_end: 'CREATE INDEX IF NOT EXISTS idx_calendar_end ON calendar_events(end_time);',
+
+  finance_trans_date: 'CREATE INDEX IF NOT EXISTS idx_finance_trans_date ON finance_transactions(date);',
+  finance_trans_type: 'CREATE INDEX IF NOT EXISTS idx_finance_trans_type ON finance_transactions(type);',
+};
+
+/**
+ * Drop all tables (for reset/testing)
+ */
+export const DROP_TABLES = [
+  'DROP TABLE IF EXISTS habit_logs',
+  'DROP TABLE IF EXISTS habits',
+  'DROP TABLE IF EXISTS tasks',
+  'DROP TABLE IF EXISTS projects',
+  'DROP TABLE IF EXISTS calendar_events',
+  'DROP TABLE IF EXISTS finance_transactions',
+  'DROP TABLE IF EXISTS finance_assets',
+  'DROP TABLE IF EXISTS finance_liabilities',
+];

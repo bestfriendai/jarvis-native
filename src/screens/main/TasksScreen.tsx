@@ -3,7 +3,7 @@
  * Professional task management with list, kanban, and priority matrix views
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -20,9 +20,8 @@ import {
   FlatList,
 } from 'react-native';
 import { IconButton, SegmentedButtons, Checkbox } from 'react-native-paper';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { tasksApi } from '../../services/tasks.api';
+import * as tasksDB from '../../database/tasks';
 import { AppButton, AppCard, AppChip, EmptyState, LoadingState } from '../../components/ui';
 import {
   colors,
@@ -64,51 +63,62 @@ const PRIORITY_CONFIG: Record<TaskPriority, { color: string; label: string }> = 
 };
 
 export default function TasksScreen() {
-  const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>('all');
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const insets = useSafeAreaInsets();
 
-  const { data: tasks = [], isLoading } = useQuery({
-    queryKey: ['tasks', filterStatus],
-    queryFn: () =>
-      tasksApi.getTasks(
-        filterStatus !== 'all' ? { status: filterStatus } : undefined
-      ),
-  });
+  // Load tasks from local database
+  const loadTasks = useCallback(async () => {
+    try {
+      const filters = filterStatus !== 'all' ? { status: filterStatus } : undefined;
+      const loadedTasks = await tasksDB.getTasks(filters);
+      setTasks(loadedTasks);
+    } catch (error) {
+      console.error('Error loading tasks:', error);
+      Alert.alert('Error', 'Failed to load tasks');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [filterStatus]);
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) =>
-      tasksApi.updateTask(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    },
-  });
+  useEffect(() => {
+    loadTasks();
+  }, [loadTasks]);
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => tasksApi.deleteTask(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    },
-  });
+  // Listen for task updates from modal
+  useEffect(() => {
+    const handleTasksUpdated = () => {
+      loadTasks();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('tasksUpdated', handleTasksUpdated);
+      return () => window.removeEventListener('tasksUpdated', handleTasksUpdated);
+    }
+  }, [loadTasks]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    await loadTasks();
     setRefreshing(false);
   };
 
-  const handleStatusChange = (taskId: string, newStatus: TaskStatus) => {
-    updateMutation.mutate({
-      id: taskId,
-      data: {
+  const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
+    try {
+      await tasksDB.updateTask(taskId, {
         status: newStatus,
         completedAt: newStatus === 'completed' ? new Date().toISOString() : undefined,
-      },
-    });
+      });
+      await loadTasks();
+    } catch (error) {
+      console.error('Error updating task:', error);
+      Alert.alert('Error', 'Failed to update task');
+    }
   };
 
   const handleDelete = (taskId: string) => {
@@ -117,7 +127,15 @@ export default function TasksScreen() {
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: () => deleteMutation.mutate(taskId),
+        onPress: async () => {
+          try {
+            await tasksDB.deleteTask(taskId);
+            await loadTasks();
+          } catch (error) {
+            console.error('Error deleting task:', error);
+            Alert.alert('Error', 'Failed to delete task');
+          }
+        },
       },
     ]);
   };
@@ -539,13 +557,13 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
   task,
   onClose,
 }) => {
-  const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState(task?.title || '');
   const [description, setDescription] = useState(task?.description || '');
   const [priority, setPriority] = useState<TaskPriority>(task?.priority || 'medium');
   const [titleFocused, setTitleFocused] = useState(false);
   const [descFocused, setDescFocused] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   React.useEffect(() => {
     if (visible) {
@@ -555,35 +573,35 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
     }
   }, [visible, task]);
 
-  const createMutation = useMutation({
-    mutationFn: (data: any) => tasksApi.createTask(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      const data = {
+        title,
+        description: description || undefined,
+        priority,
+        status: task?.status || ('todo' as TaskStatus),
+        tags: task?.tags || [],
+      };
+
+      if (task) {
+        await tasksDB.updateTask(task.id, data);
+      } else {
+        await tasksDB.createTask(data);
+      }
+
       onClose();
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) =>
-      tasksApi.updateTask(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      onClose();
-    },
-  });
-
-  const handleSubmit = () => {
-    const data = {
-      title,
-      description: description || undefined,
-      priority,
-      status: task?.status || 'todo',
-    };
-
-    if (task) {
-      updateMutation.mutate({ id: task.id, data });
-    } else {
-      createMutation.mutate(data);
+      // Trigger parent refresh
+      setTimeout(() => {
+        window.dispatchEvent(new Event('tasksUpdated'));
+      }, 100);
+    } catch (error) {
+      console.error('Error saving task:', error);
+      Alert.alert('Error', 'Failed to save task');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -680,7 +698,7 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
               <AppButton
                 title={task ? 'Update' : 'Create'}
                 onPress={handleSubmit}
-                loading={createMutation.isPending || updateMutation.isPending}
+                loading={isSubmitting}
                 disabled={!title.trim()}
                 style={styles.modalButton}
               />

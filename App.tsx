@@ -1,15 +1,18 @@
 /**
  * Jarvis Mobile - Main App Entry Point
- * React Native app that connects to claude-dash backend
+ * Offline-first React Native personal assistant
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { View, ActivityIndicator, Text, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { PaperProvider, MD3LightTheme } from 'react-native-paper';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import RootNavigator from './src/navigation/RootNavigator';
+import { initDatabase } from './src/database';
+import { needsSeeding, seedDatabase } from './src/database/seed';
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -38,6 +41,57 @@ const theme = {
 };
 
 export default function App() {
+  const [isReady, setIsReady] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function prepare() {
+      try {
+        console.log('[App] Initializing database...');
+
+        // Initialize database
+        await initDatabase();
+        console.log('[App] Database initialized');
+
+        // Check if we need to seed data
+        const shouldSeed = await needsSeeding();
+        if (shouldSeed) {
+          console.log('[App] Seeding database with sample data...');
+          await seedDatabase();
+          console.log('[App] Database seeded successfully');
+        } else {
+          console.log('[App] Database already has data, skipping seed');
+        }
+
+        setIsReady(true);
+      } catch (error) {
+        console.error('[App] Failed to initialize:', error);
+        setInitError(error instanceof Error ? error.message : 'Failed to initialize app');
+        setIsReady(true); // Still show app, but with error state
+      }
+    }
+
+    prepare();
+  }, []);
+
+  if (!isReady) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={styles.loadingText}>Initializing Jarvis...</Text>
+      </View>
+    );
+  }
+
+  if (initError) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.errorText}>Initialization Error</Text>
+        <Text style={styles.errorMessage}>{initError}</Text>
+      </View>
+    );
+  }
+
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
@@ -49,3 +103,29 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F2F2F7',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
+  },
+  errorText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FF3B30',
+    marginBottom: 8,
+  },
+  errorMessage: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    paddingHorizontal: 32,
+  },
+});
