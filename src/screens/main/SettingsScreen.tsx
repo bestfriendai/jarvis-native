@@ -1,9 +1,9 @@
 /**
- * Settings Screen
- * Production-ready settings with database management
+ * Settings Screen (Main)
+ * Professional settings with navigation to sub-screens
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -11,12 +11,14 @@ import {
   Alert,
   Text,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import { Switch } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useAuthStore } from '../../store/authStore';
+import type { SettingsStackParamList } from '../../types';
 import {
   colors,
   typography,
@@ -24,8 +26,6 @@ import {
   borderRadius,
   shadows,
 } from '../../theme';
-
-// Import database modules
 import { getTasks } from '../../database/tasks';
 import { getHabits } from '../../database/habits';
 import { getEvents } from '../../database/calendar';
@@ -34,7 +34,7 @@ import {
   getAssets,
   getLiabilities
 } from '../../database/finance';
-import { dropAllTables, initDatabase } from '../../database';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface SettingItemProps {
   icon: string;
@@ -43,6 +43,7 @@ interface SettingItemProps {
   onPress?: () => void;
   rightElement?: React.ReactNode;
   danger?: boolean;
+  showChevron?: boolean;
 }
 
 const SettingItem: React.FC<SettingItemProps> = ({
@@ -52,6 +53,7 @@ const SettingItem: React.FC<SettingItemProps> = ({
   onPress,
   rightElement,
   danger = false,
+  showChevron = false,
 }) => {
   const content = (
     <View style={styles.settingItem}>
@@ -65,7 +67,7 @@ const SettingItem: React.FC<SettingItemProps> = ({
         {subtitle && <Text style={styles.settingSubtitle}>{subtitle}</Text>}
       </View>
       {rightElement}
-      {onPress && !rightElement && (
+      {showChevron && !rightElement && (
         <Text style={styles.chevron}>›</Text>
       )}
     </View>
@@ -82,37 +84,16 @@ const SettingItem: React.FC<SettingItemProps> = ({
   return content;
 };
 
-interface DatabaseStats {
-  tasks: number;
-  habits: number;
-  events: number;
-  transactions: number;
-  assets: number;
-  liabilities: number;
-}
-
 export default function SettingsScreen() {
   const { user, logout } = useAuthStore();
+  const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [stats, setStats] = useState<DatabaseStats>({
-    tasks: 0,
-    habits: 0,
-    events: 0,
-    transactions: 0,
-    assets: 0,
-    liabilities: 0,
-  });
-  const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [totalRecords, setTotalRecords] = useState(0);
   const insets = useSafeAreaInsets();
 
-  useEffect(() => {
-    loadDatabaseStats();
-  }, []);
-
-  const loadDatabaseStats = async () => {
+  const loadTotalRecords = useCallback(async () => {
     try {
-      setLoading(true);
       const [tasks, habits, events, transactions, assets, liabilities] = await Promise.all([
         getTasks(),
         getHabits(),
@@ -122,51 +103,26 @@ export default function SettingsScreen() {
         getLiabilities(),
       ]);
 
-      setStats({
-        tasks: tasks.length,
-        habits: habits.length,
-        events: events.length,
-        transactions: transactions.length,
-        assets: assets.length,
-        liabilities: liabilities.length,
-      });
+      const total =
+        tasks.length +
+        habits.length +
+        events.length +
+        transactions.length +
+        assets.length +
+        liabilities.length;
+
+      setTotalRecords(total);
     } catch (error) {
-      console.error('Failed to load database stats:', error);
-      Alert.alert('Error', 'Failed to load database statistics.');
-    } finally {
-      setLoading(false);
+      console.error('Failed to load total records:', error);
     }
-  };
+  }, []);
 
-  const handleClearAllData = () => {
-    const totalRecords = Object.values(stats).reduce((sum, val) => sum + val, 0);
-
-    Alert.alert(
-      'Clear All Data?',
-      `This will permanently delete all ${totalRecords} records (${stats.tasks} tasks, ${stats.habits} habits, ${stats.events} events, ${stats.transactions} transactions, ${stats.assets} assets, ${stats.liabilities} liabilities). This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear All Data',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setLoading(true);
-              await dropAllTables();
-              await initDatabase();
-              await loadDatabaseStats();
-              Alert.alert('Success', 'All data has been cleared successfully.');
-            } catch (error) {
-              console.error('Failed to clear data:', error);
-              Alert.alert('Error', 'Failed to clear data. Please try again.');
-            } finally {
-              setLoading(false);
-            }
-          },
-        },
-      ]
-    );
-  };
+  // Reload stats when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadTotalRecords();
+    }, [loadTotalRecords])
+  );
 
   const handleExportData = async () => {
     try {
@@ -187,7 +143,7 @@ export default function SettingsScreen() {
         version: '1.0.0',
         appVersion: '1.0.0',
         stats: {
-          totalRecords: Object.values(stats).reduce((sum, val) => sum + val, 0),
+          totalRecords: totalRecords,
           tasks: tasks.length,
           habits: habits.length,
           events: events.length,
@@ -223,7 +179,7 @@ export default function SettingsScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
+    Alert.alert('Logout?', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Logout',
@@ -235,8 +191,6 @@ export default function SettingsScreen() {
     ]);
   };
 
-  const totalRecords = Object.values(stats).reduce((sum, val) => sum + val, 0);
-
   return (
     <ScrollView
       style={styles.container}
@@ -246,67 +200,6 @@ export default function SettingsScreen() {
       ]}
       showsVerticalScrollIndicator={false}
     >
-      {/* Database Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>DATABASE</Text>
-        <View style={styles.sectionContent}>
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color={colors.primary.main} />
-              <Text style={styles.loadingText}>Loading statistics...</Text>
-            </View>
-          ) : (
-            <>
-              <View style={styles.statsGrid}>
-                <View style={styles.statBox}>
-                  <Text style={styles.statValue}>{totalRecords}</Text>
-                  <Text style={styles.statLabel}>Total Records</Text>
-                </View>
-                <View style={styles.statBox}>
-                  <Text style={styles.statValue}>{stats.tasks}</Text>
-                  <Text style={styles.statLabel}>Tasks</Text>
-                </View>
-                <View style={styles.statBox}>
-                  <Text style={styles.statValue}>{stats.habits}</Text>
-                  <Text style={styles.statLabel}>Habits</Text>
-                </View>
-                <View style={styles.statBox}>
-                  <Text style={styles.statValue}>{stats.events}</Text>
-                  <Text style={styles.statLabel}>Events</Text>
-                </View>
-                <View style={styles.statBox}>
-                  <Text style={styles.statValue}>{stats.transactions}</Text>
-                  <Text style={styles.statLabel}>Transactions</Text>
-                </View>
-                <View style={styles.statBox}>
-                  <Text style={styles.statValue}>{stats.assets}</Text>
-                  <Text style={styles.statLabel}>Assets</Text>
-                </View>
-              </View>
-
-              <View style={styles.divider} />
-
-              <SettingItem
-                icon="📤"
-                title={exporting ? 'Exporting...' : 'Export Data'}
-                subtitle="Download all data as JSON file"
-                onPress={exporting ? undefined : handleExportData}
-              />
-
-              <View style={styles.divider} />
-
-              <SettingItem
-                icon="🗑️"
-                title="Clear All Data"
-                subtitle="Permanently delete all database records"
-                onPress={handleClearAllData}
-                danger
-              />
-            </>
-          )}
-        </View>
-      </View>
-
       {/* Account Section */}
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>ACCOUNT</Text>
@@ -354,9 +247,58 @@ export default function SettingsScreen() {
         </View>
       </View>
 
-      {/* App Info Section */}
+      {/* Data & Storage Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionLabel}>APP INFO</Text>
+        <Text style={styles.sectionLabel}>DATA & STORAGE</Text>
+        <View style={styles.sectionContent}>
+          <SettingItem
+            icon="💾"
+            title="Storage Overview"
+            subtitle={`${totalRecords} total records`}
+            onPress={() => navigation.navigate('StorageOverview')}
+            showChevron
+          />
+          <View style={styles.divider} />
+          <SettingItem
+            icon="📤"
+            title={exporting ? 'Exporting...' : 'Export Data'}
+            subtitle="Copy all data as JSON to clipboard"
+            onPress={exporting ? undefined : handleExportData}
+          />
+        </View>
+      </View>
+
+      {/* Privacy Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>PRIVACY</Text>
+        <View style={styles.sectionContent}>
+          <View style={styles.privacyContainer}>
+            <Text style={styles.privacyIcon}>🔒</Text>
+            <Text style={styles.privacyText}>
+              All your data is stored locally on your device in an encrypted SQLite database.
+              No data is sent to external servers unless you explicitly use AI features or export your data.
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Advanced Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>ADVANCED</Text>
+        <View style={styles.sectionContent}>
+          <SettingItem
+            icon="⚙️"
+            title="Data Management"
+            subtitle="Advanced database options"
+            onPress={() => navigation.navigate('DataManagement')}
+            showChevron
+          />
+        </View>
+      </View>
+
+      {/* About Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>ABOUT</Text>
         <View style={styles.sectionContent}>
           <SettingItem
             icon="ℹ️"
@@ -375,20 +317,6 @@ export default function SettingsScreen() {
             title="Mode"
             subtitle="Offline-First Architecture"
           />
-        </View>
-      </View>
-
-      {/* Privacy Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>PRIVACY</Text>
-        <View style={styles.sectionContent}>
-          <View style={styles.privacyContainer}>
-            <Text style={styles.privacyIcon}>🔒</Text>
-            <Text style={styles.privacyText}>
-              All your data is stored locally on your device in an encrypted SQLite database.
-              No data is sent to external servers unless you explicitly use AI features or export your data.
-            </Text>
-          </View>
         </View>
       </View>
 
@@ -484,38 +412,6 @@ const styles = StyleSheet.create({
   },
   dangerText: {
     color: colors.error,
-  },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xl,
-  },
-  loadingText: {
-    fontSize: typography.size.sm,
-    color: colors.text.tertiary,
-    marginLeft: spacing.md,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    padding: spacing.sm,
-  },
-  statBox: {
-    width: '33.333%',
-    padding: spacing.md,
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: typography.size['2xl'],
-    fontWeight: typography.weight.bold,
-    color: colors.primary.main,
-    marginBottom: spacing.xs,
-  },
-  statLabel: {
-    fontSize: typography.size.xs,
-    color: colors.text.tertiary,
-    textAlign: 'center',
   },
   privacyContainer: {
     flexDirection: 'row',

@@ -191,3 +191,9 @@ export type MainTabParamList = {
   Finance: undefined;
   Settings: undefined;
 };
+
+export type SettingsStackParamList = {
+  SettingsMain: undefined;
+  StorageOverview: undefined;
+  DataManagement: undefined;
+};

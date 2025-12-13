@@ -26,7 +26,7 @@ import TasksScreen from '../screens/main/TasksScreen';
 import HabitsScreen from '../screens/main/HabitsScreen';
 import CalendarScreen from '../screens/main/CalendarScreen';
 import FinanceScreen from '../screens/main/FinanceScreen';
-import SettingsScreen from '../screens/main/SettingsScreen';
+import SettingsNavigator from './SettingsNavigator';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -160,13 +160,14 @@ export default function MainNavigator() {
 
       <Tab.Screen
         name="Settings"
-        component={SettingsScreen}
+        component={SettingsNavigator}
         options={{
           tabBarIcon: ({ focused }) => (
             <TabIcon icon="cog" focused={focused} />
           ),
           tabBarLabel: 'Settings',
           title: 'Settings',
+          headerShown: false, // SettingsNavigator has its own headers
         }}
       />
     </Tab.Navigator>
