@@ -36,6 +36,9 @@ import {
 } from '../../database/finance';
 import { useFocusEffect } from '@react-navigation/native';
 
+// Import version from package.json
+const packageJson = require('../../../package.json');
+
 interface SettingItemProps {
   icon: string;
   title: string;
@@ -140,8 +143,8 @@ export default function SettingsScreen() {
 
       const exportData = {
         exportDate: new Date().toISOString(),
-        version: '1.0.0',
-        appVersion: '1.0.0',
+        version: packageJson.version,
+        appVersion: packageJson.version,
         stats: {
           totalRecords: totalRecords,
           tasks: tasks.length,
@@ -303,7 +306,7 @@ export default function SettingsScreen() {
           <SettingItem
             icon="ℹ️"
             title="Version"
-            subtitle="1.0.0"
+            subtitle={packageJson.version}
           />
           <View style={styles.divider} />
           <SettingItem
@@ -336,7 +339,7 @@ export default function SettingsScreen() {
       <View style={styles.appInfo}>
         <Text style={styles.appName}>Jarvis</Text>
         <Text style={styles.appVersion}>Your Personal AI Assistant</Text>
-        <Text style={styles.appBuild}>Build 1.0.0</Text>
+        <Text style={styles.appBuild}>Build {packageJson.version}</Text>
         <Text style={styles.appCopyright}>
           Last Updated: December 2025
         </Text>
