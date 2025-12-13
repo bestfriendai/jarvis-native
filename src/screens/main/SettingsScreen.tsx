@@ -20,6 +20,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Clipboard from '@react-native-clipboard/clipboard';
 import * as Notifications from 'expo-notifications';
 import { useAuthStore } from '../../store/authStore';
+import { useThemeStore } from '../../store/themeStore';
 import type { SettingsStackParamList } from '../../types';
 import {
   colors,
@@ -91,6 +92,7 @@ const SettingItem: React.FC<SettingItemProps> = ({
 
 export default function SettingsScreen() {
   const { user, logout } = useAuthStore();
+  const { mode: themeMode, setMode: setThemeMode } = useThemeStore();
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [notificationsPermissionStatus, setNotificationsPermissionStatus] = useState<string>('undetermined');
@@ -268,6 +270,54 @@ export default function SettingsScreen() {
             title={user?.currency || 'USD'}
             subtitle="Currency"
           />
+        </View>
+      </View>
+
+      {/* Appearance Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>APPEARANCE</Text>
+        <View style={styles.sectionContent}>
+          <TouchableOpacity
+            style={styles.themeOption}
+            onPress={() => setThemeMode('dark')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.themeInfo}>
+              <Text style={styles.themeIcon}>🌙</Text>
+              <View style={styles.themeText}>
+                <Text style={styles.themeTitle}>Dark Mode</Text>
+                <Text style={styles.themeSubtitle}>Deep blacks with emerald accents</Text>
+              </View>
+            </View>
+            <View style={[
+              styles.radioButton,
+              themeMode === 'dark' && styles.radioButtonSelected
+            ]}>
+              {themeMode === 'dark' && <View style={styles.radioButtonInner} />}
+            </View>
+          </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity
+            style={styles.themeOption}
+            onPress={() => setThemeMode('light')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.themeInfo}>
+              <Text style={styles.themeIcon}>☀️</Text>
+              <View style={styles.themeText}>
+                <Text style={styles.themeTitle}>Light Mode</Text>
+                <Text style={styles.themeSubtitle}>Clean whites with vibrant colors</Text>
+              </View>
+            </View>
+            <View style={[
+              styles.radioButton,
+              themeMode === 'light' && styles.radioButtonSelected
+            ]}>
+              {themeMode === 'light' && <View style={styles.radioButtonInner} />}
+            </View>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -506,5 +556,51 @@ const styles = StyleSheet.create({
   appCopyright: {
     fontSize: typography.size.xs,
     color: colors.text.disabled,
+  },
+  themeOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.base,
+  },
+  themeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  themeIcon: {
+    fontSize: 28,
+    marginRight: spacing.md,
+  },
+  themeText: {
+    flex: 1,
+  },
+  themeTitle: {
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
+  },
+  themeSubtitle: {
+    fontSize: typography.size.sm,
+    color: colors.text.tertiary,
+  },
+  radioButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.border.default,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioButtonSelected: {
+    borderColor: colors.primary.main,
+  },
+  radioButtonInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.primary.main,
   },
 });
