@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { IconButton } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import * as calendarDB from '../../database/calendar';
 import { AppButton, AppChip, EmptyState, LoadingState } from '../../components/ui';
 import DayTimelineView from '../../components/calendar/DayTimelineView';
@@ -340,6 +341,10 @@ const EventFormModal: React.FC<EventFormModalProps> = ({
   const [descFocused, setDescFocused] = useState(false);
   const [locationFocused, setLocationFocused] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
 
   React.useEffect(() => {
     if (visible) {
@@ -481,25 +486,112 @@ const EventFormModal: React.FC<EventFormModalProps> = ({
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Start Time</Text>
-                <Text style={styles.timeDisplay}>
-                  {new Date(startTime).toLocaleString()}
-                </Text>
-                <Text style={styles.hint}>
-                  Tap to change (Date/time picker coming soon)
-                </Text>
+                <Text style={styles.label}>Start Date & Time</Text>
+                <View style={styles.dateTimeRow}>
+                  <TouchableOpacity
+                    style={styles.dateTimeButton}
+                    onPress={() => setShowStartDatePicker(true)}
+                  >
+                    <Text style={styles.dateTimeButtonText}>
+                      📅 {new Date(startTime).toLocaleDateString()}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.dateTimeButton}
+                    onPress={() => setShowStartTimePicker(true)}
+                  >
+                    <Text style={styles.dateTimeButtonText}>
+                      🕐 {new Date(startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>End Time</Text>
-                <Text style={styles.timeDisplay}>
-                  {new Date(endTime).toLocaleString()}
-                </Text>
-                <Text style={styles.hint}>
-                  Tap to change (Date/time picker coming soon)
-                </Text>
+                <Text style={styles.label}>End Date & Time</Text>
+                <View style={styles.dateTimeRow}>
+                  <TouchableOpacity
+                    style={styles.dateTimeButton}
+                    onPress={() => setShowEndDatePicker(true)}
+                  >
+                    <Text style={styles.dateTimeButtonText}>
+                      📅 {new Date(endTime).toLocaleDateString()}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.dateTimeButton}
+                    onPress={() => setShowEndTimePicker(true)}
+                  >
+                    <Text style={styles.dateTimeButtonText}>
+                      🕐 {new Date(endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </ScrollView>
+
+            {/* Date/Time Pickers */}
+            {showStartDatePicker && (
+              <DateTimePicker
+                value={new Date(startTime)}
+                mode="date"
+                display="default"
+                onChange={(event, selectedDate) => {
+                  setShowStartDatePicker(false);
+                  if (selectedDate) {
+                    const currentTime = new Date(startTime);
+                    selectedDate.setHours(currentTime.getHours());
+                    selectedDate.setMinutes(currentTime.getMinutes());
+                    setStartTime(selectedDate.toISOString());
+                  }
+                }}
+              />
+            )}
+
+            {showStartTimePicker && (
+              <DateTimePicker
+                value={new Date(startTime)}
+                mode="time"
+                display="default"
+                onChange={(event, selectedTime) => {
+                  setShowStartTimePicker(false);
+                  if (selectedTime) {
+                    setStartTime(selectedTime.toISOString());
+                  }
+                }}
+              />
+            )}
+
+            {showEndDatePicker && (
+              <DateTimePicker
+                value={new Date(endTime)}
+                mode="date"
+                display="default"
+                onChange={(event, selectedDate) => {
+                  setShowEndDatePicker(false);
+                  if (selectedDate) {
+                    const currentTime = new Date(endTime);
+                    selectedDate.setHours(currentTime.getHours());
+                    selectedDate.setMinutes(currentTime.getMinutes());
+                    setEndTime(selectedDate.toISOString());
+                  }
+                }}
+              />
+            )}
+
+            {showEndTimePicker && (
+              <DateTimePicker
+                value={new Date(endTime)}
+                mode="time"
+                display="default"
+                onChange={(event, selectedTime) => {
+                  setShowEndTimePicker(false);
+                  if (selectedTime) {
+                    setEndTime(selectedTime.toISOString());
+                  }
+                }}
+              />
+            )}
 
             <View style={styles.modalFooter}>
               {event && (
@@ -690,19 +782,23 @@ const styles = StyleSheet.create({
     minHeight: 80,
     lineHeight: typography.size.base * typography.lineHeight.relaxed,
   },
-  timeDisplay: {
+  dateTimeRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  dateTimeButton: {
+    flex: 1,
     backgroundColor: colors.background.primary,
     borderRadius: borderRadius.md,
     borderWidth: 1.5,
     borderColor: colors.border.default,
     padding: spacing.md,
-    color: colors.text.primary,
-    fontSize: typography.size.base,
+    alignItems: 'center',
   },
-  hint: {
-    fontSize: typography.size.xs,
-    color: colors.text.tertiary,
-    marginTop: spacing.xs,
+  dateTimeButtonText: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.medium,
+    color: colors.text.primary,
   },
   modalFooter: {
     flexDirection: 'row',
