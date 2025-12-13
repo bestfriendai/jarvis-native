@@ -70,6 +70,7 @@ export default function TasksScreen() {
   const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>('all');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const insets = useSafeAreaInsets();
 
   // Load tasks from local database
@@ -88,19 +89,7 @@ export default function TasksScreen() {
 
   useEffect(() => {
     loadTasks();
-  }, [loadTasks]);
-
-  // Listen for task updates from modal
-  useEffect(() => {
-    const handleTasksUpdated = () => {
-      loadTasks();
-    };
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('tasksUpdated', handleTasksUpdated);
-      return () => window.removeEventListener('tasksUpdated', handleTasksUpdated);
-    }
-  }, [loadTasks]);
+  }, [loadTasks, refreshTrigger]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -280,6 +269,9 @@ export default function TasksScreen() {
         onClose={() => {
           setShowCreateModal(false);
           setSelectedTask(null);
+        }}
+        onSuccess={() => {
+          setRefreshTrigger(prev => prev + 1);
         }}
       />
     </View>
@@ -550,12 +542,14 @@ interface TaskFormModalProps {
   visible: boolean;
   task: Task | null;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
 const TaskFormModal: React.FC<TaskFormModalProps> = ({
   visible,
   task,
   onClose,
+  onSuccess,
 }) => {
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState(task?.title || '');
@@ -592,11 +586,8 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
         await tasksDB.createTask(data);
       }
 
+      onSuccess?.();
       onClose();
-      // Trigger parent refresh
-      setTimeout(() => {
-        window.dispatchEvent(new Event('tasksUpdated'));
-      }, 100);
     } catch (error) {
       console.error('Error saving task:', error);
       Alert.alert('Error', 'Failed to save task');

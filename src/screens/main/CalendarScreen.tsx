@@ -42,6 +42,7 @@ export default function CalendarScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Load events from local database
   const loadEvents = useCallback(async () => {
@@ -78,19 +79,7 @@ export default function CalendarScreen() {
 
   useEffect(() => {
     loadEvents();
-  }, [loadEvents]);
-
-  // Listen for event updates from modal
-  useEffect(() => {
-    const handleEventsUpdated = () => {
-      loadEvents();
-    };
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('eventsUpdated', handleEventsUpdated);
-      return () => window.removeEventListener('eventsUpdated', handleEventsUpdated);
-    }
-  }, [loadEvents]);
+  }, [loadEvents, refreshTrigger]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -273,6 +262,9 @@ export default function CalendarScreen() {
           setShowCreateModal(false);
           setSelectedEvent(null);
         }}
+        onSuccess={() => {
+          setRefreshTrigger(prev => prev + 1);
+        }}
       />
     </View>
   );
@@ -283,12 +275,14 @@ interface EventFormModalProps {
   visible: boolean;
   event: CalendarEvent | null;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
 const EventFormModal: React.FC<EventFormModalProps> = ({
   visible,
   event,
   onClose,
+  onSuccess,
 }) => {
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState(event?.title || '');
@@ -337,11 +331,8 @@ const EventFormModal: React.FC<EventFormModalProps> = ({
         await calendarDB.createEvent(data);
       }
 
+      onSuccess?.();
       onClose();
-      // Trigger parent refresh
-      setTimeout(() => {
-        window.dispatchEvent(new Event('eventsUpdated'));
-      }, 100);
     } catch (error) {
       console.error('Error saving event:', error);
       Alert.alert('Error', 'Failed to save event');
@@ -361,10 +352,8 @@ const EventFormModal: React.FC<EventFormModalProps> = ({
         onPress: async () => {
           try {
             await calendarDB.deleteEvent(event.id);
+            onSuccess?.();
             onClose();
-            setTimeout(() => {
-              window.dispatchEvent(new Event('eventsUpdated'));
-            }, 100);
           } catch (error) {
             console.error('Error deleting event:', error);
             Alert.alert('Error', 'Failed to delete event');

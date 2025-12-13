@@ -44,6 +44,7 @@ export default function HabitsScreen() {
   const [heatmapHabit, setHeatmapHabit] = useState<Habit | null>(null);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const insets = useSafeAreaInsets();
 
   // Load habits from local database
@@ -75,19 +76,7 @@ export default function HabitsScreen() {
 
   useEffect(() => {
     loadHabits();
-  }, [loadHabits]);
-
-  // Listen for habit updates from modal
-  useEffect(() => {
-    const handleHabitsUpdated = () => {
-      loadHabits();
-    };
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('habitsUpdated', handleHabitsUpdated);
-      return () => window.removeEventListener('habitsUpdated', handleHabitsUpdated);
-    }
-  }, [loadHabits]);
+  }, [loadHabits, refreshTrigger]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -254,6 +243,9 @@ export default function HabitsScreen() {
         onClose={() => {
           setShowCreateModal(false);
           setSelectedHabit(null);
+        }}
+        onSuccess={() => {
+          setRefreshTrigger(prev => prev + 1);
         }}
       />
 
@@ -433,12 +425,14 @@ interface HabitFormModalProps {
   visible: boolean;
   habit: Habit | null;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
 const HabitFormModal: React.FC<HabitFormModalProps> = ({
   visible,
   habit,
   onClose,
+  onSuccess,
 }) => {
   const insets = useSafeAreaInsets();
   const [name, setName] = useState(habit?.name || '');
@@ -473,11 +467,8 @@ const HabitFormModal: React.FC<HabitFormModalProps> = ({
         await habitsDB.createHabit(data);
       }
 
+      onSuccess?.();
       onClose();
-      // Trigger parent refresh
-      setTimeout(() => {
-        window.dispatchEvent(new Event('habitsUpdated'));
-      }, 100);
     } catch (error) {
       console.error('Error saving habit:', error);
       Alert.alert('Error', 'Failed to save habit');
