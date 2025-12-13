@@ -21,6 +21,8 @@ import { IconButton } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as calendarDB from '../../database/calendar';
 import { AppButton, AppChip, EmptyState, LoadingState } from '../../components/ui';
+import DayTimelineView from '../../components/calendar/DayTimelineView';
+import WeekGridView from '../../components/calendar/WeekGridView';
 import {
   colors,
   typography,
@@ -37,12 +39,13 @@ interface CalendarEvent extends calendarDB.CalendarEvent {
 
 export default function CalendarScreen() {
   const [refreshing, setRefreshing] = useState(false);
-  const [viewMode, setViewMode] = useState<'today' | 'week' | 'all'>('today');
+  const [viewMode, setViewMode] = useState<'agenda' | 'day' | 'week'>('agenda');
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   // Load events from local database
   const loadEvents = useCallback(async () => {
@@ -52,12 +55,27 @@ export default function CalendarScreen() {
 
       let loadedEvents: calendarDB.CalendarEvent[] = [];
 
-      if (viewMode === 'today') {
-        loadedEvents = await calendarDB.getEventsByDate(today);
+      // For visual views (day/week), load more events to populate the timeline
+      if (viewMode === 'day') {
+        const dateStr = selectedDate.toISOString().split('T')[0];
+        loadedEvents = await calendarDB.getEventsByDate(dateStr);
       } else if (viewMode === 'week') {
-        loadedEvents = await calendarDB.getUpcomingEvents(7);
+        // Get the whole week of events
+        const startOfWeek = new Date(selectedDate);
+        const day = startOfWeek.getDay();
+        const diff = day === 0 ? -6 : 1 - day;
+        startOfWeek.setDate(startOfWeek.getDate() + diff);
+
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+        loadedEvents = await calendarDB.getEventsByDateRange(
+          startOfWeek.toISOString(),
+          endOfWeek.toISOString()
+        );
       } else {
-        loadedEvents = await calendarDB.getEvents();
+        // Agenda view - show upcoming events
+        loadedEvents = await calendarDB.getUpcomingEvents(7);
       }
 
       // Map to include compatible fields
@@ -75,7 +93,7 @@ export default function CalendarScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [viewMode]);
+  }, [viewMode, selectedDate]);
 
   useEffect(() => {
     loadEvents();
@@ -158,10 +176,10 @@ export default function CalendarScreen() {
         style={styles.filterContainer}
         contentContainerStyle={styles.filterContent}
       >
-        {(['today', 'week', 'all'] as const).map((mode) => (
+        {(['agenda', 'day', 'week'] as const).map((mode) => (
           <AppChip
             key={mode}
-            label={mode === 'today' ? 'Today' : mode === 'week' ? 'This Week' : 'All'}
+            label={mode === 'agenda' ? 'Agenda' : mode === 'day' ? 'Day' : 'Week'}
             selected={viewMode === mode}
             onPress={() => setViewMode(mode)}
           />
@@ -169,90 +187,114 @@ export default function CalendarScreen() {
       </ScrollView>
 
       {/* Content */}
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.primary.main}
-          />
-        }
-        showsVerticalScrollIndicator={false}
-      >
-        {events.length === 0 ? (
-          <EmptyState
-            icon="📅"
-            title="No events"
-            description={
-              viewMode === 'today'
-                ? 'Your schedule is clear for today'
-                : viewMode === 'week'
-                ? 'No events scheduled this week'
-                : 'Create events to keep track of your schedule'
-            }
-            actionLabel="Create Event"
-            onAction={() => {
-              setSelectedEvent(null);
-              setShowCreateModal(true);
+      {viewMode === 'day' ? (
+        <View style={styles.content}>
+          <DayTimelineView
+            events={events}
+            selectedDate={selectedDate}
+            onEventPress={(event) => {
+              const fullEvent = events.find(e => e.id === event.id);
+              if (fullEvent) {
+                setSelectedEvent(fullEvent);
+                setShowCreateModal(true);
+              }
             }}
           />
-        ) : (
-          <View style={styles.eventsList}>
-            {events.map((event) => (
-              <TouchableOpacity
-                key={event.id}
-                style={styles.eventCard}
-                activeOpacity={0.9}
-                onPress={() => {
-                  setSelectedEvent(event);
-                  setShowCreateModal(true);
-                }}
-                onLongPress={() => handleDelete(event.id)}
-              >
-                <View style={styles.eventTimeColumn}>
-                  <Text style={styles.eventTimeText}>
-                    {formatTime(event.startAt || event.startTime)}
-                  </Text>
-                  <View style={styles.eventTimeLine} />
-                  <Text style={styles.eventTimeText}>
-                    {formatTime(event.endAt || event.endTime)}
-                  </Text>
-                </View>
-
-                <View style={styles.eventContent}>
-                  <View style={styles.eventHeader}>
-                    <Text style={styles.eventTitle}>{event.title}</Text>
-                    <AppChip
-                      label={formatDate(event.startAt || event.startTime)}
-                      variant="info"
-                      compact
-                    />
+        </View>
+      ) : viewMode === 'week' ? (
+        <View style={styles.content}>
+          <WeekGridView
+            events={events}
+            selectedDate={selectedDate}
+            onEventPress={(event) => {
+              const fullEvent = events.find(e => e.id === event.id);
+              if (fullEvent) {
+                setSelectedEvent(fullEvent);
+                setShowCreateModal(true);
+              }
+            }}
+          />
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary.main}
+            />
+          }
+          showsVerticalScrollIndicator={false}
+        >
+          {events.length === 0 ? (
+            <EmptyState
+              icon="📅"
+              title="No events"
+              description="No upcoming events scheduled"
+              actionLabel="Create Event"
+              onAction={() => {
+                setSelectedEvent(null);
+                setShowCreateModal(true);
+              }}
+            />
+          ) : (
+            <View style={styles.eventsList}>
+              {events.map((event) => (
+                <TouchableOpacity
+                  key={event.id}
+                  style={styles.eventCard}
+                  activeOpacity={0.9}
+                  onPress={() => {
+                    setSelectedEvent(event);
+                    setShowCreateModal(true);
+                  }}
+                  onLongPress={() => handleDelete(event.id)}
+                >
+                  <View style={styles.eventTimeColumn}>
+                    <Text style={styles.eventTimeText}>
+                      {formatTime(event.startAt || event.startTime)}
+                    </Text>
+                    <View style={styles.eventTimeLine} />
+                    <Text style={styles.eventTimeText}>
+                      {formatTime(event.endAt || event.endTime)}
+                    </Text>
                   </View>
 
-                  {event.description && (
-                    <Text style={styles.eventDescription} numberOfLines={2}>
-                      {event.description}
-                    </Text>
-                  )}
-
-                  {event.location && (
-                    <View style={styles.eventLocation}>
-                      <Text style={styles.locationIcon}>📍</Text>
-                      <Text style={styles.locationText}>{event.location}</Text>
+                  <View style={styles.eventContent}>
+                    <View style={styles.eventHeader}>
+                      <Text style={styles.eventTitle}>{event.title}</Text>
+                      <AppChip
+                        label={formatDate(event.startAt || event.startTime)}
+                        variant="info"
+                        compact
+                      />
                     </View>
-                  )}
 
-                  {event.isRecurring && (
-                    <AppChip label="Recurring" compact style={styles.recurringChip} />
-                  )}
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-      </ScrollView>
+                    {event.description && (
+                      <Text style={styles.eventDescription} numberOfLines={2}>
+                        {event.description}
+                      </Text>
+                    )}
+
+                    {event.location && (
+                      <View style={styles.eventLocation}>
+                        <Text style={styles.locationIcon}>📍</Text>
+                        <Text style={styles.locationText}>{event.location}</Text>
+                      </View>
+                    )}
+
+                    {event.isRecurring && (
+                      <AppChip label="Recurring" compact style={styles.recurringChip} />
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </ScrollView>
+      )}
 
       {/* Create/Edit Modal */}
       <EventFormModal
