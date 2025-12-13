@@ -15,6 +15,7 @@ import {
   Text,
   TouchableOpacity,
   Animated,
+  Vibration,
 } from 'react-native';
 import { IconButton, Switch } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -34,6 +35,12 @@ type HabitCadence = 'daily' | 'weekly' | 'monthly';
 interface Habit extends habitsDB.Habit {
   isActive: boolean;
   completionsToday?: number;
+  completionRate30Days?: number;
+  stats?: {
+    totalDays: number;
+    completedDays: number;
+    completionRate: number;
+  };
 }
 
 export default function HabitsScreen() {
@@ -45,6 +52,8 @@ export default function HabitsScreen() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [celebratingHabitId, setCelebratingHabitId] = useState<string | null>(null);
+  const [celebrationMessage, setCelebrationMessage] = useState('');
   const insets = useSafeAreaInsets();
 
   // Load habits from local database
@@ -52,15 +61,27 @@ export default function HabitsScreen() {
     try {
       const loadedHabits = await habitsDB.getHabits();
 
-      // Check completion status for today
+      // Check completion status and get stats for each habit
       const today = new Date().toISOString().split('T')[0];
       const habitsWithStatus = await Promise.all(
         loadedHabits.map(async (habit) => {
           const isCompleted = await habitsDB.isHabitCompletedToday(habit.id);
+          const stats = await habitsDB.getHabitStats(habit.id);
+
+          // Calculate 30-day completion rate
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          const startDate = thirtyDaysAgo.toISOString().split('T')[0];
+          const logs = await habitsDB.getHabitLogs(habit.id, startDate, today);
+          const completedLast30 = logs.filter(l => l.completed).length;
+          const completionRate30Days = (completedLast30 / 30) * 100;
+
           return {
             ...habit,
             isActive: true, // All habits are active by default
             completionsToday: isCompleted ? 1 : 0,
+            completionRate30Days,
+            stats,
           };
         })
       );
@@ -91,7 +112,40 @@ export default function HabitsScreen() {
 
       // Toggle completion
       await habitsDB.logHabitCompletion(habitId, today, !isCompleted);
+
+      // Haptic feedback
+      if (!isCompleted) {
+        Vibration.vibrate(50);
+      }
+
+      // Reload to get updated streak
       await loadHabits();
+
+      // Check for milestones after completion
+      if (!isCompleted) {
+        const updatedHabit = await habitsDB.getHabit(habitId);
+        if (updatedHabit) {
+          const streak = updatedHabit.currentStreak;
+          let message = '';
+
+          if (streak === 7) {
+            message = '7 day streak! Keep going!';
+          } else if (streak === 30) {
+            message = '30 days! You are unstoppable!';
+          } else if (streak === 100) {
+            message = '100 DAYS! LEGEND STATUS!';
+          } else if (streak % 10 === 0 && streak > 0) {
+            message = `${streak} day streak!`;
+          }
+
+          if (message) {
+            setCelebratingHabitId(habitId);
+            setCelebrationMessage(message);
+            Vibration.vibrate([100, 50, 100]);
+            setTimeout(() => setCelebratingHabitId(null), 3000);
+          }
+        }
+      }
     } catch (error) {
       console.error('Error logging habit:', error);
       Alert.alert('Error', 'Failed to log habit completion');
@@ -132,6 +186,14 @@ export default function HabitsScreen() {
   const handleViewHeatmap = (habit: Habit) => {
     setHeatmapHabit(habit);
     setShowHeatmap(true);
+  };
+
+  const getMilestoneBadges = (currentStreak: number, longestStreak: number) => {
+    const badges: string[] = [];
+    if (longestStreak >= 7) badges.push('🥉 7 Day');
+    if (longestStreak >= 30) badges.push('🥈 30 Day');
+    if (longestStreak >= 100) badges.push('🥇 100 Day');
+    return badges;
   };
 
   const activeHabits = habits.filter((h) => h.isActive);
@@ -205,6 +267,7 @@ export default function HabitsScreen() {
                     onToggleActive={() =>
                       handleToggleActive(habit.id, habit.isActive)
                     }
+                    getMilestoneBadges={getMilestoneBadges}
                   />
                 ))}
               </View>
@@ -228,6 +291,7 @@ export default function HabitsScreen() {
                     onToggleActive={() =>
                       handleToggleActive(habit.id, habit.isActive)
                     }
+                    getMilestoneBadges={getMilestoneBadges}
                   />
                 ))}
               </View>
@@ -281,6 +345,23 @@ export default function HabitsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Celebration Modal */}
+      {celebratingHabitId && (
+        <Modal
+          visible={true}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setCelebratingHabitId(null)}
+        >
+          <View style={styles.celebrationOverlay}>
+            <Animated.View style={styles.celebrationContent}>
+              <Text style={styles.celebrationEmoji}>🎉</Text>
+              <Text style={styles.celebrationText}>{celebrationMessage}</Text>
+            </Animated.View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -293,6 +374,7 @@ interface HabitCardProps {
   onEdit: (habit: Habit) => void;
   onDelete: (id: string) => void;
   onToggleActive: () => void;
+  getMilestoneBadges: (currentStreak: number, longestStreak: number) => string[];
 }
 
 const HabitCard: React.FC<HabitCardProps> = ({
@@ -302,6 +384,7 @@ const HabitCard: React.FC<HabitCardProps> = ({
   onEdit,
   onDelete,
   onToggleActive,
+  getMilestoneBadges,
 }) => {
   const [scaleValue] = useState(new Animated.Value(1));
   const isCompletedToday = (habit.completionsToday || 0) > 0;
@@ -341,11 +424,11 @@ const HabitCard: React.FC<HabitCardProps> = ({
                 </Text>
               )}
 
-              {/* Meta row */}
+              {/* Meta row with enhanced stats */}
               <View style={styles.habitMeta}>
                 <AppChip label={habit.cadence} compact />
 
-                {/* Streak indicator */}
+                {/* Current Streak */}
                 <View style={styles.streakContainer}>
                   <Text style={styles.streakIcon}>🔥</Text>
                   <Text style={styles.streakText}>
@@ -353,7 +436,46 @@ const HabitCard: React.FC<HabitCardProps> = ({
                     {(habit.currentStreak || 0) !== 1 ? 's' : ''}
                   </Text>
                 </View>
+
+                {/* Best Streak */}
+                {habit.longestStreak > 0 && habit.longestStreak > habit.currentStreak && (
+                  <View style={styles.bestStreakContainer}>
+                    <Text style={styles.bestStreakLabel}>Best:</Text>
+                    <Text style={styles.bestStreakValue}>{habit.longestStreak}</Text>
+                  </View>
+                )}
               </View>
+
+              {/* 30-day completion rate */}
+              {habit.completionRate30Days !== undefined && (
+                <View style={styles.completionRateRow}>
+                  <View style={styles.completionRateBar}>
+                    <View
+                      style={[
+                        styles.completionRateFill,
+                        { width: `${Math.min(100, habit.completionRate30Days)}%` },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.completionRateText}>
+                    {Math.round(habit.completionRate30Days)}% (30 days)
+                  </Text>
+                </View>
+              )}
+
+              {/* Milestone Badges */}
+              {(() => {
+                const badges = getMilestoneBadges(habit.currentStreak, habit.longestStreak);
+                return badges.length > 0 ? (
+                  <View style={styles.badgesRow}>
+                    {badges.map((badge, index) => (
+                      <View key={index} style={styles.badge}>
+                        <Text style={styles.badgeText}>{badge}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null;
+              })()}
             </View>
 
             {/* Log Button */}
@@ -816,5 +938,93 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     flex: 1,
+  },
+  // Best streak styles
+  bestStreakContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.background.tertiary,
+    borderRadius: borderRadius.sm,
+  },
+  bestStreakLabel: {
+    fontSize: typography.size.xs,
+    color: colors.text.tertiary,
+  },
+  bestStreakValue: {
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.semibold,
+    color: colors.primary.main,
+  },
+  // Completion rate styles
+  completionRateRow: {
+    marginTop: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  completionRateBar: {
+    flex: 1,
+    height: 6,
+    backgroundColor: colors.background.tertiary,
+    borderRadius: borderRadius.full,
+    overflow: 'hidden',
+  },
+  completionRateFill: {
+    height: '100%',
+    backgroundColor: colors.primary.main,
+    borderRadius: borderRadius.full,
+  },
+  completionRateText: {
+    fontSize: typography.size.xs,
+    color: colors.text.tertiary,
+    minWidth: 80,
+  },
+  // Badge styles
+  badgesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  badge: {
+    backgroundColor: colors.background.tertiary,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: colors.primary.main,
+  },
+  badgeText: {
+    fontSize: typography.size.xs,
+    color: colors.text.secondary,
+    fontWeight: typography.weight.medium,
+  },
+  // Celebration modal styles
+  celebrationOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  celebrationContent: {
+    backgroundColor: colors.background.secondary,
+    borderRadius: borderRadius.xl,
+    padding: spacing['2xl'],
+    alignItems: 'center',
+    minWidth: 250,
+    ...shadows.lg,
+  },
+  celebrationEmoji: {
+    fontSize: 64,
+    marginBottom: spacing.base,
+  },
+  celebrationText: {
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.primary.main,
+    textAlign: 'center',
   },
 });
