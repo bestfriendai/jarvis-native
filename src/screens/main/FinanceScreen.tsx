@@ -14,6 +14,8 @@ import {
   Text,
   TouchableOpacity,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { IconButton, SegmentedButtons } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -37,6 +39,10 @@ export default function FinanceScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showAssetModal, setShowAssetModal] = useState(false);
   const [showLiabilityModal, setShowLiabilityModal] = useState(false);
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<financeDB.Asset | null>(null);
+  const [selectedLiability, setSelectedLiability] = useState<financeDB.Liability | null>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<financeDB.Transaction | null>(null);
   const [summary, setSummary] = useState<financeDB.FinanceSummary | null>(null);
   const [assets, setAssets] = useState<financeDB.Asset[]>([]);
   const [liabilities, setLiabilities] = useState<financeDB.Liability[]>([]);
@@ -492,6 +498,17 @@ export default function FinanceScreen() {
               );
             })()}
 
+            {/* Add Transaction Button */}
+            <AppButton
+              title="Add Transaction"
+              onPress={() => {
+                setSelectedTransaction(null);
+                setShowTransactionModal(true);
+              }}
+              fullWidth
+              style={styles.addButton}
+            />
+
             {/* Transaction List */}
             {filteredTransactions.length === 0 ? (
               <EmptyState
@@ -499,7 +516,10 @@ export default function FinanceScreen() {
                 title="No transactions"
                 description="Start tracking your income and expenses"
                 actionLabel="Add Transaction"
-                onAction={() => {}}
+                onAction={() => {
+                  setSelectedTransaction(null);
+                  setShowTransactionModal(true);
+                }}
               />
             ) : (
               <View style={styles.transactionList}>
@@ -546,7 +566,44 @@ export default function FinanceScreen() {
         )}
       </ScrollView>
 
-      {/* TODO: Add modals for creating assets and liabilities */}
+      {/* Transaction Modal */}
+      <TransactionFormModal
+        visible={showTransactionModal}
+        transaction={selectedTransaction}
+        onClose={() => {
+          setShowTransactionModal(false);
+          setSelectedTransaction(null);
+        }}
+        onSuccess={() => {
+          loadData();
+        }}
+      />
+
+      {/* Asset Modal */}
+      <AssetFormModal
+        visible={showAssetModal}
+        asset={selectedAsset}
+        onClose={() => {
+          setShowAssetModal(false);
+          setSelectedAsset(null);
+        }}
+        onSuccess={() => {
+          loadData();
+        }}
+      />
+
+      {/* Liability Modal */}
+      <LiabilityFormModal
+        visible={showLiabilityModal}
+        liability={selectedLiability}
+        onClose={() => {
+          setShowLiabilityModal(false);
+          setSelectedLiability(null);
+        }}
+        onSuccess={() => {
+          loadData();
+        }}
+      />
     </View>
   );
 }
@@ -582,6 +639,426 @@ const FinanceItemCard: React.FC<FinanceItemCardProps> = ({
         </Text>
       </View>
     </View>
+  );
+};
+
+// Transaction Form Modal
+interface TransactionFormModalProps {
+  visible: boolean;
+  transaction: financeDB.Transaction | null;
+  onClose: () => void;
+  onSuccess?: () => void;
+}
+
+const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
+  visible,
+  transaction,
+  onClose,
+  onSuccess,
+}) => {
+  const insets = useSafeAreaInsets();
+  const [type, setType] = useState<financeDB.TransactionType>(transaction?.type || 'expense');
+  const [amount, setAmount] = useState(transaction ? (transaction.amount / 100).toString() : '');
+  const [category, setCategory] = useState(transaction?.category || '');
+  const [date, setDate] = useState(transaction?.date || new Date().toISOString().split('T')[0]);
+  const [description, setDescription] = useState(transaction?.description || '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    if (visible) {
+      setType(transaction?.type || 'expense');
+      setAmount(transaction ? (transaction.amount / 100).toString() : '');
+      setCategory(transaction?.category || '');
+      setDate(transaction?.date || new Date().toISOString().split('T')[0]);
+      setDescription(transaction?.description || '');
+    }
+  }, [visible, transaction]);
+
+  const handleSubmit = async () => {
+    if (isSubmitting || !amount || !category) return;
+
+    setIsSubmitting(true);
+    try {
+      const amountCents = Math.round(parseFloat(amount) * 100);
+      const data = {
+        type,
+        amount: amountCents,
+        category,
+        date,
+        description: description || undefined,
+      };
+
+      if (transaction) {
+        await financeDB.updateTransaction(transaction.id, data);
+      } else {
+        await financeDB.createTransaction(data);
+      }
+
+      onSuccess?.();
+      onClose();
+    } catch (error) {
+      console.error('Error saving transaction:', error);
+      Alert.alert('Error', 'Failed to save transaction');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, spacing.base) }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{transaction ? 'Edit Transaction' : 'New Transaction'}</Text>
+              <IconButton icon="close" onPress={onClose} iconColor={colors.text.tertiary} />
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              {/* Type Selector */}
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Type</Text>
+                <View style={styles.typeRow}>
+                  <TouchableOpacity
+                    style={[styles.typeButton, type === 'expense' && styles.typeButtonActive]}
+                    onPress={() => setType('expense')}
+                  >
+                    <Text style={[styles.typeButtonText, type === 'expense' && styles.typeButtonTextActive]}>
+                      💸 Expense
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.typeButton, type === 'income' && styles.typeButtonActive]}
+                    onPress={() => setType('income')}
+                  >
+                    <Text style={[styles.typeButtonText, type === 'income' && styles.typeButtonTextActive]}>
+                      💰 Income
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Amount */}
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Amount</Text>
+                <TextInput
+                  value={amount}
+                  onChangeText={setAmount}
+                  placeholder="0.00"
+                  placeholderTextColor={colors.text.placeholder}
+                  keyboardType="decimal-pad"
+                  style={styles.input}
+                />
+              </View>
+
+              {/* Category */}
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Category</Text>
+                <TextInput
+                  value={category}
+                  onChangeText={setCategory}
+                  placeholder="e.g., Food, Rent, Salary..."
+                  placeholderTextColor={colors.text.placeholder}
+                  style={styles.input}
+                />
+              </View>
+
+              {/* Date */}
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Date</Text>
+                <TextInput
+                  value={date}
+                  onChangeText={setDate}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor={colors.text.placeholder}
+                  style={styles.input}
+                />
+              </View>
+
+              {/* Description */}
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Description (Optional)</Text>
+                <TextInput
+                  value={description}
+                  onChangeText={setDescription}
+                  placeholder="Add details..."
+                  placeholderTextColor={colors.text.placeholder}
+                  multiline
+                  numberOfLines={3}
+                  style={[styles.input, styles.textArea]}
+                />
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <AppButton title="Cancel" onPress={onClose} variant="outline" style={styles.modalButton} />
+              <AppButton
+                title={transaction ? 'Update' : 'Create'}
+                onPress={handleSubmit}
+                loading={isSubmitting}
+                disabled={!amount || !category}
+                style={styles.modalButton}
+              />
+            </View>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+};
+
+// Asset Form Modal
+interface AssetFormModalProps {
+  visible: boolean;
+  asset: financeDB.Asset | null;
+  onClose: () => void;
+  onSuccess?: () => void;
+}
+
+const AssetFormModal: React.FC<AssetFormModalProps> = ({
+  visible,
+  asset,
+  onClose,
+  onSuccess,
+}) => {
+  const insets = useSafeAreaInsets();
+  const [name, setName] = useState(asset?.name || '');
+  const [type, setType] = useState(asset?.type || '');
+  const [value, setValue] = useState(asset ? (asset.value / 100).toString() : '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    if (visible) {
+      setName(asset?.name || '');
+      setType(asset?.type || '');
+      setValue(asset ? (asset.value / 100).toString() : '');
+    }
+  }, [visible, asset]);
+
+  const handleSubmit = async () => {
+    if (isSubmitting || !name || !value) return;
+
+    setIsSubmitting(true);
+    try {
+      const valueCents = Math.round(parseFloat(value) * 100);
+      const data = {
+        name,
+        type: type || 'Other',
+        value: valueCents,
+      };
+
+      if (asset) {
+        await financeDB.updateAsset(asset.id, data);
+      } else {
+        await financeDB.createAsset(data);
+      }
+
+      onSuccess?.();
+      onClose();
+    } catch (error) {
+      console.error('Error saving asset:', error);
+      Alert.alert('Error', 'Failed to save asset');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, spacing.base) }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{asset ? 'Edit Asset' : 'New Asset'}</Text>
+              <IconButton icon="close" onPress={onClose} iconColor={colors.text.tertiary} />
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Name</Text>
+                <TextInput
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="e.g., Savings Account, House..."
+                  placeholderTextColor={colors.text.placeholder}
+                  style={styles.input}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Type</Text>
+                <TextInput
+                  value={type}
+                  onChangeText={setType}
+                  placeholder="e.g., Cash, Property, Investment..."
+                  placeholderTextColor={colors.text.placeholder}
+                  style={styles.input}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Value</Text>
+                <TextInput
+                  value={value}
+                  onChangeText={setValue}
+                  placeholder="0.00"
+                  placeholderTextColor={colors.text.placeholder}
+                  keyboardType="decimal-pad"
+                  style={styles.input}
+                />
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <AppButton title="Cancel" onPress={onClose} variant="outline" style={styles.modalButton} />
+              <AppButton
+                title={asset ? 'Update' : 'Create'}
+                onPress={handleSubmit}
+                loading={isSubmitting}
+                disabled={!name || !value}
+                style={styles.modalButton}
+              />
+            </View>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+};
+
+// Liability Form Modal
+interface LiabilityFormModalProps {
+  visible: boolean;
+  liability: financeDB.Liability | null;
+  onClose: () => void;
+  onSuccess?: () => void;
+}
+
+const LiabilityFormModal: React.FC<LiabilityFormModalProps> = ({
+  visible,
+  liability,
+  onClose,
+  onSuccess,
+}) => {
+  const insets = useSafeAreaInsets();
+  const [name, setName] = useState(liability?.name || '');
+  const [type, setType] = useState(liability?.type || '');
+  const [amount, setAmount] = useState(liability ? (liability.amount / 100).toString() : '');
+  const [interestRate, setInterestRate] = useState(
+    liability?.interestRate ? liability.interestRate.toString() : ''
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    if (visible) {
+      setName(liability?.name || '');
+      setType(liability?.type || '');
+      setAmount(liability ? (liability.amount / 100).toString() : '');
+      setInterestRate(liability?.interestRate ? liability.interestRate.toString() : '');
+    }
+  }, [visible, liability]);
+
+  const handleSubmit = async () => {
+    if (isSubmitting || !name || !amount) return;
+
+    setIsSubmitting(true);
+    try {
+      const amountCents = Math.round(parseFloat(amount) * 100);
+      const data = {
+        name,
+        type: type || 'Other',
+        amount: amountCents,
+        interestRate: interestRate ? parseFloat(interestRate) : undefined,
+      };
+
+      if (liability) {
+        await financeDB.updateLiability(liability.id, data);
+      } else {
+        await financeDB.createLiability(data);
+      }
+
+      onSuccess?.();
+      onClose();
+    } catch (error) {
+      console.error('Error saving liability:', error);
+      Alert.alert('Error', 'Failed to save liability');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, spacing.base) }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{liability ? 'Edit Liability' : 'New Liability'}</Text>
+              <IconButton icon="close" onPress={onClose} iconColor={colors.text.tertiary} />
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Name</Text>
+                <TextInput
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="e.g., Credit Card, Mortgage..."
+                  placeholderTextColor={colors.text.placeholder}
+                  style={styles.input}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Type</Text>
+                <TextInput
+                  value={type}
+                  onChangeText={setType}
+                  placeholder="e.g., Loan, Debt, Mortgage..."
+                  placeholderTextColor={colors.text.placeholder}
+                  style={styles.input}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Amount Owed</Text>
+                <TextInput
+                  value={amount}
+                  onChangeText={setAmount}
+                  placeholder="0.00"
+                  placeholderTextColor={colors.text.placeholder}
+                  keyboardType="decimal-pad"
+                  style={styles.input}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Interest Rate % (Optional)</Text>
+                <TextInput
+                  value={interestRate}
+                  onChangeText={setInterestRate}
+                  placeholder="e.g., 4.5"
+                  placeholderTextColor={colors.text.placeholder}
+                  keyboardType="decimal-pad"
+                  style={styles.input}
+                />
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <AppButton title="Cancel" onPress={onClose} variant="outline" style={styles.modalButton} />
+              <AppButton
+                title={liability ? 'Update' : 'Create'}
+                onPress={handleSubmit}
+                loading={isSubmitting}
+                disabled={!name || !amount}
+                style={styles.modalButton}
+              />
+            </View>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
   );
 };
 
@@ -874,5 +1351,91 @@ const styles = StyleSheet.create({
   transactionAmount: {
     fontSize: typography.size.lg,
     fontWeight: typography.weight.bold,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: colors.background.secondary,
+    borderTopLeftRadius: borderRadius['2xl'],
+    borderTopRightRadius: borderRadius['2xl'],
+    maxHeight: '90%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.base,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.subtle,
+  },
+  modalTitle: {
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.primary,
+  },
+  modalBody: {
+    padding: spacing.base,
+  },
+  formGroup: {
+    marginBottom: spacing.lg,
+  },
+  label: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.medium,
+    color: colors.text.secondary,
+    marginBottom: spacing.sm,
+  },
+  input: {
+    backgroundColor: colors.background.primary,
+    borderRadius: borderRadius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border.default,
+    padding: spacing.md,
+    color: colors.text.primary,
+    fontSize: typography.size.base,
+  },
+  textArea: {
+    textAlignVertical: 'top',
+    minHeight: 80,
+    lineHeight: typography.size.base * typography.lineHeight.relaxed,
+  },
+  typeRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  typeButton: {
+    flex: 1,
+    backgroundColor: colors.background.primary,
+    borderRadius: borderRadius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border.default,
+    padding: spacing.md,
+    alignItems: 'center',
+  },
+  typeButtonActive: {
+    backgroundColor: colors.primary.main,
+    borderColor: colors.primary.main,
+  },
+  typeButtonText: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.medium,
+    color: colors.text.primary,
+  },
+  typeButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    padding: spacing.base,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.subtle,
+  },
+  modalButton: {
+    flex: 1,
   },
 });
