@@ -15,8 +15,7 @@ import {
 } from 'react-native';
 import { Switch } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as FileSystem from 'expo-file-system/build/legacy';
-import * as Sharing from 'expo-sharing';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { useAuthStore } from '../../store/authStore';
 import {
   colors,
@@ -206,24 +205,15 @@ export default function SettingsScreen() {
         },
       };
 
-      const fileName = `jarvis-backup-${new Date().toISOString().split('T')[0]}.json`;
-      const filePath = `${FileSystem.documentDirectory}${fileName}`;
+      // Copy JSON to clipboard
+      const jsonString = JSON.stringify(exportData, null, 2);
+      Clipboard.setString(jsonString);
 
-      await FileSystem.writeAsStringAsync(
-        filePath,
-        JSON.stringify(exportData, null, 2)
+      Alert.alert(
+        'Success!',
+        'All data copied to clipboard!\n\nYou can paste it into a text file to save your backup.',
+        [{ text: 'OK' }]
       );
-
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(filePath, {
-          mimeType: 'application/json',
-          dialogTitle: 'Export Jarvis Data',
-          UTI: 'public.json',
-        });
-        Alert.alert('Success', 'Data exported successfully!');
-      } else {
-        Alert.alert('Success', `Data exported to:\n${filePath}`);
-      }
     } catch (error) {
       console.error('Failed to export data:', error);
       Alert.alert('Error', 'Failed to export data. Please try again.');
