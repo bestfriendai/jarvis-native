@@ -23,8 +23,10 @@ import * as habitsDB from '../../database/habits';
 import { getHabitInsights, HabitInsights } from '../../database/habits';
 import { HabitHeatmap } from '../../components/HabitHeatmap';
 import { HabitInsightsCard } from '../../components/habits/HabitInsightsCard';
+import { HabitReminderPicker } from '../../components/habits/HabitReminderPicker';
 import { AppButton, AppChip, EmptyState, LoadingState } from '../../components/ui';
 import { WeeklyCompletionChart, HabitsComparisonChart } from '../../components/charts';
+import * as notificationService from '../../services/notifications';
 import {
   colors,
   typography,
@@ -169,6 +171,18 @@ export default function HabitsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
+              // Get habit to check for notification ID
+              const habit = await habitsDB.getHabit(habitId);
+
+              // Cancel notification if it exists
+              if (habit?.notificationId) {
+                try {
+                  await notificationService.cancelNotification(habit.notificationId);
+                } catch (error) {
+                  console.warn('[HabitsScreen] Error canceling notification:', error);
+                }
+              }
+
               await habitsDB.deleteHabit(habitId);
               await loadHabits();
             } catch (error) {
@@ -628,6 +642,7 @@ const HabitFormModal: React.FC<HabitFormModalProps> = ({
   const [name, setName] = useState(habit?.name || '');
   const [description, setDescription] = useState(habit?.description || '');
   const [cadence, setCadence] = useState<HabitCadence>(habit?.cadence || 'daily');
+  const [reminderTime, setReminderTime] = useState<string | undefined>(habit?.reminderTime);
   const [nameFocused, setNameFocused] = useState(false);
   const [descFocused, setDescFocused] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -637,6 +652,7 @@ const HabitFormModal: React.FC<HabitFormModalProps> = ({
       setName(habit?.name || '');
       setDescription(habit?.description || '');
       setCadence(habit?.cadence || 'daily');
+      setReminderTime(habit?.reminderTime);
     }
   }, [visible, habit]);
 
@@ -649,12 +665,68 @@ const HabitFormModal: React.FC<HabitFormModalProps> = ({
         name,
         description: description || undefined,
         cadence,
+        reminderTime: reminderTime || undefined,
       };
 
+      let savedHabit: habitsDB.Habit;
+
       if (habit) {
-        await habitsDB.updateHabit(habit.id, data);
+        // Update existing habit
+        savedHabit = await habitsDB.updateHabit(habit.id, data);
+
+        // Handle notification scheduling
+        // Cancel old notification if it exists
+        if (habit.notificationId) {
+          try {
+            await notificationService.cancelNotification(habit.notificationId);
+          } catch (error) {
+            console.warn('[HabitsScreen] Error canceling old notification:', error);
+          }
+        }
+
+        // Schedule new notification if reminder time is set
+        if (reminderTime) {
+          try {
+            const notificationId = await notificationService.scheduleHabitReminder(
+              savedHabit.id,
+              savedHabit.name,
+              reminderTime
+            );
+            await habitsDB.updateHabit(savedHabit.id, { notificationId });
+          } catch (error) {
+            console.warn('[HabitsScreen] Error scheduling notification:', error);
+            Alert.alert(
+              'Reminder Not Set',
+              'Failed to schedule reminder notification. Please check notification permissions.',
+              [{ text: 'OK' }]
+            );
+          }
+        } else {
+          // Clear notification ID if reminder was removed
+          await habitsDB.updateHabit(savedHabit.id, { notificationId: undefined });
+        }
       } else {
-        await habitsDB.createHabit(data);
+        // Create new habit
+        savedHabit = await habitsDB.createHabit(data);
+
+        // Schedule notification if reminder time is set
+        if (reminderTime) {
+          try {
+            const notificationId = await notificationService.scheduleHabitReminder(
+              savedHabit.id,
+              savedHabit.name,
+              reminderTime
+            );
+            await habitsDB.updateHabit(savedHabit.id, { notificationId });
+          } catch (error) {
+            console.warn('[HabitsScreen] Error scheduling notification:', error);
+            Alert.alert(
+              'Reminder Not Set',
+              'Failed to schedule reminder notification. Please check notification permissions.',
+              [{ text: 'OK' }]
+            );
+          }
+        }
       }
 
       onSuccess?.();
@@ -737,6 +809,13 @@ const HabitFormModal: React.FC<HabitFormModalProps> = ({
                   />
                 ))}
               </View>
+            </View>
+
+            <View style={styles.formGroup}>
+              <HabitReminderPicker
+                reminderTime={reminderTime}
+                onReminderChange={setReminderTime}
+              />
             </View>
           </ScrollView>
 
