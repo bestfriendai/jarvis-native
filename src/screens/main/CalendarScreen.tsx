@@ -21,6 +21,8 @@ import { IconButton } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as calendarDB from '../../database/calendar';
+import { detectConflicts, EventConflict } from '../../database/calendar';
+import { ConflictWarning } from '../../components/calendar/ConflictWarning';
 import { AppButton, AppChip, EmptyState, LoadingState } from '../../components/ui';
 import { RecurrencePicker } from '../../components/RecurrencePicker';
 import type { RecurrenceRule } from '../../types';
@@ -350,6 +352,8 @@ const EventFormModal: React.FC<EventFormModalProps> = ({
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
+  const [conflicts, setConflicts] = useState<EventConflict[]>([]);
+  const [showConflictWarning, setShowConflictWarning] = useState(false);
 
   React.useEffect(() => {
     if (visible) {
@@ -380,30 +384,60 @@ const EventFormModal: React.FC<EventFormModalProps> = ({
 
     setIsSubmitting(true);
     try {
-      const data: calendarDB.CreateEventData = {
-        title,
-        description: description || undefined,
+      // Check for conflicts before saving
+      const detectedConflicts = await detectConflicts(
         startTime,
         endTime,
-        location: location || undefined,
-        isAllDay: false,
-        recurrence,
-      };
+        event?.id // Pass current event ID if editing
+      );
 
-      if (event) {
-        await calendarDB.updateEvent(event.id, data);
-      } else {
-        await calendarDB.createEvent(data);
+      if (detectedConflicts.length > 0) {
+        setConflicts(detectedConflicts);
+        setShowConflictWarning(true);
+        setIsSubmitting(false);
+        return; // Stop here and show warning
       }
 
-      onSuccess?.();
-      onClose();
+      // No conflicts, proceed with save
+      await saveEventToDatabase();
     } catch (error) {
       console.error('Error saving event:', error);
       Alert.alert('Error', 'Failed to save event');
-    } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const saveEventToDatabase = async () => {
+    const data: calendarDB.CreateEventData = {
+      title,
+      description: description || undefined,
+      startTime,
+      endTime,
+      location: location || undefined,
+      isAllDay: false,
+      recurrence,
+    };
+
+    if (event) {
+      await calendarDB.updateEvent(event.id, data);
+    } else {
+      await calendarDB.createEvent(data);
+    }
+
+    onSuccess?.();
+    onClose();
+    setIsSubmitting(false);
+  };
+
+  const handleProceedDespiteConflict = async () => {
+    setShowConflictWarning(false);
+    await saveEventToDatabase();
+  };
+
+  const handleViewConflict = (eventId: string) => {
+    // For now, just close the conflict warning
+    // In a full implementation, you could navigate to the conflicting event
+    console.log('[CalendarScreen] View conflict event:', eventId);
   };
 
   const handleDelete = async () => {
@@ -665,6 +699,21 @@ const EventFormModal: React.FC<EventFormModalProps> = ({
           value={recurrence}
           onChange={setRecurrence}
           onClose={() => setShowRecurrencePicker(false)}
+        />
+      </Modal>
+
+      {/* Conflict Warning Modal */}
+      <Modal
+        visible={showConflictWarning}
+        presentationStyle="pageSheet"
+        animationType="slide"
+        onRequestClose={() => setShowConflictWarning(false)}
+      >
+        <ConflictWarning
+          conflicts={conflicts}
+          onViewConflict={handleViewConflict}
+          onProceed={handleProceedDespiteConflict}
+          onCancel={() => setShowConflictWarning(false)}
         />
       </Modal>
     </Modal>
