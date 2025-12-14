@@ -56,6 +56,16 @@ export interface CreateEventData {
 export interface UpdateEventData extends Partial<CreateEventData> {}
 
 /**
+ * Represents an event conflict with overlap information
+ */
+export interface EventConflict {
+  event: CalendarEvent;
+  overlapMinutes: number;
+  overlapStart: string;  // ISO timestamp
+  overlapEnd: string;    // ISO timestamp
+}
+
+/**
  * Convert database row to CalendarEvent object
  */
 function rowToEvent(row: CalendarEventRow): CalendarEvent {
@@ -273,6 +283,97 @@ export async function searchEvents(query: string): Promise<CalendarEvent[]> {
   return rows.map(rowToEvent);
 }
 
+// ============================================================================
+// CONFLICT DETECTION
+// ============================================================================
+
+/**
+ * Detect calendar event conflicts for a given time range
+ * @param startTime - Event start time (ISO string)
+ * @param endTime - Event end time (ISO string)
+ * @param excludeEventId - Optional event ID to exclude (for editing)
+ * @returns Array of conflicting events with overlap details
+ */
+export async function detectConflicts(
+  startTime: string,
+  endTime: string,
+  excludeEventId?: string
+): Promise<EventConflict[]> {
+  // Query for overlapping events
+  // Events overlap if:
+  // 1. Event wraps our timeframe (starts before, ends after)
+  // 2. Event starts during our timeframe
+  // 3. Event ends during our timeframe
+
+  const query = `
+    SELECT * FROM calendar_events
+    WHERE id != ?
+    AND (
+      (start_time < ? AND end_time > ?) OR
+      (start_time >= ? AND start_time < ?) OR
+      (end_time > ? AND end_time <= ?)
+    )
+    ORDER BY start_time ASC
+  `;
+
+  const params = [
+    excludeEventId || '',
+    endTime, startTime,  // Event wraps our timeframe
+    startTime, endTime,  // Event starts during our timeframe
+    startTime, endTime   // Event ends during our timeframe
+  ];
+
+  const overlappingEvents = await executeQuery<CalendarEventRow>(query, params);
+
+  // Calculate overlap duration for each conflict
+  const conflicts: EventConflict[] = overlappingEvents.map(eventRow => {
+    const event = rowToEvent(eventRow);
+
+    // Calculate actual overlap window
+    const overlapStart = new Date(Math.max(
+      new Date(startTime).getTime(),
+      new Date(event.startTime).getTime()
+    ));
+
+    const overlapEnd = new Date(Math.min(
+      new Date(endTime).getTime(),
+      new Date(event.endTime).getTime()
+    ));
+
+    const overlapMinutes = Math.round(
+      (overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60)
+    );
+
+    return {
+      event,
+      overlapMinutes,
+      overlapStart: overlapStart.toISOString(),
+      overlapEnd: overlapEnd.toISOString(),
+    };
+  });
+
+  return conflicts;
+}
+
+/**
+ * Format time range for display (e.g., "2:00 PM - 3:30 PM")
+ */
+export function formatEventTimeRange(startTime: string, endTime: string): string {
+  const start = new Date(startTime);
+  const end = new Date(endTime);
+
+  const formatTime = (date: Date) => {
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    const displayMinutes = minutes.toString().padStart(2, '0');
+    return `${displayHours}:${displayMinutes} ${period}`;
+  };
+
+  return `${formatTime(start)} - ${formatTime(end)}`;
+}
+
 export default {
   getEvents,
   getEventsByDateRange,
@@ -284,4 +385,6 @@ export default {
   deleteEvent,
   getTodayEventsCount,
   searchEvents,
+  detectConflicts,
+  formatEventTimeRange,
 };
