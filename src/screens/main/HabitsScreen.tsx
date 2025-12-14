@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as habitsDB from '../../database/habits';
 import { HabitHeatmap } from '../../components/HabitHeatmap';
 import { AppButton, AppChip, EmptyState, LoadingState } from '../../components/ui';
+import { WeeklyCompletionChart, HabitsComparisonChart } from '../../components/charts';
 import {
   colors,
   typography,
@@ -249,6 +250,15 @@ export default function HabitsScreen() {
           />
         ) : (
           <>
+            {/* Habits Comparison Chart */}
+            {activeHabits.length >= 2 && (
+              <View style={styles.section}>
+                <HabitsComparisonChart
+                  habitIds={activeHabits.slice(0, 5).map((h) => h.id)}
+                />
+              </View>
+            )}
+
             {/* Active Habits */}
             {activeHabits.length > 0 && (
               <View style={styles.section}>
@@ -462,6 +472,11 @@ const HabitCard: React.FC<HabitCardProps> = ({
                   </Text>
                 </View>
               )}
+
+              {/* Weekly Activity Chart */}
+              <View style={styles.chartContainer}>
+                <WeeklyCompletionChart habitId={habit.id} compact />
+              </View>
 
               {/* Milestone Badges */}
               {(() => {
@@ -981,6 +996,10 @@ const styles = StyleSheet.create({
     fontSize: typography.size.xs,
     color: colors.text.tertiary,
     minWidth: 80,
+  },
+  chartContainer: {
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
   },
   // Badge styles
   badgesRow: {
