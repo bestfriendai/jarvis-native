@@ -22,12 +22,15 @@ import * as dashboardDB from '../../database/dashboard';
 import * as tasksDB from '../../database/tasks';
 import * as financeDB from '../../database/finance';
 import * as budgetsDB from '../../database/budgets';
+import * as analyticsDB from '../../database/analytics';
 import { MetricCard } from '../../components/MetricCard';
 import { StartControls } from '../../components/StartControls';
 import { TodaysFocusCard } from '../../components/TodaysFocusCard';
 import { AppCard, AppButton, EmptyState, LoadingState } from '../../components/ui';
 import { DashboardCardSkeleton } from '../../components/dashboard/DashboardCardSkeleton';
+import { DetailedChartModal, ChartDataType } from '../../components/charts/DetailedChartModal';
 import { navigateToItem, navigateToViewAll } from '../../utils/navigation';
+import { calculatePercentageChange } from '../../utils/chartUtils';
 import {
   colors,
   typography,
@@ -51,21 +54,27 @@ export default function DashboardScreen() {
     type: 'idea' | 'study' | 'cash';
     id: string;
   } | null>(null);
+  const [trendData, setTrendData] = useState<analyticsDB.DashboardTrendData | null>(null);
+  const [chartModalVisible, setChartModalVisible] = useState(false);
+  const [selectedChartType, setSelectedChartType] = useState<ChartDataType>('tasks');
+  const [selectedChartTitle, setSelectedChartTitle] = useState('');
   const insets = useSafeAreaInsets();
 
   // Load dashboard data
   const loadData = useCallback(async () => {
     try {
-      const [metricsData, goalsData, alertsData, focusData] = await Promise.all([
+      const [metricsData, goalsData, alertsData, focusData, trendsData] = await Promise.all([
         dashboardDB.getTodayMetrics(),
         dashboardDB.getMacroGoals(),
         budgetsDB.getAlertBudgets(),
         dashboardDB.getTodaysFocus(),
+        analyticsDB.getDashboardTrendData(7),
       ]);
       setMetrics(metricsData);
       setMacroGoals(goalsData);
       setBudgetAlerts(alertsData);
       setTodaysFocus(focusData);
+      setTrendData(trendsData);
     } catch (error) {
       console.error('[Dashboard] Error loading data:', error);
       Alert.alert('Error', 'Failed to load dashboard data');
@@ -196,6 +205,19 @@ export default function DashboardScreen() {
     navigateToViewAll(navigation, type);
   };
 
+  const handleOpenChart = (type: ChartDataType, title: string) => {
+    setSelectedChartType(type);
+    setSelectedChartTitle(title);
+    setChartModalVisible(true);
+  };
+
+  const calculateMetricPercentageChange = (currentData: number[]): number => {
+    if (!currentData || currentData.length < 2) return 0;
+    const current = currentData[currentData.length - 1];
+    const previous = currentData[0];
+    return calculatePercentageChange(current, previous);
+  };
+
   if (isLoading && !metrics) {
     return (
       <ScrollView
@@ -280,26 +302,43 @@ export default function DashboardScreen() {
             <Text style={styles.sectionLabel}>YOUR PROGRESS</Text>
             <View style={styles.metricsGrid}>
               <MetricCard
-                label="Starts today"
+                label="Tasks completed"
                 value={metrics.starts}
                 helper={
                   metrics.starts >= 3
                     ? 'Great momentum!'
-                    : 'Micro-starts fuel progress'
+                    : 'Keep building momentum'
                 }
                 variant={metrics.starts >= 3 ? 'success' : 'default'}
+                trendData={trendData?.tasks}
+                percentageChange={
+                  trendData?.tasks ? calculateMetricPercentageChange(trendData.tasks) : undefined
+                }
+                onPress={() => handleOpenChart('tasks', 'Tasks Completed')}
               />
               <MetricCard
-                label="Study minutes"
+                label="Habits completed"
                 value={metrics.studyMinutes}
-                helper="Daily learning time"
+                helper="Daily habit tracking"
                 variant="info"
+                trendData={trendData?.habits}
+                percentageChange={
+                  trendData?.habits ? calculateMetricPercentageChange(trendData.habits) : undefined
+                }
+                onPress={() => handleOpenChart('habits', 'Habits Completed')}
               />
               <MetricCard
                 label="Cash on hand"
                 value={formatCash(metrics.cash, metrics.currency)}
-                helper={`Latest snapshot`}
+                helper="Latest snapshot"
                 variant="success"
+                trendData={trendData?.spending}
+                percentageChange={
+                  trendData?.spending
+                    ? calculateMetricPercentageChange(trendData.spending)
+                    : undefined
+                }
+                onPress={() => handleOpenChart('spending', 'Daily Spending')}
               />
             </View>
           </View>
@@ -396,6 +435,14 @@ export default function DashboardScreen() {
       >
         {snackbarMessage}
       </Snackbar>
+
+      {/* Detailed Chart Modal */}
+      <DetailedChartModal
+        visible={chartModalVisible}
+        onClose={() => setChartModalVisible(false)}
+        dataType={selectedChartType}
+        title={selectedChartTitle}
+      />
     </ScrollView>
   );
 }
