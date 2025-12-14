@@ -24,7 +24,10 @@ import { getHabitInsights, HabitInsights } from '../../database/habits';
 import { HabitHeatmap } from '../../components/HabitHeatmap';
 import { HabitInsightsCard } from '../../components/habits/HabitInsightsCard';
 import { HabitReminderPicker } from '../../components/habits/HabitReminderPicker';
+import { HabitNotesModal } from '../../components/habits/HabitNotesModal';
+import { HabitLogsView } from '../../components/habits/HabitLogsView';
 import { AppButton, AppChip, EmptyState, LoadingState } from '../../components/ui';
+import * as storage from '../../services/storage';
 import { WeeklyCompletionChart, HabitsComparisonChart } from '../../components/charts';
 import * as notificationService from '../../services/notifications';
 import {
@@ -62,6 +65,13 @@ export default function HabitsScreen() {
   const [selectedHabitInsights, setSelectedHabitInsights] = useState<HabitInsights | null>(null);
   const [showInsightsModal, setShowInsightsModal] = useState(false);
   const [insightsHabitName, setInsightsHabitName] = useState('');
+  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [notesHabitId, setNotesHabitId] = useState<string | null>(null);
+  const [notesHabitName, setNotesHabitName] = useState('');
+  const [promptForNotes, setPromptForNotes] = useState(false);
+  const [showHistoryView, setShowHistoryView] = useState(false);
+  const [historyHabitId, setHistoryHabitId] = useState<string | null>(null);
+  const [historyHabitName, setHistoryHabitName] = useState('');
   const insets = useSafeAreaInsets();
 
   // Load habits from local database
@@ -105,7 +115,17 @@ export default function HabitsScreen() {
 
   useEffect(() => {
     loadHabits();
+    loadNotesPreference();
   }, [loadHabits, refreshTrigger]);
+
+  const loadNotesPreference = async () => {
+    try {
+      const preference = await storage.getItem('habit_notes_prompt_enabled');
+      setPromptForNotes(preference === 'true');
+    } catch (error) {
+      console.error('[HabitsScreen] Error loading notes preference:', error);
+    }
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -118,46 +138,95 @@ export default function HabitsScreen() {
       const today = new Date().toISOString().split('T')[0];
       const isCompleted = await habitsDB.isHabitCompletedToday(habitId);
 
-      // Toggle completion
-      await habitsDB.logHabitCompletion(habitId, today, !isCompleted);
-
-      // Haptic feedback
       if (!isCompleted) {
-        Vibration.vibrate(50);
-      }
-
-      // Reload to get updated streak
-      await loadHabits();
-
-      // Check for milestones after completion
-      if (!isCompleted) {
-        const updatedHabit = await habitsDB.getHabit(habitId);
-        if (updatedHabit) {
-          const streak = updatedHabit.currentStreak;
-          let message = '';
-
-          if (streak === 7) {
-            message = '7 day streak! Keep going!';
-          } else if (streak === 30) {
-            message = '30 days! You are unstoppable!';
-          } else if (streak === 100) {
-            message = '100 DAYS! LEGEND STATUS!';
-          } else if (streak % 10 === 0 && streak > 0) {
-            message = `${streak} day streak!`;
-          }
-
-          if (message) {
-            setCelebratingHabitId(habitId);
-            setCelebrationMessage(message);
-            Vibration.vibrate([100, 50, 100]);
-            setTimeout(() => setCelebratingHabitId(null), 3000);
+        // Completing habit - check if we should prompt for notes
+        if (promptForNotes) {
+          const habit = habits.find((h) => h.id === habitId);
+          if (habit) {
+            setNotesHabitId(habitId);
+            setNotesHabitName(habit.name);
+            setShowNotesModal(true);
+            return;
           }
         }
+
+        // Complete without notes
+        await completeHabit(habitId, undefined);
+      } else {
+        // Uncompleting habit
+        await habitsDB.logHabitCompletion(habitId, today, false);
+        await loadHabits();
       }
     } catch (error) {
       console.error('Error logging habit:', error);
       Alert.alert('Error', 'Failed to log habit completion');
     }
+  };
+
+  const completeHabit = async (habitId: string, notes?: string) => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+
+      // Complete with optional notes
+      await habitsDB.logHabitCompletion(habitId, today, true, notes);
+
+      // Haptic feedback
+      Vibration.vibrate(50);
+
+      // Reload to get updated streak
+      await loadHabits();
+
+      // Check for milestones after completion
+      const updatedHabit = await habitsDB.getHabit(habitId);
+      if (updatedHabit) {
+        const streak = updatedHabit.currentStreak;
+        let message = '';
+
+        if (streak === 7) {
+          message = '7 day streak! Keep going!';
+        } else if (streak === 30) {
+          message = '30 days! You are unstoppable!';
+        } else if (streak === 100) {
+          message = '100 DAYS! LEGEND STATUS!';
+        } else if (streak % 10 === 0 && streak > 0) {
+          message = `${streak} day streak!`;
+        }
+
+        if (message) {
+          setCelebratingHabitId(habitId);
+          setCelebrationMessage(message);
+          Vibration.vibrate([100, 50, 100]);
+          setTimeout(() => setCelebratingHabitId(null), 3000);
+        }
+      }
+    } catch (error) {
+      console.error('Error completing habit:', error);
+      Alert.alert('Error', 'Failed to complete habit');
+    }
+  };
+
+  const handleSaveNotes = async (notes: string) => {
+    if (!notesHabitId) return;
+
+    await completeHabit(notesHabitId, notes);
+    setShowNotesModal(false);
+    setNotesHabitId(null);
+    setNotesHabitName('');
+  };
+
+  const handleSkipNotes = async () => {
+    if (!notesHabitId) return;
+
+    await completeHabit(notesHabitId, undefined);
+    setShowNotesModal(false);
+    setNotesHabitId(null);
+    setNotesHabitName('');
+  };
+
+  const handleViewHistory = (habitId: string, habitName: string) => {
+    setHistoryHabitId(habitId);
+    setHistoryHabitName(habitName);
+    setShowHistoryView(true);
   };
 
   const handleDelete = (habitId: string) => {
@@ -301,6 +370,7 @@ export default function HabitsScreen() {
                     onLogToday={handleLogToday}
                     onViewHeatmap={handleViewHeatmap}
                     onViewInsights={loadInsights}
+                    onViewHistory={handleViewHistory}
                     onEdit={(h) => {
                       setSelectedHabit(h);
                       setShowCreateModal(true);
@@ -326,6 +396,7 @@ export default function HabitsScreen() {
                     onLogToday={handleLogToday}
                     onViewHeatmap={handleViewHeatmap}
                     onViewInsights={loadInsights}
+                    onViewHistory={handleViewHistory}
                     onEdit={(h) => {
                       setSelectedHabit(h);
                       setShowCreateModal(true);
@@ -431,6 +502,42 @@ export default function HabitsScreen() {
           )}
         </View>
       </Modal>
+
+      {/* Notes Modal */}
+      {notesHabitId && (
+        <HabitNotesModal
+          visible={showNotesModal}
+          habitName={notesHabitName}
+          onSave={handleSaveNotes}
+          onSkip={handleSkipNotes}
+          onClose={() => {
+            setShowNotesModal(false);
+            setNotesHabitId(null);
+            setNotesHabitName('');
+          }}
+        />
+      )}
+
+      {/* History View Modal */}
+      <Modal
+        visible={showHistoryView}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowHistoryView(false)}
+      >
+        {historyHabitId && (
+          <HabitLogsView
+            habitId={historyHabitId}
+            habitName={historyHabitName}
+            onClose={() => {
+              setShowHistoryView(false);
+              setHistoryHabitId(null);
+              setHistoryHabitName('');
+              loadHabits(); // Reload habits in case notes were edited
+            }}
+          />
+        )}
+      </Modal>
     </View>
   );
 }
@@ -441,6 +548,7 @@ interface HabitCardProps {
   onLogToday: (id: string) => void;
   onViewHeatmap: (habit: Habit) => void;
   onViewInsights: (habitId: string, habitName: string) => void;
+  onViewHistory: (habitId: string, habitName: string) => void;
   onEdit: (habit: Habit) => void;
   onDelete: (id: string) => void;
   onToggleActive: () => void;
@@ -452,6 +560,7 @@ const HabitCard: React.FC<HabitCardProps> = ({
   onLogToday,
   onViewHeatmap,
   onViewInsights,
+  onViewHistory,
   onEdit,
   onDelete,
   onToggleActive,
@@ -577,6 +686,12 @@ const HabitCard: React.FC<HabitCardProps> = ({
 
           {/* Actions */}
           <View style={styles.habitActions}>
+            <TouchableOpacity
+              onPress={() => onViewHistory(habit.id, habit.name)}
+              style={styles.actionButton}
+            >
+              <Text style={styles.actionButtonText}>History</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={() => onViewInsights(habit.id, habit.name)}
               style={styles.actionButton}
