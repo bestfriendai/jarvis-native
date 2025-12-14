@@ -23,6 +23,8 @@ import { IconButton, SegmentedButtons, Checkbox } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as tasksDB from '../../database/tasks';
 import { AppButton, AppCard, AppChip, EmptyState, LoadingState } from '../../components/ui';
+import { RecurrencePicker } from '../../components/RecurrencePicker';
+import type { RecurrenceRule } from '../../types';
 import {
   colors,
   typography,
@@ -44,6 +46,7 @@ interface Task {
   priority?: TaskPriority;
   dueDate?: string;
   tags: string[];
+  recurrence?: RecurrenceRule;
   project?: { id: string; name: string };
 }
 
@@ -356,15 +359,20 @@ const TaskCard: React.FC<TaskCardProps> = ({
             </TouchableOpacity>
 
             <View style={styles.taskInfo}>
-              <Text
-                style={[
-                  styles.taskTitle,
-                  isCompleted && styles.taskTitleCompleted,
-                ]}
-                numberOfLines={compact ? 1 : 2}
-              >
-                {task.title}
-              </Text>
+              <View style={styles.taskTitleRow}>
+                <Text
+                  style={[
+                    styles.taskTitle,
+                    isCompleted && styles.taskTitleCompleted,
+                  ]}
+                  numberOfLines={compact ? 1 : 2}
+                >
+                  {task.title}
+                </Text>
+                {task.recurrence && (
+                  <Text style={styles.recurrenceIcon}>♻️</Text>
+                )}
+              </View>
               {task.description && !compact && (
                 <Text style={styles.taskDescription} numberOfLines={2}>
                   {task.description}
@@ -555,6 +563,8 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
   const [title, setTitle] = useState(task?.title || '');
   const [description, setDescription] = useState(task?.description || '');
   const [priority, setPriority] = useState<TaskPriority>(task?.priority || 'medium');
+  const [recurrence, setRecurrence] = useState<RecurrenceRule | undefined>(task?.recurrence);
+  const [showRecurrencePicker, setShowRecurrencePicker] = useState(false);
   const [titleFocused, setTitleFocused] = useState(false);
   const [descFocused, setDescFocused] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -564,8 +574,20 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
       setTitle(task?.title || '');
       setDescription(task?.description || '');
       setPriority(task?.priority || 'medium');
+      setRecurrence(task?.recurrence);
     }
   }, [visible, task]);
+
+  const getRecurrenceSummary = (rule: RecurrenceRule): string => {
+    const { frequency, interval } = rule;
+    if (interval === 1) {
+      return `Repeats ${frequency}`;
+    }
+    const unit = frequency === 'daily' ? 'days' :
+                 frequency === 'weekly' ? 'weeks' :
+                 frequency === 'monthly' ? 'months' : 'years';
+    return `Repeats every ${interval} ${unit}`;
+  };
 
   const handleSubmit = async () => {
     if (isSubmitting) return;
@@ -578,6 +600,7 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
         priority,
         status: task?.status || ('todo' as TaskStatus),
         tags: task?.tags || [],
+        recurrence,
       };
 
       if (task) {
@@ -677,6 +700,24 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
                   )}
                 </View>
               </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Recurrence</Text>
+                <TouchableOpacity
+                  style={styles.recurrenceButton}
+                  onPress={() => setShowRecurrencePicker(true)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.recurrenceButtonText}>
+                    {recurrence ? getRecurrenceSummary(recurrence) : 'Does not repeat'}
+                  </Text>
+                  <IconButton
+                    icon="chevron-right"
+                    size={20}
+                    iconColor={colors.text.tertiary}
+                  />
+                </TouchableOpacity>
+              </View>
             </ScrollView>
 
             <View style={styles.modalFooter}>
@@ -697,6 +738,18 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      <Modal
+        visible={showRecurrencePicker}
+        animationType="slide"
+        onRequestClose={() => setShowRecurrencePicker(false)}
+      >
+        <RecurrencePicker
+          value={recurrence}
+          onChange={setRecurrence}
+          onClose={() => setShowRecurrencePicker(false)}
+        />
+      </Modal>
     </Modal>
   );
 };
@@ -801,15 +854,25 @@ const styles = StyleSheet.create({
   taskInfo: {
     flex: 1,
   },
+  taskTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
   taskTitle: {
     fontSize: typography.size.base,
     fontWeight: typography.weight.medium,
     color: colors.text.primary,
     lineHeight: typography.size.base * typography.lineHeight.snug,
+    flex: 1,
   },
   taskTitleCompleted: {
     textDecorationLine: 'line-through',
     color: colors.text.disabled,
+  },
+  recurrenceIcon: {
+    fontSize: typography.size.sm,
+    lineHeight: typography.size.base * typography.lineHeight.snug,
   },
   taskDescription: {
     fontSize: typography.size.sm,
@@ -960,6 +1023,22 @@ const styles = StyleSheet.create({
   },
   priorityChip: {
     marginBottom: spacing.xs,
+  },
+  recurrenceButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.background.secondary,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+    borderRadius: borderRadius.md,
+  },
+  recurrenceButtonText: {
+    fontSize: typography.size.base,
+    color: colors.text.primary,
+    flex: 1,
   },
   modalFooter: {
     flexDirection: 'row',

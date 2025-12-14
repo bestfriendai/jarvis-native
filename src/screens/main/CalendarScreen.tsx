@@ -22,6 +22,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as calendarDB from '../../database/calendar';
 import { AppButton, AppChip, EmptyState, LoadingState } from '../../components/ui';
+import { RecurrencePicker } from '../../components/RecurrencePicker';
+import type { RecurrenceRule } from '../../types';
 import DayTimelineView from '../../components/calendar/DayTimelineView';
 import WeekGridView from '../../components/calendar/WeekGridView';
 import {
@@ -84,7 +86,7 @@ export default function CalendarScreen() {
         ...event,
         startAt: event.startTime,
         endAt: event.endTime,
-        isRecurring: !!event.recurring,
+        isRecurring: !!event.recurrence,
       }));
 
       setEvents(mappedEvents);
@@ -265,7 +267,12 @@ export default function CalendarScreen() {
 
                   <View style={styles.eventContent}>
                     <View style={styles.eventHeader}>
-                      <Text style={styles.eventTitle}>{event.title}</Text>
+                      <View style={styles.eventTitleRow}>
+                        <Text style={styles.eventTitle}>{event.title}</Text>
+                        {event.recurrence && (
+                          <Text style={styles.recurrenceIcon}>♻️</Text>
+                        )}
+                      </View>
                       <AppChip
                         label={formatDate(event.startAt || event.startTime)}
                         variant="info"
@@ -284,10 +291,6 @@ export default function CalendarScreen() {
                         <Text style={styles.locationIcon}>📍</Text>
                         <Text style={styles.locationText}>{event.location}</Text>
                       </View>
-                    )}
-
-                    {event.isRecurring && (
-                      <AppChip label="Recurring" compact style={styles.recurringChip} />
                     )}
                   </View>
                 </TouchableOpacity>
@@ -337,6 +340,8 @@ const EventFormModal: React.FC<EventFormModalProps> = ({
   const [endTime, setEndTime] = useState(
     event?.endTime || new Date(Date.now() + 60 * 60 * 1000).toISOString()
   );
+  const [recurrence, setRecurrence] = useState<RecurrenceRule | undefined>(event?.recurrence);
+  const [showRecurrencePicker, setShowRecurrencePicker] = useState(false);
   const [titleFocused, setTitleFocused] = useState(false);
   const [descFocused, setDescFocused] = useState(false);
   const [locationFocused, setLocationFocused] = useState(false);
@@ -355,8 +360,20 @@ const EventFormModal: React.FC<EventFormModalProps> = ({
       setEndTime(
         event?.endTime || new Date(Date.now() + 60 * 60 * 1000).toISOString()
       );
+      setRecurrence(event?.recurrence);
     }
   }, [visible, event]);
+
+  const getRecurrenceSummary = (rule: RecurrenceRule): string => {
+    const { frequency, interval } = rule;
+    if (interval === 1) {
+      return `Repeats ${frequency}`;
+    }
+    const unit = frequency === 'daily' ? 'days' :
+                 frequency === 'weekly' ? 'weeks' :
+                 frequency === 'monthly' ? 'months' : 'years';
+    return `Repeats every ${interval} ${unit}`;
+  };
 
   const handleSubmit = async () => {
     if (isSubmitting) return;
@@ -370,6 +387,7 @@ const EventFormModal: React.FC<EventFormModalProps> = ({
         endTime,
         location: location || undefined,
         isAllDay: false,
+        recurrence,
       };
 
       if (event) {
@@ -528,6 +546,24 @@ const EventFormModal: React.FC<EventFormModalProps> = ({
                   </TouchableOpacity>
                 </View>
               </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Recurrence</Text>
+                <TouchableOpacity
+                  style={styles.recurrenceButton}
+                  onPress={() => setShowRecurrencePicker(true)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.recurrenceButtonText}>
+                    {recurrence ? getRecurrenceSummary(recurrence) : 'Does not repeat'}
+                  </Text>
+                  <IconButton
+                    icon="chevron-right"
+                    size={20}
+                    iconColor={colors.text.tertiary}
+                  />
+                </TouchableOpacity>
+              </View>
             </ScrollView>
 
             {/* Date/Time Pickers */}
@@ -619,6 +655,18 @@ const EventFormModal: React.FC<EventFormModalProps> = ({
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      <Modal
+        visible={showRecurrencePicker}
+        animationType="slide"
+        onRequestClose={() => setShowRecurrencePicker(false)}
+      >
+        <RecurrencePicker
+          value={recurrence}
+          onChange={setRecurrence}
+          onClose={() => setShowRecurrencePicker(false)}
+        />
+      </Modal>
     </Modal>
   );
 };
@@ -699,12 +747,21 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: spacing.sm,
   },
+  eventTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flex: 1,
+  },
   eventTitle: {
     fontSize: typography.size.md,
     fontWeight: typography.weight.semibold,
     color: colors.text.primary,
     flex: 1,
     marginRight: spacing.sm,
+  },
+  recurrenceIcon: {
+    fontSize: typography.size.sm,
   },
   eventDescription: {
     fontSize: typography.size.sm,
@@ -799,6 +856,22 @@ const styles = StyleSheet.create({
     fontSize: typography.size.sm,
     fontWeight: typography.weight.medium,
     color: colors.text.primary,
+  },
+  recurrenceButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.background.secondary,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+    borderRadius: borderRadius.md,
+  },
+  recurrenceButtonText: {
+    fontSize: typography.size.base,
+    color: colors.text.primary,
+    flex: 1,
   },
   modalFooter: {
     flexDirection: 'row',
