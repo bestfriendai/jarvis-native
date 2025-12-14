@@ -9,3 +9,4 @@ export { AppCard } from './AppCard';
 export { AppChip } from './AppChip';
 export { EmptyState } from './EmptyState';
 export { LoadingState, Skeleton, CardSkeleton } from './LoadingState';
+export { SearchBar } from './SearchBar';
