@@ -44,7 +44,7 @@ export async function requestPermissions(): Promise<boolean> {
     return false;
   }
 
-  // For Android, create notification channel
+  // For Android, create notification channels
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('events', {
       name: 'Event Reminders',
@@ -52,6 +52,15 @@ export async function requestPermissions(): Promise<boolean> {
       importance: Notifications.AndroidImportance.HIGH,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#4A90E2',
+      sound: 'default',
+    });
+
+    await Notifications.setNotificationChannelAsync('habits', {
+      name: 'Habit Reminders',
+      description: 'Daily reminders for your habits',
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#10B981',
       sound: 'default',
     });
   }
@@ -140,6 +149,62 @@ export function addNotificationResponseListener(
 }
 
 /**
+ * Schedule a daily recurring notification for a habit reminder
+ * @param habitId - ID of the habit
+ * @param habitName - Name of the habit
+ * @param reminderTime - Time in "HH:MM" format (24-hour)
+ * @returns Notification ID from Expo (for cancellation)
+ */
+export async function scheduleHabitReminder(
+  habitId: string,
+  habitName: string,
+  reminderTime: string
+): Promise<string> {
+  const hasPermission = await requestPermissions();
+
+  if (!hasPermission) {
+    throw new Error('Notification permission not granted');
+  }
+
+  // Parse reminder time (format: "HH:MM")
+  const [hours, minutes] = reminderTime.split(':').map(Number);
+
+  if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+    throw new Error('Invalid reminder time format. Expected HH:MM in 24-hour format');
+  }
+
+  // Create daily trigger
+  const trigger: any = {
+    hour: hours,
+    minute: minutes,
+    repeats: true,
+  };
+
+  // Add channel for Android
+  if (Platform.OS === 'android') {
+    trigger.channelId = 'habits';
+  }
+
+  const notificationId = await Notifications.scheduleNotificationAsync({
+    content: {
+      title: 'Habit Reminder',
+      body: `Time to complete: ${habitName}`,
+      data: {
+        type: 'habit',
+        habitId,
+        habitName,
+      },
+      sound: true,
+      priority: Notifications.AndroidNotificationPriority.HIGH,
+    },
+    trigger,
+  });
+
+  console.log('[Notifications] Scheduled habit reminder:', notificationId, 'at', reminderTime);
+  return notificationId;
+}
+
+/**
  * Format reminder time for display
  * @param minutes - Minutes before event
  * @returns Human-readable string (e.g., "5 minutes before")
@@ -159,6 +224,7 @@ export function formatReminderTime(minutes: number): string {
 export default {
   requestPermissions,
   scheduleEventNotification,
+  scheduleHabitReminder,
   cancelNotification,
   cancelAllNotifications,
   getAllScheduledNotifications,
