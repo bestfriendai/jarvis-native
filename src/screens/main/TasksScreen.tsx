@@ -29,6 +29,7 @@ import { AppButton, AppCard, AppChip, EmptyState, LoadingState } from '../../com
 import { RecurrencePicker } from '../../components/RecurrencePicker';
 import { ProjectPicker } from '../../components/ProjectPicker';
 import { TaskFilterBar } from '../../components/TaskFilterBar';
+import { BulkActionBar } from '../../components/tasks/BulkActionBar';
 import * as filterStore from '../../store/taskFilterStore';
 import { clearHighlight } from '../../utils/navigation';
 import type { RecurrenceRule } from '../../types';
@@ -87,6 +88,8 @@ export default function TasksScreen() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [filters, setFilters] = useState<filterStore.TaskFilters>(filterStore.getFilters());
+  const [bulkSelectMode, setBulkSelectMode] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
   const insets = useSafeAreaInsets();
 
   // Load persisted filters on mount
@@ -158,6 +161,109 @@ export default function TasksScreen() {
     setFilters(newFilters);
   };
 
+  // Bulk selection handlers
+  const toggleBulkSelectMode = () => {
+    setBulkSelectMode(!bulkSelectMode);
+    setSelectedTaskIds(new Set());
+  };
+
+  const toggleTaskSelection = (taskId: string) => {
+    const newSelected = new Set(selectedTaskIds);
+    if (newSelected.has(taskId)) {
+      newSelected.delete(taskId);
+    } else {
+      newSelected.add(taskId);
+    }
+    setSelectedTaskIds(newSelected);
+  };
+
+  const selectAllTasks = () => {
+    const allIds = new Set(tasks.map(t => t.id));
+    setSelectedTaskIds(allIds);
+  };
+
+  const deselectAllTasks = () => {
+    setSelectedTaskIds(new Set());
+  };
+
+  // Bulk operations
+  const handleBulkComplete = async () => {
+    try {
+      const taskIdsArray = Array.from(selectedTaskIds);
+      await tasksDB.bulkCompleteTasks(taskIdsArray);
+      await loadTasks();
+      setBulkSelectMode(false);
+      setSelectedTaskIds(new Set());
+      Alert.alert('Success', `Completed ${taskIdsArray.length} task(s)`);
+    } catch (error) {
+      console.error('[TasksScreen] Bulk complete error:', error);
+      Alert.alert('Error', 'Failed to complete tasks. Please try again.');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      const taskIdsArray = Array.from(selectedTaskIds);
+      await tasksDB.bulkDeleteTasks(taskIdsArray);
+      await loadTasks();
+      setBulkSelectMode(false);
+      setSelectedTaskIds(new Set());
+      Alert.alert('Success', `Deleted ${taskIdsArray.length} task(s)`);
+    } catch (error) {
+      console.error('[TasksScreen] Bulk delete error:', error);
+      Alert.alert('Error', 'Failed to delete tasks. Please try again.');
+    }
+  };
+
+  const handleBulkChangeStatus = async (status: TaskStatus) => {
+    try {
+      const taskIdsArray = Array.from(selectedTaskIds);
+      await tasksDB.bulkUpdateTasks(taskIdsArray, {
+        status,
+        completedAt: status === 'completed' ? new Date().toISOString() : undefined,
+      });
+      await loadTasks();
+      setBulkSelectMode(false);
+      setSelectedTaskIds(new Set());
+      Alert.alert('Success', `Updated ${taskIdsArray.length} task(s) to ${status}`);
+    } catch (error) {
+      console.error('[TasksScreen] Bulk status change error:', error);
+      Alert.alert('Error', 'Failed to update task status. Please try again.');
+    }
+  };
+
+  const handleBulkChangePriority = async (priority: TaskPriority) => {
+    try {
+      const taskIdsArray = Array.from(selectedTaskIds);
+      await tasksDB.bulkUpdateTasks(taskIdsArray, { priority });
+      await loadTasks();
+      setBulkSelectMode(false);
+      setSelectedTaskIds(new Set());
+      Alert.alert('Success', `Updated ${taskIdsArray.length} task(s) to ${priority} priority`);
+    } catch (error) {
+      console.error('[TasksScreen] Bulk priority change error:', error);
+      Alert.alert('Error', 'Failed to update task priority. Please try again.');
+    }
+  };
+
+  const handleBulkMoveToProject = async (projectId: string | null) => {
+    try {
+      const taskIdsArray = Array.from(selectedTaskIds);
+      await tasksDB.bulkUpdateTasks(taskIdsArray, { projectId });
+      await loadTasks();
+      setBulkSelectMode(false);
+      setSelectedTaskIds(new Set());
+
+      const projectName = projectId
+        ? availableProjects.find(p => p.id === projectId)?.name || 'project'
+        : 'No Project';
+      Alert.alert('Success', `Moved ${taskIdsArray.length} task(s) to ${projectName}`);
+    } catch (error) {
+      console.error('[TasksScreen] Bulk move error:', error);
+      Alert.alert('Error', 'Failed to move tasks. Please try again.');
+    }
+  };
+
   // Extract unique projects and tags from tasks
   const availableProjects = Array.from(
     new Map(
@@ -182,63 +288,101 @@ export default function TasksScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>Tasks</Text>
-          <Text style={styles.subtitle}>
-            {tasks.filter((t) => t.status !== 'completed').length} active
-            {activeFilterCount > 0 && (
-              <Text style={styles.filterBadgeText}> • {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''}</Text>
-            )}
+          <Text style={styles.title}>
+            {bulkSelectMode ? `${selectedTaskIds.size} Selected` : 'Tasks'}
           </Text>
+          {!bulkSelectMode && (
+            <Text style={styles.subtitle}>
+              {tasks.filter((t) => t.status !== 'completed').length} active
+              {activeFilterCount > 0 && (
+                <Text style={styles.filterBadgeText}> • {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''}</Text>
+              )}
+            </Text>
+          )}
         </View>
         <View style={styles.headerActions}>
-          <View style={styles.filterButtonContainer}>
+          {bulkSelectMode ? (
             <IconButton
-              icon="filter-variant"
+              icon="close"
               size={24}
-              onPress={() => setShowFilterModal(true)}
-              iconColor={activeFilterCount > 0 ? colors.primary.main : colors.text.secondary}
-              style={styles.filterButton}
+              onPress={toggleBulkSelectMode}
+              iconColor={colors.text.primary}
             />
-            {activeFilterCount > 0 && (
-              <View style={styles.filterCountBadge}>
-                <Text style={styles.filterCountText}>{activeFilterCount}</Text>
+          ) : (
+            <>
+              <IconButton
+                icon="checkbox-multiple-marked-outline"
+                size={24}
+                onPress={toggleBulkSelectMode}
+                iconColor={colors.text.secondary}
+              />
+              <View style={styles.filterButtonContainer}>
+                <IconButton
+                  icon="filter-variant"
+                  size={24}
+                  onPress={() => setShowFilterModal(true)}
+                  iconColor={activeFilterCount > 0 ? colors.primary.main : colors.text.secondary}
+                  style={styles.filterButton}
+                />
+                {activeFilterCount > 0 && (
+                  <View style={styles.filterCountBadge}>
+                    <Text style={styles.filterCountText}>{activeFilterCount}</Text>
+                  </View>
+                )}
               </View>
-            )}
-          </View>
-          <AppButton
-            title="New Task"
-            onPress={() => {
-              setSelectedTask(null);
-              setShowCreateModal(true);
-            }}
-            size="small"
-          />
+              <AppButton
+                title="New Task"
+                onPress={() => {
+                  setSelectedTask(null);
+                  setShowCreateModal(true);
+                }}
+                size="small"
+              />
+            </>
+          )}
         </View>
       </View>
 
-      {/* View Mode Selector */}
-      <View style={styles.viewSelectorContainer}>
-        <SegmentedButtons
-          value={viewMode}
-          onValueChange={(value) => setViewMode(value as ViewMode)}
-          buttons={[
-            { value: 'list', label: 'List' },
-            { value: 'kanban', label: 'Board' },
-            { value: 'matrix', label: 'Matrix' },
-          ]}
-          style={styles.viewSelector}
-          theme={{
-            colors: {
-              secondaryContainer: colors.primary.main,
-              onSecondaryContainer: '#FFFFFF',
-              onSurface: colors.text.secondary,
-            },
-          }}
+      {/* Bulk Action Bar */}
+      {bulkSelectMode && (
+        <BulkActionBar
+          selectedCount={selectedTaskIds.size}
+          onSelectAll={selectAllTasks}
+          onDeselectAll={deselectAllTasks}
+          onComplete={handleBulkComplete}
+          onDelete={handleBulkDelete}
+          onChangeStatus={handleBulkChangeStatus}
+          onChangePriority={handleBulkChangePriority}
+          onMoveToProject={handleBulkMoveToProject}
+          availableProjects={availableProjects}
         />
-      </View>
+      )}
+
+      {/* View Mode Selector */}
+      {!bulkSelectMode && (
+        <View style={styles.viewSelectorContainer}>
+          <SegmentedButtons
+            value={viewMode}
+            onValueChange={(value) => setViewMode(value as ViewMode)}
+            buttons={[
+              { value: 'list', label: 'List' },
+              { value: 'kanban', label: 'Board' },
+              { value: 'matrix', label: 'Matrix' },
+            ]}
+            style={styles.viewSelector}
+            theme={{
+              colors: {
+                secondaryContainer: colors.primary.main,
+                onSecondaryContainer: '#FFFFFF',
+                onSurface: colors.text.secondary,
+              },
+            }}
+          />
+        </View>
+      )}
 
       {/* Filters */}
-      {viewMode === 'list' && (
+      {viewMode === 'list' && !bulkSelectMode && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -298,6 +442,9 @@ export default function TasksScreen() {
                     onDelete={handleDelete}
                     highlightId={params?.highlightId}
                     onHighlightComplete={() => clearHighlight(navigation)}
+                    bulkSelectMode={bulkSelectMode}
+                    selected={selectedTaskIds.has(task.id)}
+                    onToggleSelect={() => toggleTaskSelection(task.id)}
                   />
                 ))}
               </View>
@@ -308,6 +455,9 @@ export default function TasksScreen() {
                 onStatusChange={handleStatusChange}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                bulkSelectMode={bulkSelectMode}
+                selectedTaskIds={selectedTaskIds}
+                onToggleSelect={toggleTaskSelection}
               />
             )}
             {viewMode === 'matrix' && (
@@ -316,6 +466,9 @@ export default function TasksScreen() {
                 onStatusChange={handleStatusChange}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                bulkSelectMode={bulkSelectMode}
+                selectedTaskIds={selectedTaskIds}
+                onToggleSelect={toggleTaskSelection}
               />
             )}
           </>
@@ -602,6 +755,9 @@ interface KanbanViewProps {
   onStatusChange: (id: string, status: TaskStatus) => void;
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
+  bulkSelectMode?: boolean;
+  selectedTaskIds?: Set<string>;
+  onToggleSelect?: (taskId: string) => void;
 }
 
 const KanbanView: React.FC<KanbanViewProps> = ({
@@ -609,6 +765,9 @@ const KanbanView: React.FC<KanbanViewProps> = ({
   onStatusChange,
   onEdit,
   onDelete,
+  bulkSelectMode = false,
+  selectedTaskIds = new Set(),
+  onToggleSelect,
 }) => {
   const columns: TaskStatus[] = ['todo', 'in_progress', 'blocked', 'completed'];
 
@@ -639,6 +798,9 @@ const KanbanView: React.FC<KanbanViewProps> = ({
                     onEdit={onEdit}
                     onDelete={onDelete}
                     compact
+                    bulkSelectMode={bulkSelectMode}
+                    selected={selectedTaskIds.has(task.id)}
+                    onToggleSelect={() => onToggleSelect?.(task.id)}
                   />
                 ))}
               </ScrollView>
@@ -656,6 +818,9 @@ interface MatrixViewProps {
   onStatusChange: (id: string, status: TaskStatus) => void;
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
+  bulkSelectMode?: boolean;
+  selectedTaskIds?: Set<string>;
+  onToggleSelect?: (taskId: string) => void;
 }
 
 const MatrixView: React.FC<MatrixViewProps> = ({
@@ -663,6 +828,9 @@ const MatrixView: React.FC<MatrixViewProps> = ({
   onStatusChange,
   onEdit,
   onDelete,
+  bulkSelectMode = false,
+  selectedTaskIds = new Set(),
+  onToggleSelect,
 }) => {
   const matrix = {
     urgent: tasks.filter(
@@ -705,6 +873,9 @@ const MatrixView: React.FC<MatrixViewProps> = ({
               onEdit={onEdit}
               onDelete={onDelete}
               compact
+              bulkSelectMode={bulkSelectMode}
+              selected={selectedTaskIds.has(task.id)}
+              onToggleSelect={() => onToggleSelect?.(task.id)}
             />
           ))}
         </View>
