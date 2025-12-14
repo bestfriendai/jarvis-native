@@ -55,7 +55,7 @@ export function ReminderPicker({ value, onChange }: ReminderPickerProps) {
               <Icon
                 name={option.icon}
                 size={20}
-                color={isSelected ? colors.primary : colors.textSecondary}
+                color={isSelected ? colors.primary.main : colors.text.secondary}
                 style={styles.optionIcon}
               />
               <Text
@@ -79,9 +79,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   label: {
-    ...typography.body,
+    fontSize: typography.size.base,
+    fontFamily: typography.fontFamily.semibold,
     fontWeight: '600',
-    color: colors.textPrimary,
+    color: colors.text.primary,
     marginBottom: spacing.sm,
   },
   optionsContainer: {
@@ -95,24 +96,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.md,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background.secondary,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.border.default,
   },
   optionButtonSelected: {
-    backgroundColor: colors.primaryLight,
-    borderColor: colors.primary,
+    backgroundColor: colors.primary.light,
+    borderColor: colors.primary.main,
   },
   optionIcon: {
     marginRight: spacing.xs,
   },
   optionLabel: {
-    ...typography.body,
-    color: colors.textSecondary,
     fontSize: 13,
+    fontFamily: typography.fontFamily.regular,
+    color: colors.text.secondary,
   },
   optionLabelSelected: {
-    color: colors.primary,
+    color: colors.primary.main,
     fontWeight: '600',
   },
 });

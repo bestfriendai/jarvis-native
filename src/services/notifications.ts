@@ -14,6 +14,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -76,6 +78,10 @@ export async function scheduleEventNotification(
     throw new Error('Cannot schedule notification for past time');
   }
 
+  const trigger: any = Platform.OS === 'android'
+    ? { date: params.triggerDate, channelId: 'events' }
+    : { date: params.triggerDate };
+
   const notificationId = await Notifications.scheduleNotificationAsync({
     content: {
       title: params.title,
@@ -84,10 +90,7 @@ export async function scheduleEventNotification(
       sound: true,
       priority: Notifications.AndroidNotificationPriority.HIGH,
     },
-    trigger: {
-      date: params.triggerDate,
-      channelId: Platform.OS === 'android' ? 'events' : undefined,
-    },
+    trigger,
   });
 
   console.log('[Notifications] Scheduled notification:', notificationId, 'for', params.triggerDate);
