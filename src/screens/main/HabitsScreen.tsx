@@ -27,6 +27,7 @@ import { HabitReminderPicker } from '../../components/habits/HabitReminderPicker
 import { HabitNotesModal } from '../../components/habits/HabitNotesModal';
 import { HabitLogsView } from '../../components/habits/HabitLogsView';
 import { AppButton, AppChip, EmptyState, LoadingState } from '../../components/ui';
+import { HabitCardSkeleton } from '../../components/habits/HabitCardSkeleton';
 import * as storage from '../../services/storage';
 import { WeeklyCompletionChart, HabitsComparisonChart } from '../../components/charts';
 import * as notificationService from '../../services/notifications';
@@ -336,7 +337,26 @@ export default function HabitsScreen() {
   const inactiveHabits = habits.filter((h) => !h.isActive);
 
   if (isLoading && habits.length === 0) {
-    return <LoadingState fullScreen message="Loading habits..." />;
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.title}>Habits</Text>
+          </View>
+        </View>
+        <ScrollView
+          style={styles.content}
+          accessible
+          accessibilityLabel="Loading habits"
+          accessibilityRole="progressbar"
+        >
+          <HabitCardSkeleton />
+          <HabitCardSkeleton />
+          <HabitCardSkeleton />
+          <HabitCardSkeleton />
+        </ScrollView>
+      </View>
+    );
   }
 
   return (

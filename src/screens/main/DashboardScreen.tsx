@@ -26,6 +26,7 @@ import { MetricCard } from '../../components/MetricCard';
 import { StartControls } from '../../components/StartControls';
 import { TodaysFocusCard } from '../../components/TodaysFocusCard';
 import { AppCard, AppButton, EmptyState, LoadingState } from '../../components/ui';
+import { DashboardCardSkeleton } from '../../components/dashboard/DashboardCardSkeleton';
 import { navigateToItem, navigateToViewAll } from '../../utils/navigation';
 import {
   colors,
@@ -196,7 +197,36 @@ export default function DashboardScreen() {
   };
 
   if (isLoading && !metrics) {
-    return <LoadingState fullScreen message="Loading your dashboard..." />;
+    return (
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[
+          styles.contentContainer,
+          { paddingBottom: insets.bottom + spacing['3xl'] },
+        ]}
+        accessible
+        accessibilityLabel="Loading dashboard"
+        accessibilityRole="progressbar"
+      >
+        <View style={[styles.content, { paddingTop: insets.top + spacing.base }]}>
+          <View style={styles.header}>
+            <View style={styles.headerContent}>
+              <View>
+                <Text style={styles.dateLabel}>TODAY</Text>
+                <Text style={styles.dateText}>{getFormattedDate()}</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.metricsGrid}>
+            <DashboardCardSkeleton showChart />
+            <DashboardCardSkeleton showChart />
+            <DashboardCardSkeleton />
+            <DashboardCardSkeleton />
+          </View>
+        </View>
+      </ScrollView>
+    );
   }
 
   return (

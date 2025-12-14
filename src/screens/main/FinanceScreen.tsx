@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as financeDB from '../../database/finance';
 import * as budgetsDB from '../../database/budgets';
 import { AppButton, AppChip, EmptyState, LoadingState, AppCard } from '../../components/ui';
+import { TransactionCardSkeleton } from '../../components/finance/TransactionCardSkeleton';
 import { MetricCard } from '../../components/MetricCard';
 import { BudgetCard } from '../../components/BudgetCard';
 import { BudgetFormModal } from '../../components/BudgetFormModal';
@@ -170,7 +171,29 @@ export default function FinanceScreen() {
   };
 
   if (isLoading && !summary) {
-    return <LoadingState fullScreen message="Loading finances..." />;
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.title}>Finance</Text>
+          </View>
+        </View>
+        <ScrollView
+          style={styles.content}
+          accessible
+          accessibilityLabel="Loading finances"
+          accessibilityRole="progressbar"
+        >
+          <TransactionCardSkeleton />
+          <TransactionCardSkeleton />
+          <TransactionCardSkeleton />
+          <TransactionCardSkeleton />
+          <TransactionCardSkeleton />
+          <TransactionCardSkeleton />
+          <TransactionCardSkeleton />
+        </ScrollView>
+      </View>
+    );
   }
 
   return (

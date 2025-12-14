@@ -25,6 +25,7 @@ import { detectConflicts, EventConflict } from '../../database/calendar';
 import { ConflictWarning } from '../../components/calendar/ConflictWarning';
 import { ReminderPicker } from '../../components/calendar/ReminderPicker';
 import { AppButton, AppChip, EmptyState, LoadingState } from '../../components/ui';
+import { CalendarEventSkeleton } from '../../components/calendar/CalendarEventSkeleton';
 import { RecurrencePicker } from '../../components/RecurrencePicker';
 import type { RecurrenceRule } from '../../types';
 import DayTimelineView from '../../components/calendar/DayTimelineView';
@@ -166,7 +167,28 @@ export default function CalendarScreen() {
   };
 
   if (isLoading && events.length === 0) {
-    return <LoadingState fullScreen message="Loading calendar..." />;
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.title}>Calendar</Text>
+          </View>
+        </View>
+        <ScrollView
+          style={styles.content}
+          accessible
+          accessibilityLabel="Loading calendar events"
+          accessibilityRole="progressbar"
+        >
+          <CalendarEventSkeleton />
+          <CalendarEventSkeleton />
+          <CalendarEventSkeleton />
+          <CalendarEventSkeleton />
+          <CalendarEventSkeleton />
+          <CalendarEventSkeleton />
+        </ScrollView>
+      </View>
+    );
   }
 
   return (

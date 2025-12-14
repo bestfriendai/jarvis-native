@@ -26,6 +26,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import * as tasksDB from '../../database/tasks';
 import type { Project } from '../../database/projects';
 import { AppButton, AppCard, AppChip, EmptyState, LoadingState } from '../../components/ui';
+import { TaskCardSkeleton } from '../../components/tasks/TaskCardSkeleton';
 import { RecurrencePicker } from '../../components/RecurrencePicker';
 import { ProjectPicker } from '../../components/ProjectPicker';
 import { TaskFilterBar } from '../../components/TaskFilterBar';
@@ -314,7 +315,27 @@ export default function TasksScreen() {
   const activeFilterCount = filterStore.countActiveFilters(filters);
 
   if (isLoading && tasks.length === 0) {
-    return <LoadingState fullScreen message="Loading tasks..." />;
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.title}>Tasks</Text>
+          </View>
+        </View>
+        <ScrollView
+          style={styles.content}
+          accessible
+          accessibilityLabel="Loading tasks"
+          accessibilityRole="progressbar"
+        >
+          <TaskCardSkeleton />
+          <TaskCardSkeleton />
+          <TaskCardSkeleton />
+          <TaskCardSkeleton />
+          <TaskCardSkeleton />
+        </ScrollView>
+      </View>
+    );
   }
 
   return (
