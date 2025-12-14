@@ -30,6 +30,7 @@ import { AppButton, AppChip, EmptyState, LoadingState } from '../../components/u
 import * as storage from '../../services/storage';
 import { WeeklyCompletionChart, HabitsComparisonChart } from '../../components/charts';
 import * as notificationService from '../../services/notifications';
+import { useOptimisticUpdate } from '../../hooks/useOptimisticUpdate';
 import {
   colors,
   typography,
@@ -73,6 +74,7 @@ export default function HabitsScreen() {
   const [historyHabitId, setHistoryHabitId] = useState<string | null>(null);
   const [historyHabitName, setHistoryHabitName] = useState('');
   const insets = useSafeAreaInsets();
+  const { updateOptimistically, isPending } = useOptimisticUpdate();
 
   // Load habits from local database
   const loadHabits = useCallback(async () => {
@@ -136,26 +138,44 @@ export default function HabitsScreen() {
   const handleLogToday = async (habitId: string) => {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const isCompleted = await habitsDB.isHabitCompletedToday(habitId);
+      const habit = habits.find((h) => h.id === habitId);
+      if (!habit) return;
+
+      const isCompleted = (habit.completionsToday || 0) > 0;
 
       if (!isCompleted) {
         // Completing habit - check if we should prompt for notes
         if (promptForNotes) {
-          const habit = habits.find((h) => h.id === habitId);
-          if (habit) {
-            setNotesHabitId(habitId);
-            setNotesHabitName(habit.name);
-            setShowNotesModal(true);
-            return;
-          }
+          setNotesHabitId(habitId);
+          setNotesHabitName(habit.name);
+          setShowNotesModal(true);
+          return;
         }
 
-        // Complete without notes
-        await completeHabit(habitId, undefined);
+        // Complete without notes - optimistic update
+        await completeHabitOptimistic(habitId, undefined);
       } else {
-        // Uncompleting habit
-        await habitsDB.logHabitCompletion(habitId, today, false);
-        await loadHabits();
+        // Uncompleting habit - optimistic update
+        const previousHabits = [...habits];
+        const updatedHabits = habits.map(h =>
+          h.id === habitId
+            ? { ...h, completionsToday: 0 }
+            : h
+        );
+
+        await updateOptimistically(
+          () => setHabits(updatedHabits),
+          async () => {
+            await habitsDB.logHabitCompletion(habitId, today, false);
+            await loadHabits();
+          },
+          {
+            onError: (error) => {
+              console.error('[HabitsScreen] Error uncompleting habit:', error);
+              setHabits(previousHabits);
+            },
+          }
+        );
       }
     } catch (error) {
       console.error('Error logging habit:', error);
@@ -163,47 +183,62 @@ export default function HabitsScreen() {
     }
   };
 
-  const completeHabit = async (habitId: string, notes?: string) => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
+  const completeHabitOptimistic = async (habitId: string, notes?: string) => {
+    const previousHabits = [...habits];
+    const habit = habits.find(h => h.id === habitId);
+    if (!habit) return;
 
-      // Complete with optional notes
-      await habitsDB.logHabitCompletion(habitId, today, true, notes);
+    // Optimistic update - mark as completed
+    const updatedHabits = habits.map(h =>
+      h.id === habitId
+        ? { ...h, completionsToday: 1, currentStreak: (h.currentStreak || 0) + 1 }
+        : h
+    );
 
-      // Haptic feedback
-      Vibration.vibrate(50);
+    await updateOptimistically(
+      () => {
+        setHabits(updatedHabits);
+        Vibration.vibrate(50); // Haptic feedback
+      },
+      async () => {
+        const today = new Date().toISOString().split('T')[0];
+        await habitsDB.logHabitCompletion(habitId, today, true, notes);
+        await loadHabits(); // Reload to get accurate streak
 
-      // Reload to get updated streak
-      await loadHabits();
+        // Check for milestones after completion
+        const updatedHabit = await habitsDB.getHabit(habitId);
+        if (updatedHabit) {
+          const streak = updatedHabit.currentStreak;
+          let message = '';
 
-      // Check for milestones after completion
-      const updatedHabit = await habitsDB.getHabit(habitId);
-      if (updatedHabit) {
-        const streak = updatedHabit.currentStreak;
-        let message = '';
+          if (streak === 7) {
+            message = '7 day streak! Keep going!';
+          } else if (streak === 30) {
+            message = '30 days! You are unstoppable!';
+          } else if (streak === 100) {
+            message = '100 DAYS! LEGEND STATUS!';
+          } else if (streak % 10 === 0 && streak > 0) {
+            message = `${streak} day streak!`;
+          }
 
-        if (streak === 7) {
-          message = '7 day streak! Keep going!';
-        } else if (streak === 30) {
-          message = '30 days! You are unstoppable!';
-        } else if (streak === 100) {
-          message = '100 DAYS! LEGEND STATUS!';
-        } else if (streak % 10 === 0 && streak > 0) {
-          message = `${streak} day streak!`;
+          if (message) {
+            setCelebratingHabitId(habitId);
+            setCelebrationMessage(message);
+            Vibration.vibrate([100, 50, 100]);
+            setTimeout(() => setCelebratingHabitId(null), 3000);
+          }
         }
-
-        if (message) {
-          setCelebratingHabitId(habitId);
-          setCelebrationMessage(message);
-          Vibration.vibrate([100, 50, 100]);
-          setTimeout(() => setCelebratingHabitId(null), 3000);
-        }
+      },
+      {
+        onError: (error) => {
+          console.error('[HabitsScreen] Error completing habit:', error);
+          setHabits(previousHabits);
+        },
       }
-    } catch (error) {
-      console.error('Error completing habit:', error);
-      Alert.alert('Error', 'Failed to complete habit');
-    }
+    );
   };
+
+  const completeHabit = completeHabitOptimistic;
 
   const handleSaveNotes = async (notes: string) => {
     if (!notesHabitId) return;
@@ -308,11 +343,18 @@ export default function HabitsScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <View>
+        <View style={styles.headerLeft}>
           <Text style={styles.title}>Habits</Text>
-          <Text style={styles.subtitle}>
-            {activeHabits.length} active habit{activeHabits.length !== 1 ? 's' : ''}
-          </Text>
+          <View style={styles.subtitleRow}>
+            <Text style={styles.subtitle}>
+              {activeHabits.length} active habit{activeHabits.length !== 1 ? 's' : ''}
+            </Text>
+            {isPending && (
+              <View style={styles.savingIndicator}>
+                <Text style={styles.savingText}>Saving...</Text>
+              </View>
+            )}
+          </View>
         </View>
         <AppButton
           title="New Habit"
@@ -968,15 +1010,34 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: spacing.base,
   },
+  headerLeft: {
+    flex: 1,
+  },
   title: {
     fontSize: typography.size['2xl'],
     fontWeight: typography.weight.bold,
     color: colors.text.primary,
   },
+  subtitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
   subtitle: {
     fontSize: typography.size.sm,
     color: colors.text.tertiary,
-    marginTop: spacing.xs,
+  },
+  savingIndicator: {
+    backgroundColor: colors.primary.light,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+  },
+  savingText: {
+    fontSize: typography.size.xs,
+    color: colors.primary.main,
+    fontWeight: typography.weight.medium,
   },
   content: {
     flex: 1,
