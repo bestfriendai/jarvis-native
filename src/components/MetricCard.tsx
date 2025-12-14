@@ -2,11 +2,14 @@
  * MetricCard Component
  * Displays a single metric with label, value, and optional helper text
  * Professional, polished design with proper theming
+ * Now supports sparklines and percentage change indicators
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, ViewStyle, TouchableOpacity } from 'react-native';
 import { colors, typography, spacing, borderRadius, shadows } from '../theme';
+import { Sparkline, SparklineTrend } from './charts/Sparkline';
+import { PercentageChange } from './charts/PercentageChange';
 
 type MetricVariant = 'default' | 'success' | 'warning' | 'danger' | 'info';
 
@@ -17,6 +20,9 @@ interface MetricCardProps {
   variant?: MetricVariant;
   style?: ViewStyle;
   compact?: boolean;
+  trendData?: number[];
+  percentageChange?: number;
+  onPress?: () => void;
 }
 
 export const MetricCard: React.FC<MetricCardProps> = ({
@@ -26,6 +32,9 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   variant = 'default',
   style,
   compact = false,
+  trendData,
+  percentageChange,
+  onPress,
 }) => {
   const getAccentColor = () => {
     switch (variant) {
@@ -57,8 +66,15 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     }
   };
 
-  return (
-    <View style={[styles.card, compact && styles.cardCompact, style]}>
+  const getTrendDirection = (): SparklineTrend => {
+    if (percentageChange === undefined) return 'neutral';
+    if (percentageChange > 0) return 'positive';
+    if (percentageChange < 0) return 'negative';
+    return 'neutral';
+  };
+
+  const CardContent = (
+    <>
       {/* Accent bar */}
       <View
         style={[
@@ -83,7 +99,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
             {value}
           </Text>
 
-          {variant !== 'default' && (
+          {variant !== 'default' && !percentageChange && (
             <View
               style={[
                 styles.badge,
@@ -100,12 +116,55 @@ export const MetricCard: React.FC<MetricCardProps> = ({
           )}
         </View>
 
+        {/* Sparkline and percentage change */}
+        {(trendData || percentageChange !== undefined) && (
+          <View style={styles.trendContainer}>
+            {trendData && trendData.length > 0 && (
+              <Sparkline
+                data={trendData}
+                width={100}
+                height={40}
+                trend={getTrendDirection()}
+                strokeWidth={2}
+                smooth
+              />
+            )}
+            {percentageChange !== undefined && (
+              <PercentageChange
+                value={percentageChange}
+                label="vs last week"
+                showIcon
+                size="sm"
+                variant="inline"
+              />
+            )}
+          </View>
+        )}
+
         {helper && (
           <Text style={styles.helper} numberOfLines={2}>
             {helper}
           </Text>
         )}
       </View>
+    </>
+  );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity
+        style={[styles.card, compact && styles.cardCompact, style]}
+        onPress={onPress}
+        activeOpacity={0.7}
+      >
+        {CardContent}
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <View style={[styles.card, compact && styles.cardCompact, style]}>
+      {CardContent}
     </View>
   );
 };
@@ -162,6 +221,13 @@ const styles = StyleSheet.create({
     fontSize: typography.size.sm,
     color: colors.text.tertiary,
     lineHeight: typography.size.sm * typography.lineHeight.relaxed,
+  },
+  trendContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.sm,
+    gap: spacing.sm,
   },
 });
 
