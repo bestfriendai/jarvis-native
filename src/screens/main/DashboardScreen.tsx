@@ -26,6 +26,7 @@ import { MetricCard } from '../../components/MetricCard';
 import { StartControls } from '../../components/StartControls';
 import { TodaysFocusCard } from '../../components/TodaysFocusCard';
 import { AppCard, AppButton, EmptyState, LoadingState } from '../../components/ui';
+import { navigateToItem, navigateToViewAll } from '../../utils/navigation';
 import {
   colors,
   typography,
@@ -187,23 +188,11 @@ export default function DashboardScreen() {
   };
 
   const handleFocusNavigate = (type: 'task' | 'habit' | 'event', id: string) => {
-    if (type === 'task') {
-      navigation.navigate('Tasks' as never);
-    } else if (type === 'habit') {
-      navigation.navigate('Habits' as never);
-    } else if (type === 'event') {
-      navigation.navigate('Calendar' as never);
-    }
+    navigateToItem(navigation, type, id);
   };
 
   const handleFocusViewAll = (type: 'tasks' | 'habits' | 'events') => {
-    if (type === 'tasks') {
-      navigation.navigate('Tasks' as never);
-    } else if (type === 'habits') {
-      navigation.navigate('Habits' as never);
-    } else if (type === 'events') {
-      navigation.navigate('Calendar' as never);
-    }
+    navigateToViewAll(navigation, type);
   };
 
   if (isLoading && !metrics) {

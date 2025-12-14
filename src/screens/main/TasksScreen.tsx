@@ -21,6 +21,7 @@ import {
 } from 'react-native';
 import { IconButton, SegmentedButtons, Checkbox, Badge } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import * as tasksDB from '../../database/tasks';
 import type { Project } from '../../database/projects';
 import { AppButton, AppCard, AppChip, EmptyState, LoadingState } from '../../components/ui';
@@ -28,6 +29,7 @@ import { RecurrencePicker } from '../../components/RecurrencePicker';
 import { ProjectPicker } from '../../components/ProjectPicker';
 import { TaskFilterBar } from '../../components/TaskFilterBar';
 import * as filterStore from '../../store/taskFilterStore';
+import { clearHighlight } from '../../utils/navigation';
 import type { RecurrenceRule } from '../../types';
 import {
   colors,
@@ -71,6 +73,9 @@ const PRIORITY_CONFIG: Record<TaskPriority, { color: string; label: string }> = 
 };
 
 export default function TasksScreen() {
+  const route = useRoute();
+  const navigation = useNavigation();
+  const params = route.params as { highlightId?: string; scrollTo?: boolean } | undefined;
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -290,6 +295,8 @@ export default function TasksScreen() {
                     onStatusChange={handleStatusChange}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
+                    highlightId={params?.highlightId}
+                    onHighlightComplete={() => clearHighlight(navigation)}
                   />
                 ))}
               </View>
@@ -346,6 +353,8 @@ interface TaskCardProps {
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
   compact?: boolean;
+  highlightId?: string;
+  onHighlightComplete?: () => void;
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({
@@ -354,7 +363,15 @@ const TaskCard: React.FC<TaskCardProps> = ({
   onEdit,
   onDelete,
   compact = false,
+  highlightId,
+  onHighlightComplete,
 }) => {
+  const useHighlight = require('../../hooks/useHighlight').default;
+  const { shouldHighlight, highlightOpacity, highlightScale } = useHighlight({
+    highlightId,
+    itemId: task.id,
+    onComplete: onHighlightComplete,
+  });
   const [scaleValue] = useState(new Animated.Value(1));
   const isCompleted = task.status === 'completed';
 
@@ -388,7 +405,12 @@ const TaskCard: React.FC<TaskCardProps> = ({
   };
 
   return (
-    <Animated.View style={{ transform: [{ scale: scaleValue }] }}>
+    <Animated.View style={{
+      transform: [
+        { scale: shouldHighlight ? highlightScale : scaleValue }
+      ],
+      opacity: shouldHighlight ? highlightOpacity : 1,
+    }}>
       <TouchableOpacity
         onPress={() => onEdit(task)}
         onPressIn={handlePressIn}
@@ -399,6 +421,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
           compact && styles.taskCardCompact,
           { borderLeftWidth: 4, borderLeftColor: borderColor },
           isOverdue && styles.taskCardOverdue,
+          shouldHighlight && styles.taskCardHighlight,
         ]}
       >
         <View style={styles.taskContent}>
@@ -970,6 +993,14 @@ const styles = StyleSheet.create({
   },
   taskCardOverdue: {
     backgroundColor: `${colors.error}10`,
+  },
+  taskCardHighlight: {
+    backgroundColor: `${colors.primary.main}15`,
+    shadowColor: colors.primary.main,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
   },
   taskContent: {
     flex: 1,
