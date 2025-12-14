@@ -9,6 +9,9 @@ import { CategoryPieChart } from './CategoryPieChart';
 import { MonthlyComparisonChart } from './MonthlyComparisonChart';
 import { WeeklyCompletionChart } from './WeeklyCompletionChart';
 import { HabitsComparisonChart } from './HabitsComparisonChart';
+import { Sparkline } from './Sparkline';
+import { PercentageChange } from './PercentageChange';
+import { DetailedChartModal } from './DetailedChartModal';
 
 export {
   BaseChart,
@@ -18,6 +21,9 @@ export {
   MonthlyComparisonChart,
   WeeklyCompletionChart,
   HabitsComparisonChart,
+  Sparkline,
+  PercentageChange,
+  DetailedChartModal,
 };
 
 export default {
@@ -28,4 +34,7 @@ export default {
   MonthlyComparisonChart,
   WeeklyCompletionChart,
   HabitsComparisonChart,
+  Sparkline,
+  PercentageChange,
+  DetailedChartModal,
 };
