@@ -52,6 +52,32 @@ async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
     console.log('[DB] Migration: finance_budgets table already exists or error:', error);
   }
 
+  // Migration 3: Add reminder fields to calendar_events
+  try {
+    const tableInfo = await db.getAllAsync<{ name: string }>(
+      'PRAGMA table_info(calendar_events)'
+    );
+
+    const hasReminderMinutes = tableInfo.some(col => col.name === 'reminder_minutes');
+    const hasNotificationId = tableInfo.some(col => col.name === 'notification_id');
+
+    if (!hasReminderMinutes) {
+      await db.execAsync('ALTER TABLE calendar_events ADD COLUMN reminder_minutes INTEGER;');
+      console.log('[DB] Migration: Added reminder_minutes column');
+    }
+
+    if (!hasNotificationId) {
+      await db.execAsync('ALTER TABLE calendar_events ADD COLUMN notification_id TEXT;');
+      console.log('[DB] Migration: Added notification_id column');
+    }
+
+    if (hasReminderMinutes && hasNotificationId) {
+      console.log('[DB] Migration: Reminder fields already exist');
+    }
+  } catch (error) {
+    console.error('[DB] Migration: Error adding reminder fields:', error);
+  }
+
   console.log('[DB] Migrations complete');
 }
 

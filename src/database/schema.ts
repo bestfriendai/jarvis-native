@@ -83,6 +83,8 @@ export const CREATE_TABLES = {
       attendees TEXT,
       is_all_day INTEGER DEFAULT 0,
       recurring TEXT,
+      reminder_minutes INTEGER,
+      notification_id TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       synced INTEGER DEFAULT 0
@@ -189,3 +191,11 @@ export const DROP_TABLES = [
   'DROP TABLE IF EXISTS finance_liabilities',
   'DROP TABLE IF EXISTS finance_budgets',
 ];
+
+/**
+ * Migration helper types
+ */
+export interface MigrationFunction {
+  name: string;
+  run: (db: any) => Promise<void>;
+}
