@@ -29,6 +29,7 @@ import {
   borderRadius,
   shadows,
 } from '../../theme';
+import * as storage from '../../services/storage';
 import { getTasks } from '../../database/tasks';
 import { getHabits } from '../../database/habits';
 import { getEvents } from '../../database/calendar';
@@ -60,16 +61,21 @@ export default function SettingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [notificationsPermissionStatus, setNotificationsPermissionStatus] = useState<string>('undetermined');
+  const [habitNotesPrompt, setHabitNotesPrompt] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [totalRecords, setTotalRecords] = useState(0);
   const insets = useSafeAreaInsets();
 
-  // Check notification permission on mount
+  // Check notification permission and load preferences on mount
   useEffect(() => {
     (async () => {
       const { status } = await Notifications.getPermissionsAsync();
       setNotificationsPermissionStatus(status);
       setNotificationsEnabled(status === 'granted');
+
+      // Load habit notes prompt preference
+      const notesPromptPref = await storage.getItem('habit_notes_prompt_enabled');
+      setHabitNotesPrompt(notesPromptPref === 'true');
     })();
   }, []);
 
@@ -189,6 +195,11 @@ export default function SettingsScreen() {
         [{ text: 'OK' }]
       );
     }
+  };
+
+  const handleHabitNotesPromptToggle = async (value: boolean) => {
+    setHabitNotesPrompt(value);
+    await storage.setItem('habit_notes_prompt_enabled', value ? 'true' : 'false');
   };
 
   const handleLogout = () => {
@@ -352,6 +363,33 @@ export default function SettingsScreen() {
                   true: `${colors.primary.main}80`,
                 }}
                 thumbColor={notificationsEnabled ? colors.primary.main : colors.text.disabled}
+              />
+            }
+          />
+        </View>
+      </View>
+
+      {/* Habits Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>HABITS</Text>
+        <View style={styles.sectionContent}>
+          <SettingItem styles={styles}
+            icon="📝"
+            title="Prompt for Notes on Completion"
+            subtitle={
+              habitNotesPrompt
+                ? 'Show notes input when completing habits'
+                : 'Complete habits quickly without notes prompt'
+            }
+            rightElement={
+              <Switch
+                value={habitNotesPrompt}
+                onValueChange={handleHabitNotesPromptToggle}
+                trackColor={{
+                  false: colors.background.tertiary,
+                  true: `${colors.primary.main}80`,
+                }}
+                thumbColor={habitNotesPrompt ? colors.primary.main : colors.text.disabled}
               />
             }
           />
