@@ -24,6 +24,7 @@ import * as financeDB from '../../database/finance';
 import * as budgetsDB from '../../database/budgets';
 import { MetricCard } from '../../components/MetricCard';
 import { StartControls } from '../../components/StartControls';
+import { TodaysFocusCard } from '../../components/TodaysFocusCard';
 import { AppCard, AppButton, EmptyState, LoadingState } from '../../components/ui';
 import {
   colors,
@@ -40,6 +41,7 @@ export default function DashboardScreen() {
   const [metrics, setMetrics] = useState<dashboardDB.TodayMetrics | null>(null);
   const [macroGoals, setMacroGoals] = useState<dashboardDB.MacroGoal[]>([]);
   const [budgetAlerts, setBudgetAlerts] = useState<budgetsDB.BudgetWithSpending[]>([]);
+  const [todaysFocus, setTodaysFocus] = useState<dashboardDB.TodaysFocus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -52,14 +54,16 @@ export default function DashboardScreen() {
   // Load dashboard data
   const loadData = useCallback(async () => {
     try {
-      const [metricsData, goalsData, alertsData] = await Promise.all([
+      const [metricsData, goalsData, alertsData, focusData] = await Promise.all([
         dashboardDB.getTodayMetrics(),
         dashboardDB.getMacroGoals(),
         budgetsDB.getAlertBudgets(),
+        dashboardDB.getTodaysFocus(),
       ]);
       setMetrics(metricsData);
       setMacroGoals(goalsData);
       setBudgetAlerts(alertsData);
+      setTodaysFocus(focusData);
     } catch (error) {
       console.error('[Dashboard] Error loading data:', error);
       Alert.alert('Error', 'Failed to load dashboard data');
@@ -182,6 +186,26 @@ export default function DashboardScreen() {
     }
   };
 
+  const handleFocusNavigate = (type: 'task' | 'habit' | 'event', id: string) => {
+    if (type === 'task') {
+      navigation.navigate('Tasks' as never);
+    } else if (type === 'habit') {
+      navigation.navigate('Habits' as never);
+    } else if (type === 'event') {
+      navigation.navigate('Calendar' as never);
+    }
+  };
+
+  const handleFocusViewAll = (type: 'tasks' | 'habits' | 'events') => {
+    if (type === 'tasks') {
+      navigation.navigate('Tasks' as never);
+    } else if (type === 'habits') {
+      navigation.navigate('Habits' as never);
+    } else if (type === 'events') {
+      navigation.navigate('Calendar' as never);
+    }
+  };
+
   if (isLoading && !metrics) {
     return <LoadingState fullScreen message="Loading your dashboard..." />;
   }
@@ -221,6 +245,15 @@ export default function DashboardScreen() {
             />
           </View>
         </View>
+
+        {/* Today's Focus */}
+        {todaysFocus && (
+          <TodaysFocusCard
+            focus={todaysFocus}
+            onNavigate={handleFocusNavigate}
+            onViewAll={handleFocusViewAll}
+          />
+        )}
 
         {/* Metrics Grid */}
         {metrics && (
