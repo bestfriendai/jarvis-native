@@ -249,7 +249,7 @@ export default function TasksScreen() {
   const handleBulkMoveToProject = async (projectId: string | null) => {
     try {
       const taskIdsArray = Array.from(selectedTaskIds);
-      await tasksDB.bulkUpdateTasks(taskIdsArray, { projectId });
+      await tasksDB.bulkUpdateTasks(taskIdsArray, { projectId: projectId || undefined });
       await loadTasks();
       setBulkSelectMode(false);
       setSelectedTaskIds(new Set());
@@ -265,7 +265,7 @@ export default function TasksScreen() {
   };
 
   // Extract unique projects and tags from tasks
-  const availableProjects = Array.from(
+  const availableProjects: Array<{ id: string; name: string; color?: string }> = Array.from(
     new Map(
       tasks
         .filter((t) => t.project)

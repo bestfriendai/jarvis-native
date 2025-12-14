@@ -16,7 +16,6 @@ import {
 import { IconButton } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import type { TaskStatus, TaskPriority } from '../../database/tasks';
-import type { Project } from '../../database/projects';
 import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
 
 interface BulkActionBarProps {
@@ -28,7 +27,7 @@ interface BulkActionBarProps {
   onChangeStatus: (status: TaskStatus) => void;
   onChangePriority: (priority: TaskPriority) => void;
   onMoveToProject: (projectId: string | null) => void;
-  availableProjects?: Project[];
+  availableProjects?: Array<{ id: string; name: string; color?: string }>;
 }
 
 const STATUS_LABELS: Record<TaskStatus, string> = {
