@@ -30,6 +30,7 @@ import { RecurrencePicker } from '../../components/RecurrencePicker';
 import { ProjectPicker } from '../../components/ProjectPicker';
 import { TaskFilterBar } from '../../components/TaskFilterBar';
 import { BulkActionBar } from '../../components/tasks/BulkActionBar';
+import { SwipeableTaskItem } from '../../components/tasks/SwipeableTaskItem';
 import * as filterStore from '../../store/taskFilterStore';
 import { clearHighlight } from '../../utils/navigation';
 import type { RecurrenceRule } from '../../types';
@@ -434,18 +435,28 @@ export default function TasksScreen() {
             {viewMode === 'list' && (
               <View style={styles.listView}>
                 {tasks.map((task) => (
-                  <TaskCard
+                  <SwipeableTaskItem
                     key={task.id}
-                    task={task}
-                    onStatusChange={handleStatusChange}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    highlightId={params?.highlightId}
-                    onHighlightComplete={() => clearHighlight(navigation)}
-                    bulkSelectMode={bulkSelectMode}
-                    selected={selectedTaskIds.has(task.id)}
-                    onToggleSelect={() => toggleTaskSelection(task.id)}
-                  />
+                    taskId={task.id}
+                    taskTitle={task.title}
+                    isCompleted={task.status === 'completed'}
+                    onComplete={() => handleStatusChange(task.id, 'completed')}
+                    onUncomplete={() => handleStatusChange(task.id, 'todo')}
+                    onDelete={() => handleDelete(task.id)}
+                    disabled={bulkSelectMode}
+                  >
+                    <TaskCard
+                      task={task}
+                      onStatusChange={handleStatusChange}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                      highlightId={params?.highlightId}
+                      onHighlightComplete={() => clearHighlight(navigation)}
+                      bulkSelectMode={bulkSelectMode}
+                      selected={selectedTaskIds.has(task.id)}
+                      onToggleSelect={() => toggleTaskSelection(task.id)}
+                    />
+                  </SwipeableTaskItem>
                 ))}
               </View>
             )}
