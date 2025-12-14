@@ -20,8 +20,12 @@ import {
 import { IconButton, SegmentedButtons } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as financeDB from '../../database/finance';
+import * as budgetsDB from '../../database/budgets';
 import { AppButton, AppChip, EmptyState, LoadingState, AppCard } from '../../components/ui';
 import { MetricCard } from '../../components/MetricCard';
+import { BudgetCard } from '../../components/BudgetCard';
+import { BudgetFormModal } from '../../components/BudgetFormModal';
+import { BudgetSummaryCard } from '../../components/BudgetSummaryCard';
 import {
   colors,
   typography,
@@ -30,7 +34,7 @@ import {
   shadows,
 } from '../../theme';
 
-type ViewMode = 'overview' | 'assets' | 'liabilities' | 'transactions';
+type ViewMode = 'overview' | 'assets' | 'liabilities' | 'transactions' | 'budgets';
 type TimeFilter = 'month' | 'lastMonth' | 'all';
 
 export default function FinanceScreen() {
@@ -40,30 +44,38 @@ export default function FinanceScreen() {
   const [showAssetModal, setShowAssetModal] = useState(false);
   const [showLiabilityModal, setShowLiabilityModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<financeDB.Asset | null>(null);
   const [selectedLiability, setSelectedLiability] = useState<financeDB.Liability | null>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<financeDB.Transaction | null>(null);
+  const [selectedBudget, setSelectedBudget] = useState<budgetsDB.Budget | null>(null);
   const [summary, setSummary] = useState<financeDB.FinanceSummary | null>(null);
   const [assets, setAssets] = useState<financeDB.Asset[]>([]);
   const [liabilities, setLiabilities] = useState<financeDB.Liability[]>([]);
   const [transactions, setTransactions] = useState<financeDB.Transaction[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<financeDB.Transaction[]>([]);
+  const [budgets, setBudgets] = useState<budgetsDB.BudgetWithSpending[]>([]);
+  const [budgetSummary, setBudgetSummary] = useState<budgetsDB.BudgetSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const insets = useSafeAreaInsets();
 
   // Load finance data
   const loadData = useCallback(async () => {
     try {
-      const [summaryData, assetsData, liabilitiesData, transactionsData] = await Promise.all([
+      const [summaryData, assetsData, liabilitiesData, transactionsData, budgetsData, budgetSummaryData] = await Promise.all([
         financeDB.getFinanceSummary(),
         financeDB.getAssets(),
         financeDB.getLiabilities(),
         financeDB.getTransactions(),
+        budgetsDB.getActiveBudgets(),
+        budgetsDB.getBudgetSummary(),
       ]);
       setSummary(summaryData);
       setAssets(assetsData);
       setLiabilities(liabilitiesData);
       setTransactions(transactionsData);
+      setBudgets(budgetsData);
+      setBudgetSummary(budgetSummaryData);
     } catch (error) {
       console.error('[Finance] Error loading data:', error);
       Alert.alert('Error', 'Failed to load finance data');
@@ -172,7 +184,7 @@ export default function FinanceScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.viewSelectorScroll}
         >
-          {(['overview', 'transactions', 'assets', 'liabilities'] as const).map((mode) => (
+          {(['overview', 'budgets', 'transactions', 'assets', 'liabilities'] as const).map((mode) => (
             <TouchableOpacity
               key={mode}
               onPress={() => setViewMode(mode)}
@@ -364,6 +376,19 @@ export default function FinanceScreen() {
                 <Text style={styles.emptyText}>No liabilities tracked yet</Text>
               )}
             </View>
+
+            {/* Budget Overview */}
+            {budgetSummary && budgetSummary.budgetCount > 0 && (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionLabel}>BUDGETS</Text>
+                  <TouchableOpacity onPress={() => setViewMode('budgets')}>
+                    <Text style={styles.viewAllText}>View All</Text>
+                  </TouchableOpacity>
+                </View>
+                <BudgetSummaryCard summary={budgetSummary} compact />
+              </View>
+            )}
           </>
         )}
 
@@ -424,6 +449,69 @@ export default function FinanceScreen() {
                     value={formatCurrency(liability.amount)}
                     category={liability.interestRate ? `${liability.type} - ${liability.interestRate}% APR` : liability.type}
                     type="liability"
+                  />
+                ))}
+              </View>
+            )}
+          </>
+        )}
+
+        {viewMode === 'budgets' && (
+          <>
+            <AppButton
+              title="Create Budget"
+              onPress={() => {
+                setSelectedBudget(null);
+                setShowBudgetModal(true);
+              }}
+              fullWidth
+              style={styles.addButton}
+            />
+
+            {budgets.length === 0 ? (
+              <EmptyState
+                icon="💰"
+                title="No budgets yet"
+                description="Create budgets to track and manage your spending"
+                actionLabel="Create Budget"
+                onAction={() => {
+                  setSelectedBudget(null);
+                  setShowBudgetModal(true);
+                }}
+              />
+            ) : (
+              <View style={styles.itemsList}>
+                {budgetSummary && <BudgetSummaryCard summary={budgetSummary} />}
+                {budgets.map((budget) => (
+                  <BudgetCard
+                    key={budget.id}
+                    budget={budget}
+                    onEdit={() => {
+                      setSelectedBudget(budget);
+                      setShowBudgetModal(true);
+                    }}
+                    onDelete={async () => {
+                      Alert.alert(
+                        'Delete Budget',
+                        `Delete budget for ${budget.category}?`,
+                        [
+                          { text: 'Cancel', style: 'cancel' },
+                          {
+                            text: 'Delete',
+                            style: 'destructive',
+                            onPress: async () => {
+                              try {
+                                await budgetsDB.deleteBudget(budget.id);
+                                loadData();
+                              } catch (error) {
+                                console.error('Error deleting budget:', error);
+                                Alert.alert('Error', 'Failed to delete budget');
+                              }
+                            },
+                          },
+                        ]
+                      );
+                    }}
                   />
                 ))}
               </View>
@@ -599,6 +687,19 @@ export default function FinanceScreen() {
         onClose={() => {
           setShowLiabilityModal(false);
           setSelectedLiability(null);
+        }}
+        onSuccess={() => {
+          loadData();
+        }}
+      />
+
+      {/* Budget Modal */}
+      <BudgetFormModal
+        visible={showBudgetModal}
+        budget={selectedBudget}
+        onClose={() => {
+          setShowBudgetModal(false);
+          setSelectedBudget(null);
         }}
         onSuccess={() => {
           loadData();

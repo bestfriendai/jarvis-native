@@ -24,6 +24,34 @@ async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
     console.log('[DB] Migration: recurrence_rule column already exists or error:', error);
   }
 
+  // Migration 2: Create finance_budgets table
+  try {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS finance_budgets (
+        id TEXT PRIMARY KEY,
+        category TEXT NOT NULL,
+        amount REAL NOT NULL,
+        period TEXT NOT NULL,
+        start_date TEXT NOT NULL,
+        end_date TEXT NOT NULL,
+        is_recurring INTEGER DEFAULT 0,
+        alert_threshold REAL DEFAULT 0.8,
+        currency TEXT DEFAULT 'USD',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        synced INTEGER DEFAULT 0,
+        UNIQUE(category, start_date)
+      );
+    `);
+    await db.execAsync('CREATE INDEX IF NOT EXISTS idx_budgets_category ON finance_budgets(category);');
+    await db.execAsync('CREATE INDEX IF NOT EXISTS idx_budgets_period ON finance_budgets(start_date, end_date);');
+    await db.execAsync('CREATE INDEX IF NOT EXISTS idx_budgets_recurring ON finance_budgets(is_recurring);');
+    console.log('[DB] Migration: Created finance_budgets table and indexes');
+  } catch (error) {
+    // Table might already exist, ignore error
+    console.log('[DB] Migration: finance_budgets table already exists or error:', error);
+  }
+
   console.log('[DB] Migrations complete');
 }
 

@@ -21,6 +21,7 @@ import { useNavigation } from '@react-navigation/native';
 import * as dashboardDB from '../../database/dashboard';
 import * as tasksDB from '../../database/tasks';
 import * as financeDB from '../../database/finance';
+import * as budgetsDB from '../../database/budgets';
 import { MetricCard } from '../../components/MetricCard';
 import { StartControls } from '../../components/StartControls';
 import { AppCard, AppButton, EmptyState, LoadingState } from '../../components/ui';
@@ -38,6 +39,7 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [metrics, setMetrics] = useState<dashboardDB.TodayMetrics | null>(null);
   const [macroGoals, setMacroGoals] = useState<dashboardDB.MacroGoal[]>([]);
+  const [budgetAlerts, setBudgetAlerts] = useState<budgetsDB.BudgetWithSpending[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -50,12 +52,14 @@ export default function DashboardScreen() {
   // Load dashboard data
   const loadData = useCallback(async () => {
     try {
-      const [metricsData, goalsData] = await Promise.all([
+      const [metricsData, goalsData, alertsData] = await Promise.all([
         dashboardDB.getTodayMetrics(),
         dashboardDB.getMacroGoals(),
+        budgetsDB.getAlertBudgets(),
       ]);
       setMetrics(metricsData);
       setMacroGoals(goalsData);
+      setBudgetAlerts(alertsData);
     } catch (error) {
       console.error('[Dashboard] Error loading data:', error);
       Alert.alert('Error', 'Failed to load dashboard data');
@@ -246,6 +250,46 @@ export default function DashboardScreen() {
                 variant="success"
               />
             </View>
+          </View>
+        )}
+
+        {/* Budget Alerts */}
+        {budgetAlerts.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>BUDGET ALERTS</Text>
+            {budgetAlerts.map((budget) => (
+              <TouchableOpacity
+                key={budget.id}
+                style={[
+                  styles.budgetAlert,
+                  budget.status === 'exceeded'
+                    ? styles.budgetAlertError
+                    : styles.budgetAlertWarning,
+                ]}
+                onPress={() => navigation.navigate('Finance' as never)}
+              >
+                <View style={styles.budgetAlertIcon}>
+                  <IconButton
+                    icon={budget.status === 'exceeded' ? 'alert-octagon' : 'alert-circle'}
+                    size={20}
+                    iconColor={budget.status === 'exceeded' ? colors.error : colors.warning}
+                    style={{ margin: 0 }}
+                  />
+                </View>
+                <View style={styles.budgetAlertContent}>
+                  <Text style={styles.budgetAlertCategory}>{budget.category}</Text>
+                  <Text style={styles.budgetAlertText}>
+                    {Math.round(budget.percentUsed)}% used • {formatCash(budget.remaining, budget.currency)} remaining
+                  </Text>
+                </View>
+                <IconButton
+                  icon="chevron-right"
+                  size={20}
+                  iconColor={colors.text.tertiary}
+                  style={{ margin: 0 }}
+                />
+              </TouchableOpacity>
+            ))}
           </View>
         )}
 
@@ -559,6 +603,41 @@ const styles = StyleSheet.create({
     fontSize: typography.size.sm,
     fontWeight: typography.weight.medium,
     color: colors.text.tertiary,
+  },
+  // Budget alert styles
+  budgetAlert: {
+    backgroundColor: colors.background.secondary,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    ...shadows.sm,
+  },
+  budgetAlertError: {
+    borderColor: colors.error,
+    backgroundColor: `${colors.error}10`,
+  },
+  budgetAlertWarning: {
+    borderColor: colors.warning,
+    backgroundColor: `${colors.warning}10`,
+  },
+  budgetAlertIcon: {
+    marginRight: spacing.sm,
+  },
+  budgetAlertContent: {
+    flex: 1,
+  },
+  budgetAlertCategory: {
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
+  },
+  budgetAlertText: {
+    fontSize: typography.size.sm,
+    color: colors.text.secondary,
   },
   snackbar: {
     backgroundColor: colors.background.secondary,

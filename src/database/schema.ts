@@ -130,6 +130,24 @@ export const CREATE_TABLES = {
       synced INTEGER DEFAULT 0
     );
   `,
+
+  finance_budgets: `
+    CREATE TABLE IF NOT EXISTS finance_budgets (
+      id TEXT PRIMARY KEY,
+      category TEXT NOT NULL,
+      amount REAL NOT NULL,
+      period TEXT NOT NULL,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      is_recurring INTEGER DEFAULT 0,
+      alert_threshold REAL DEFAULT 0.8,
+      currency TEXT DEFAULT 'USD',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      synced INTEGER DEFAULT 0,
+      UNIQUE(category, start_date)
+    );
+  `,
 };
 
 /**
@@ -151,6 +169,10 @@ export const CREATE_INDEXES = {
 
   finance_trans_date: 'CREATE INDEX IF NOT EXISTS idx_finance_trans_date ON finance_transactions(date);',
   finance_trans_type: 'CREATE INDEX IF NOT EXISTS idx_finance_trans_type ON finance_transactions(type);',
+
+  finance_budgets_category: 'CREATE INDEX IF NOT EXISTS idx_budgets_category ON finance_budgets(category);',
+  finance_budgets_period: 'CREATE INDEX IF NOT EXISTS idx_budgets_period ON finance_budgets(start_date, end_date);',
+  finance_budgets_recurring: 'CREATE INDEX IF NOT EXISTS idx_budgets_recurring ON finance_budgets(is_recurring);',
 };
 
 /**
@@ -165,4 +187,5 @@ export const DROP_TABLES = [
   'DROP TABLE IF EXISTS finance_transactions',
   'DROP TABLE IF EXISTS finance_assets',
   'DROP TABLE IF EXISTS finance_liabilities',
+  'DROP TABLE IF EXISTS finance_budgets',
 ];
