@@ -8,5 +8,6 @@ export { AppInput } from './AppInput';
 export { AppCard } from './AppCard';
 export { AppChip } from './AppChip';
 export { EmptyState } from './EmptyState';
-export { LoadingState, Skeleton, CardSkeleton } from './LoadingState';
+export { LoadingState, CardSkeleton } from './LoadingState';
+export { Skeleton, SkeletonCircle, SkeletonText } from './Skeleton';
 export { SearchBar } from './SearchBar';
