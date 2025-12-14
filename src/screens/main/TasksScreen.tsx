@@ -25,7 +25,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import * as tasksDB from '../../database/tasks';
 import type { Project } from '../../database/projects';
-import { AppButton, AppCard, AppChip, EmptyState, LoadingState } from '../../components/ui';
+import { AppButton, AppCard, AppChip, EmptyState, LoadingState, LastUpdated } from '../../components/ui';
 import { TaskCardSkeleton } from '../../components/tasks/TaskCardSkeleton';
 import { RecurrencePicker } from '../../components/RecurrencePicker';
 import { ProjectPicker } from '../../components/ProjectPicker';
@@ -39,6 +39,7 @@ import type { RecurrenceRule } from '../../types';
 import { formatDueDate, getDateUrgency, getDaysUntil } from '../../utils/dateUtils';
 import { useOptimisticUpdate } from '../../hooks/useOptimisticUpdate';
 import { useTooltip } from '../../hooks/useTooltip';
+import { useRefreshControl } from '../../hooks/useRefreshControl';
 import Tooltip from '../../components/ui/Tooltip';
 import {
   colors,
@@ -86,7 +87,6 @@ export default function TasksScreen() {
   const navigation = useNavigation();
   const params = route.params as { highlightId?: string; scrollTo?: boolean } | undefined;
   const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [refreshing, setRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>('all');
@@ -123,11 +123,11 @@ export default function TasksScreen() {
     loadTasks();
   }, [loadTasks, refreshTrigger]);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadTasks();
-    setRefreshing(false);
-  };
+  // Pull-to-refresh with haptics and timestamp
+  const { refreshing, handleRefresh, lastUpdated } = useRefreshControl({
+    screenName: 'tasks',
+    onRefresh: loadTasks,
+  });
 
   const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
     const previousTasks = [...tasks];
@@ -362,6 +362,7 @@ export default function TasksScreen() {
                   <Text style={styles.savingText}>Saving...</Text>
                 </View>
               )}
+              <LastUpdated date={lastUpdated} />
             </View>
           )}
         </View>
@@ -473,8 +474,10 @@ export default function TasksScreen() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={onRefresh}
+            onRefresh={handleRefresh}
             tintColor={colors.primary.main}
+            colors={[colors.primary.main]}
+            progressBackgroundColor={colors.background.primary}
           />
         }
         showsVerticalScrollIndicator={false}

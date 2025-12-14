@@ -26,13 +26,14 @@ import { HabitInsightsCard } from '../../components/habits/HabitInsightsCard';
 import { HabitReminderPicker } from '../../components/habits/HabitReminderPicker';
 import { HabitNotesModal } from '../../components/habits/HabitNotesModal';
 import { HabitLogsView } from '../../components/habits/HabitLogsView';
-import { AppButton, AppChip, EmptyState, LoadingState } from '../../components/ui';
+import { AppButton, AppChip, EmptyState, LoadingState, LastUpdated } from '../../components/ui';
 import { HabitCardSkeleton } from '../../components/habits/HabitCardSkeleton';
 import * as storage from '../../services/storage';
 import { WeeklyCompletionChart, HabitsComparisonChart } from '../../components/charts';
 import * as notificationService from '../../services/notifications';
 import { useOptimisticUpdate } from '../../hooks/useOptimisticUpdate';
 import { useTooltip } from '../../hooks/useTooltip';
+import { useRefreshControl } from '../../hooks/useRefreshControl';
 import Tooltip from '../../components/ui/Tooltip';
 import {
   colors,
@@ -56,7 +57,6 @@ interface Habit extends habitsDB.Habit {
 }
 
 export default function HabitsScreen() {
-  const [refreshing, setRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
   const [showHeatmap, setShowHeatmap] = useState(false);
@@ -133,11 +133,11 @@ export default function HabitsScreen() {
     }
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadHabits();
-    setRefreshing(false);
-  };
+  // Pull-to-refresh with haptics and timestamp
+  const { refreshing, handleRefresh, lastUpdated } = useRefreshControl({
+    screenName: 'habits',
+    onRefresh: loadHabits,
+  });
 
   const handleLogToday = async (habitId: string) => {
     try {
@@ -385,6 +385,7 @@ export default function HabitsScreen() {
                 <Text style={styles.savingText}>Saving...</Text>
               </View>
             )}
+            <LastUpdated date={lastUpdated} />
           </View>
         </View>
         <AppButton
@@ -404,8 +405,10 @@ export default function HabitsScreen() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={onRefresh}
+            onRefresh={handleRefresh}
             tintColor={colors.primary.main}
+            colors={[colors.primary.main]}
+            progressBackgroundColor={colors.background.primary}
           />
         }
         showsVerticalScrollIndicator={false}

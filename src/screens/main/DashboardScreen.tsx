@@ -26,11 +26,12 @@ import * as analyticsDB from '../../database/analytics';
 import { MetricCard } from '../../components/MetricCard';
 import { StartControls } from '../../components/StartControls';
 import { TodaysFocusCard } from '../../components/TodaysFocusCard';
-import { AppCard, AppButton, EmptyState, LoadingState } from '../../components/ui';
+import { AppCard, AppButton, EmptyState, LoadingState, LastUpdated } from '../../components/ui';
 import { DashboardCardSkeleton } from '../../components/dashboard/DashboardCardSkeleton';
 import { DetailedChartModal, ChartDataType } from '../../components/charts/DetailedChartModal';
 import { navigateToItem, navigateToViewAll } from '../../utils/navigation';
 import { calculatePercentageChange } from '../../utils/chartUtils';
+import { useRefreshControl } from '../../hooks/useRefreshControl';
 import {
   colors,
   typography,
@@ -42,7 +43,6 @@ import {
 
 export default function DashboardScreen() {
   const navigation = useNavigation();
-  const [refreshing, setRefreshing] = useState(false);
   const [metrics, setMetrics] = useState<dashboardDB.TodayMetrics | null>(null);
   const [macroGoals, setMacroGoals] = useState<dashboardDB.MacroGoal[]>([]);
   const [budgetAlerts, setBudgetAlerts] = useState<budgetsDB.BudgetWithSpending[]>([]);
@@ -87,11 +87,11 @@ export default function DashboardScreen() {
     loadData();
   }, [loadData]);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  };
+  // Pull-to-refresh with haptics and timestamp
+  const { refreshing, handleRefresh, lastUpdated } = useRefreshControl({
+    screenName: 'dashboard',
+    onRefresh: loadData,
+  });
 
   const formatCash = (value: number | null, currency: string) => {
     if (value == null) return '--';
@@ -261,9 +261,10 @@ export default function DashboardScreen() {
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
-          onRefresh={onRefresh}
+          onRefresh={handleRefresh}
           tintColor={colors.primary.main}
           colors={[colors.primary.main]}
+          progressBackgroundColor={colors.background.primary}
         />
       }
       showsVerticalScrollIndicator={false}
@@ -276,6 +277,7 @@ export default function DashboardScreen() {
               <Text style={styles.dateLabel}>TODAY</Text>
               <Text style={styles.dateText}>{getFormattedDate()}</Text>
               <Text style={styles.greeting}>{getGreeting()}</Text>
+              <LastUpdated date={lastUpdated} style={styles.lastUpdated} />
             </View>
             <IconButton
               icon="magnify"
@@ -591,6 +593,9 @@ const styles = StyleSheet.create({
     fontSize: typography.size.lg,
     fontWeight: typography.weight.regular,
     color: colors.text.tertiary,
+  },
+  lastUpdated: {
+    marginTop: spacing.xs,
   },
   // Section styles
   section: {

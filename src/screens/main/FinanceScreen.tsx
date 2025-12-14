@@ -21,7 +21,7 @@ import { IconButton, SegmentedButtons } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as financeDB from '../../database/finance';
 import * as budgetsDB from '../../database/budgets';
-import { AppButton, AppChip, EmptyState, LoadingState, AppCard } from '../../components/ui';
+import { AppButton, AppChip, EmptyState, LoadingState, AppCard, LastUpdated } from '../../components/ui';
 import { TransactionCardSkeleton } from '../../components/finance/TransactionCardSkeleton';
 import { MetricCard } from '../../components/MetricCard';
 import { BudgetCard } from '../../components/BudgetCard';
@@ -32,6 +32,7 @@ import { ExportButton } from '../../components/finance/ExportButton';
 import { CategoryPicker } from '../../components/finance/CategoryPicker';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useOptimisticUpdate } from '../../hooks/useOptimisticUpdate';
+import { useRefreshControl } from '../../hooks/useRefreshControl';
 import {
   colors,
   typography,
@@ -46,7 +47,6 @@ type TimeFilter = 'month' | 'lastMonth' | 'all';
 export default function FinanceScreen() {
   const [viewMode, setViewMode] = useState<ViewMode>('overview');
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('month');
-  const [refreshing, setRefreshing] = useState(false);
   const [showAssetModal, setShowAssetModal] = useState(false);
   const [showLiabilityModal, setShowLiabilityModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
@@ -118,11 +118,11 @@ export default function FinanceScreen() {
     setFilteredTransactions(filtered);
   }, [transactions, timeFilter]);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  };
+  // Pull-to-refresh with haptics and timestamp
+  const { refreshing, handleRefresh, lastUpdated } = useRefreshControl({
+    screenName: 'finance',
+    onRefresh: loadData,
+  });
 
   const calculatePreviousMonth = () => {
     const now = new Date();
@@ -209,6 +209,7 @@ export default function FinanceScreen() {
                 <Text style={styles.savingText}>Saving...</Text>
               </View>
             )}
+            <LastUpdated date={lastUpdated} />
           </View>
         </View>
         {viewMode === 'transactions' && transactions.length > 0 && (
@@ -252,8 +253,10 @@ export default function FinanceScreen() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={onRefresh}
+            onRefresh={handleRefresh}
             tintColor={colors.primary.main}
+            colors={[colors.primary.main]}
+            progressBackgroundColor={colors.background.primary}
           />
         }
         showsVerticalScrollIndicator={false}

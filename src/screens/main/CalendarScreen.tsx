@@ -24,13 +24,14 @@ import * as calendarDB from '../../database/calendar';
 import { detectConflicts, EventConflict } from '../../database/calendar';
 import { ConflictWarning } from '../../components/calendar/ConflictWarning';
 import { ReminderPicker } from '../../components/calendar/ReminderPicker';
-import { AppButton, AppChip, EmptyState, LoadingState } from '../../components/ui';
+import { AppButton, AppChip, EmptyState, LoadingState, LastUpdated } from '../../components/ui';
 import { CalendarEventSkeleton } from '../../components/calendar/CalendarEventSkeleton';
 import { RecurrencePicker } from '../../components/RecurrencePicker';
 import type { RecurrenceRule } from '../../types';
 import DayTimelineView from '../../components/calendar/DayTimelineView';
 import WeekGridView from '../../components/calendar/WeekGridView';
 import { useOptimisticUpdate } from '../../hooks/useOptimisticUpdate';
+import { useRefreshControl } from '../../hooks/useRefreshControl';
 import {
   colors,
   typography,
@@ -46,7 +47,6 @@ interface CalendarEvent extends calendarDB.CalendarEvent {
 }
 
 export default function CalendarScreen() {
-  const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<'agenda' | 'day' | 'week'>('agenda');
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -108,11 +108,11 @@ export default function CalendarScreen() {
     loadEvents();
   }, [loadEvents, refreshTrigger]);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadEvents();
-    setRefreshing(false);
-  };
+  // Pull-to-refresh with haptics and timestamp
+  const { refreshing, handleRefresh, lastUpdated } = useRefreshControl({
+    screenName: 'calendar',
+    onRefresh: loadEvents,
+  });
 
   const handleDelete = (eventId: string) => {
     Alert.alert('Delete Event', 'Are you sure you want to delete this event?', [
@@ -206,6 +206,7 @@ export default function CalendarScreen() {
                 <Text style={styles.savingText}>Saving...</Text>
               </View>
             )}
+            <LastUpdated date={lastUpdated} />
           </View>
         </View>
         <AppButton
@@ -271,7 +272,9 @@ export default function CalendarScreen() {
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={onRefresh}
+              onRefresh={handleRefresh}
+              colors={[colors.primary.main]}
+              progressBackgroundColor={colors.background.primary}
               tintColor={colors.primary.main}
             />
           }
