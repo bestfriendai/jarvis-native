@@ -183,3 +183,51 @@ export function formatDateWithDay(dateString: string): string {
   const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   return `${dayName}, ${monthDay}`;
 }
+
+/**
+ * Get relative time string from a date
+ * Example: "Just now", "2 minutes ago", "1 hour ago", "3 days ago"
+ */
+export function getRelativeTime(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSeconds = Math.floor(diffMs / 1000);
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  // Just now (less than 30 seconds)
+  if (diffSeconds < 30) {
+    return 'Just now';
+  }
+
+  // Seconds ago (30 seconds to 1 minute)
+  if (diffMinutes < 1) {
+    return `${diffSeconds} second${diffSeconds !== 1 ? 's' : ''} ago`;
+  }
+
+  // Minutes ago (1 to 59 minutes)
+  if (diffMinutes < 60) {
+    return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
+  }
+
+  // Hours ago (1 to 23 hours)
+  if (diffHours < 24) {
+    return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+  }
+
+  // Days ago (1 to 6 days)
+  if (diffDays < 7) {
+    return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+  }
+
+  // For older dates, show the actual date
+  const options: Intl.DateTimeFormatOptions = {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  };
+
+  return date.toLocaleDateString('en-US', options);
+}
