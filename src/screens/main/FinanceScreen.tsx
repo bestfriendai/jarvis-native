@@ -21,6 +21,7 @@ import { IconButton, SegmentedButtons } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as financeDB from '../../database/finance';
 import * as budgetsDB from '../../database/budgets';
+import * as undoService from '../../services/undo';
 import { AppButton, AppChip, EmptyState, LoadingState, AppCard, LastUpdated } from '../../components/ui';
 import { TransactionCardSkeleton } from '../../components/finance/TransactionCardSkeleton';
 import { MetricCard } from '../../components/MetricCard';

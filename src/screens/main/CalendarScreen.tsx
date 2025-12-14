@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as calendarDB from '../../database/calendar';
 import { detectConflicts, EventConflict } from '../../database/calendar';
+import * as undoService from '../../services/undo';
 import { ConflictWarning } from '../../components/calendar/ConflictWarning';
 import { ReminderPicker } from '../../components/calendar/ReminderPicker';
 import { AppButton, AppChip, EmptyState, LoadingState, LastUpdated } from '../../components/ui';
@@ -114,35 +115,32 @@ export default function CalendarScreen() {
     onRefresh: loadEvents,
   });
 
-  const handleDelete = (eventId: string) => {
-    Alert.alert('Delete Event', 'Are you sure you want to delete this event?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          const previousEvents = [...events];
-          const updatedEvents = events.filter(e => e.id !== eventId);
+  const handleDelete = async (eventId: string) => {
+    const event = events.find(e => e.id === eventId);
+    if (!event) return;
 
-          await updateOptimistically(
-            // Optimistic update - remove from UI immediately
-            () => setEvents(updatedEvents),
-            // Async operation
-            async () => {
-              await calendarDB.deleteEvent(eventId);
-              await loadEvents();
-            },
-            // Options
-            {
-              onError: (error) => {
-                console.error('[CalendarScreen] Error deleting event:', error);
-                setEvents(previousEvents); // Rollback
-              },
-            }
-          );
+    try {
+      // Optimistically remove from UI
+      setEvents(events.filter(e => e.id !== eventId));
+
+      // Delete with undo capability
+      await undoService.deleteEvent(
+        event,
+        // onDeleted callback
+        () => {
+          console.log('[CalendarScreen] Event deleted successfully');
         },
-      },
-    ]);
+        // onUndone callback
+        async () => {
+          console.log('[CalendarScreen] Event undo requested, reloading...');
+          await loadEvents();
+        }
+      );
+    } catch (error) {
+      console.error('[CalendarScreen] Error deleting event:', error);
+      await loadEvents();
+      Alert.alert('Error', 'Failed to delete event. Please try again.');
+    }
   };
 
   const formatTime = (dateStr: string) => {
@@ -493,23 +491,26 @@ const EventFormModal: React.FC<EventFormModalProps> = ({
   const handleDelete = async () => {
     if (!event) return;
 
-    Alert.alert('Delete Event', 'Are you sure you want to delete this event?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await calendarDB.deleteEvent(event.id);
-            onSuccess?.();
-            onClose();
-          } catch (error) {
-            console.error('Error deleting event:', error);
-            Alert.alert('Error', 'Failed to delete event');
-          }
+    try {
+      // Delete with undo capability
+      await undoService.deleteEvent(
+        event,
+        // onDeleted callback
+        () => {
+          console.log('[CalendarScreen Modal] Event deleted successfully');
+          onSuccess?.();
+          onClose();
         },
-      },
-    ]);
+        // onUndone callback
+        async () => {
+          console.log('[CalendarScreen Modal] Event undo requested');
+          onSuccess?.();
+        }
+      );
+    } catch (error) {
+      console.error('[CalendarScreen Modal] Error deleting event:', error);
+      Alert.alert('Error', 'Failed to delete event. Please try again.');
+    }
   };
 
   return (

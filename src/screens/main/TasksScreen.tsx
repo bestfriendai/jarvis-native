@@ -24,6 +24,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import * as tasksDB from '../../database/tasks';
+import * as undoService from '../../services/undo';
 import type { Project } from '../../database/projects';
 import { AppButton, AppCard, AppChip, EmptyState, LoadingState, LastUpdated } from '../../components/ui';
 import { TaskCardSkeleton } from '../../components/tasks/TaskCardSkeleton';
@@ -159,35 +160,34 @@ export default function TasksScreen() {
     );
   };
 
-  const handleDelete = (taskId: string) => {
-    Alert.alert('Delete Task', 'Are you sure you want to delete this task?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          const previousTasks = [...tasks];
-          const updatedTasks = tasks.filter(t => t.id !== taskId);
+  const handleDelete = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
 
-          await updateOptimistically(
-            // Optimistic update - remove from UI immediately
-            () => setTasks(updatedTasks),
-            // Async operation
-            async () => {
-              await tasksDB.deleteTask(taskId);
-              await loadTasks();
-            },
-            // Options
-            {
-              onError: (error) => {
-                console.error('[TasksScreen] Error deleting task:', error);
-                setTasks(previousTasks); // Rollback
-              },
-            }
-          );
+    try {
+      // Optimistically remove from UI
+      const previousTasks = [...tasks];
+      setTasks(tasks.filter(t => t.id !== taskId));
+
+      // Delete with undo capability
+      await undoService.deleteTask(
+        task as tasksDB.Task,
+        // onDeleted callback
+        () => {
+          console.log('[TasksScreen] Task deleted successfully');
         },
-      },
-    ]);
+        // onUndone callback
+        async () => {
+          console.log('[TasksScreen] Task undo requested, reloading...');
+          await loadTasks();
+        }
+      );
+    } catch (error) {
+      console.error('[TasksScreen] Error deleting task:', error);
+      // Reload tasks to restore state
+      await loadTasks();
+      Alert.alert('Error', 'Failed to delete task. Please try again.');
+    }
   };
 
   const handleEdit = (task: Task) => {
@@ -242,13 +242,29 @@ export default function TasksScreen() {
   const handleBulkDelete = async () => {
     try {
       const taskIdsArray = Array.from(selectedTaskIds);
-      await tasksDB.bulkDeleteTasks(taskIdsArray);
-      await loadTasks();
+      const tasksToDelete = tasks.filter(t => taskIdsArray.includes(t.id));
+
+      // Optimistically remove from UI
+      setTasks(tasks.filter(t => !taskIdsArray.includes(t.id)));
       setBulkSelectMode(false);
       setSelectedTaskIds(new Set());
-      Alert.alert('Success', `Deleted ${taskIdsArray.length} task(s)`);
+
+      // Delete with undo capability
+      await undoService.deleteTasks(
+        tasksToDelete as tasksDB.Task[],
+        // onDeleted callback
+        () => {
+          console.log(`[TasksScreen] ${tasksToDelete.length} tasks deleted successfully`);
+        },
+        // onUndone callback
+        async () => {
+          console.log('[TasksScreen] Bulk delete undo requested, reloading...');
+          await loadTasks();
+        }
+      );
     } catch (error) {
       console.error('[TasksScreen] Bulk delete error:', error);
+      await loadTasks();
       Alert.alert('Error', 'Failed to delete tasks. Please try again.');
     }
   };

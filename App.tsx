@@ -10,12 +10,14 @@ import { PaperProvider, MD3LightTheme } from 'react-native-paper';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainerRef } from '@react-navigation/native';
+import Toast from 'react-native-toast-message';
 
 import RootNavigator from './src/navigation/RootNavigator';
 import { initDatabase } from './src/database';
 import { needsSeeding, seedDatabase } from './src/database/seed';
 import { useThemeStore } from './src/store/themeStore';
 import * as notificationService from './src/services/notifications';
+import { toastConfig } from './src/components/ui/UndoToast';
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -136,6 +138,7 @@ export default function App() {
         <PaperProvider theme={theme}>
           <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
           <RootNavigator navigationRef={navigationRef} />
+          <Toast config={toastConfig} />
         </PaperProvider>
       </QueryClientProvider>
     </SafeAreaProvider>

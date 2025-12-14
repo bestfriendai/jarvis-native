@@ -21,6 +21,7 @@ import { IconButton, Switch } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as habitsDB from '../../database/habits';
 import { getHabitInsights, HabitInsights } from '../../database/habits';
+import * as undoService from '../../services/undo';
 import { HabitHeatmap } from '../../components/HabitHeatmap';
 import { HabitInsightsCard } from '../../components/habits/HabitInsightsCard';
 import { HabitReminderPicker } from '../../components/habits/HabitReminderPicker';
@@ -276,39 +277,42 @@ export default function HabitsScreen() {
     setShowHistoryView(true);
   };
 
-  const handleDelete = (habitId: string) => {
-    Alert.alert(
-      'Delete Habit',
-      'Are you sure? All completion history will be lost.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // Get habit to check for notification ID
-              const habit = await habitsDB.getHabit(habitId);
+  const handleDelete = async (habitId: string) => {
+    try {
+      // Get full habit data before deletion
+      const habit = await habitsDB.getHabit(habitId);
+      if (!habit) return;
 
-              // Cancel notification if it exists
-              if (habit?.notificationId) {
-                try {
-                  await notificationService.cancelNotification(habit.notificationId);
-                } catch (error) {
-                  console.warn('[HabitsScreen] Error canceling notification:', error);
-                }
-              }
+      // Cancel notification if it exists
+      if (habit.notificationId) {
+        try {
+          await notificationService.cancelNotification(habit.notificationId);
+        } catch (error) {
+          console.warn('[HabitsScreen] Error canceling notification:', error);
+        }
+      }
 
-              await habitsDB.deleteHabit(habitId);
-              await loadHabits();
-            } catch (error) {
-              console.error('Error deleting habit:', error);
-              Alert.alert('Error', 'Failed to delete habit');
-            }
-          },
+      // Optimistically remove from UI
+      setHabits(habits.filter(h => h.id !== habitId));
+
+      // Delete with undo capability
+      await undoService.deleteHabit(
+        habit,
+        // onDeleted callback
+        () => {
+          console.log('[HabitsScreen] Habit deleted successfully');
         },
-      ]
-    );
+        // onUndone callback
+        async () => {
+          console.log('[HabitsScreen] Habit undo requested, reloading...');
+          await loadHabits();
+        }
+      );
+    } catch (error) {
+      console.error('[HabitsScreen] Error deleting habit:', error);
+      await loadHabits();
+      Alert.alert('Error', 'Failed to delete habit. Please try again.');
+    }
   };
 
   const handleToggleActive = async (habitId: string, isActive: boolean) => {
