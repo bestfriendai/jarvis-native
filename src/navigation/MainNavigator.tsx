@@ -103,13 +103,21 @@ export default function MainNavigator() {
       <Tab.Screen
         name="AIChat"
         component={AIChatScreen}
-        options={{
+        options={({ navigation }) => ({
           tabBarIcon: ({ focused }) => (
             <TabIcon icon="robot" focused={focused} colors={colors} />
           ),
           tabBarLabel: 'AI',
           title: 'AI Assistant',
-        }}
+          headerRight: () => (
+            <IconButton
+              icon="magnify"
+              iconColor={colors.text.secondary}
+              size={24}
+              onPress={() => navigation.navigate('Search' as never)}
+            />
+          ),
+        })}
       />
 
       <Tab.Screen

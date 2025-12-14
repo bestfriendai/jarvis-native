@@ -180,6 +180,7 @@ export type RootStackParamList = {
   Main: undefined;
   Login: undefined;
   Register: undefined;
+  Search: undefined;
 };
 
 export type MainTabParamList = {

@@ -15,8 +15,9 @@ import {
   Animated,
   Alert,
 } from 'react-native';
-import { ActivityIndicator, Snackbar } from 'react-native-paper';
+import { ActivityIndicator, Snackbar, IconButton } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import * as dashboardDB from '../../database/dashboard';
 import * as tasksDB from '../../database/tasks';
 import * as financeDB from '../../database/finance';
@@ -33,6 +34,7 @@ import {
 } from '../../theme';
 
 export default function DashboardScreen() {
+  const navigation = useNavigation();
   const [refreshing, setRefreshing] = useState(false);
   const [metrics, setMetrics] = useState<dashboardDB.TodayMetrics | null>(null);
   const [macroGoals, setMacroGoals] = useState<dashboardDB.MacroGoal[]>([]);
@@ -200,9 +202,20 @@ export default function DashboardScreen() {
       <View style={[styles.content, { paddingTop: insets.top + spacing.base }]}>
         {/* Header Section */}
         <View style={styles.header}>
-          <Text style={styles.dateLabel}>TODAY</Text>
-          <Text style={styles.dateText}>{getFormattedDate()}</Text>
-          <Text style={styles.greeting}>{getGreeting()}</Text>
+          <View style={styles.headerContent}>
+            <View>
+              <Text style={styles.dateLabel}>TODAY</Text>
+              <Text style={styles.dateText}>{getFormattedDate()}</Text>
+              <Text style={styles.greeting}>{getGreeting()}</Text>
+            </View>
+            <IconButton
+              icon="magnify"
+              iconColor={colors.text.secondary}
+              size={24}
+              onPress={() => navigation.navigate('Search' as never)}
+              style={styles.searchButton}
+            />
+          </View>
         </View>
 
         {/* Metrics Grid */}
@@ -408,6 +421,14 @@ const styles = StyleSheet.create({
   // Header styles
   header: {
     marginBottom: spacing['2xl'],
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  searchButton: {
+    margin: 0,
   },
   dateLabel: {
     fontSize: typography.size.xs,
