@@ -36,6 +36,7 @@ import * as filterStore from '../../store/taskFilterStore';
 import { clearHighlight } from '../../utils/navigation';
 import type { RecurrenceRule } from '../../types';
 import { formatDueDate, getDateUrgency, getDaysUntil } from '../../utils/dateUtils';
+import { useOptimisticUpdate } from '../../hooks/useOptimisticUpdate';
 import {
   colors,
   typography,
@@ -94,6 +95,7 @@ export default function TasksScreen() {
   const [bulkSelectMode, setBulkSelectMode] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
   const insets = useSafeAreaInsets();
+  const { updateOptimistically, isPending } = useOptimisticUpdate();
 
   // Load persisted filters on mount
   useEffect(() => {
@@ -124,16 +126,33 @@ export default function TasksScreen() {
   };
 
   const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
-    try {
-      await tasksDB.updateTask(taskId, {
-        status: newStatus,
-        completedAt: newStatus === 'completed' ? new Date().toISOString() : undefined,
-      });
-      await loadTasks();
-    } catch (error) {
-      console.error('Error updating task:', error);
-      Alert.alert('Error', 'Failed to update task');
-    }
+    const previousTasks = [...tasks];
+    const updatedTasks = tasks.map(t =>
+      t.id === taskId
+        ? { ...t, status: newStatus, completedAt: newStatus === 'completed' ? new Date().toISOString() : undefined }
+        : t
+    );
+
+    await updateOptimistically(
+      // Optimistic update
+      () => setTasks(updatedTasks),
+      // Async operation
+      async () => {
+        await tasksDB.updateTask(taskId, {
+          status: newStatus,
+          completedAt: newStatus === 'completed' ? new Date().toISOString() : undefined,
+        });
+        // Reload to get fresh data from DB
+        await loadTasks();
+      },
+      // Options
+      {
+        onError: (error) => {
+          console.error('[TasksScreen] Error updating task:', error);
+          setTasks(previousTasks); // Rollback
+        },
+      }
+    );
   };
 
   const handleDelete = (taskId: string) => {
@@ -143,13 +162,25 @@ export default function TasksScreen() {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
-          try {
-            await tasksDB.deleteTask(taskId);
-            await loadTasks();
-          } catch (error) {
-            console.error('Error deleting task:', error);
-            Alert.alert('Error', 'Failed to delete task');
-          }
+          const previousTasks = [...tasks];
+          const updatedTasks = tasks.filter(t => t.id !== taskId);
+
+          await updateOptimistically(
+            // Optimistic update - remove from UI immediately
+            () => setTasks(updatedTasks),
+            // Async operation
+            async () => {
+              await tasksDB.deleteTask(taskId);
+              await loadTasks();
+            },
+            // Options
+            {
+              onError: (error) => {
+                console.error('[TasksScreen] Error deleting task:', error);
+                setTasks(previousTasks); // Rollback
+              },
+            }
+          );
         },
       },
     ]);
@@ -290,17 +321,24 @@ export default function TasksScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <View>
+        <View style={styles.headerLeft}>
           <Text style={styles.title}>
             {bulkSelectMode ? `${selectedTaskIds.size} Selected` : 'Tasks'}
           </Text>
           {!bulkSelectMode && (
-            <Text style={styles.subtitle}>
-              {tasks.filter((t) => t.status !== 'completed').length} active
-              {activeFilterCount > 0 && (
-                <Text style={styles.filterBadgeText}> • {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''}</Text>
+            <View style={styles.subtitleRow}>
+              <Text style={styles.subtitle}>
+                {tasks.filter((t) => t.status !== 'completed').length} active
+                {activeFilterCount > 0 && (
+                  <Text style={styles.filterBadgeText}> • {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''}</Text>
+                )}
+              </Text>
+              {isPending && (
+                <View style={styles.savingIndicator}>
+                  <Text style={styles.savingText}>Saving...</Text>
+                </View>
               )}
-            </Text>
+            </View>
           )}
         </View>
         <View style={styles.headerActions}>
@@ -1173,19 +1211,38 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: spacing.base,
   },
+  headerLeft: {
+    flex: 1,
+  },
   title: {
     fontSize: typography.size['2xl'],
     fontWeight: typography.weight.bold,
     color: colors.text.primary,
   },
+  subtitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
   subtitle: {
     fontSize: typography.size.sm,
     color: colors.text.tertiary,
-    marginTop: spacing.xs,
   },
   filterBadgeText: {
     color: colors.primary.main,
     fontWeight: typography.weight.semibold,
+  },
+  savingIndicator: {
+    backgroundColor: colors.primary.light,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+  },
+  savingText: {
+    fontSize: typography.size.xs,
+    color: colors.primary.main,
+    fontWeight: typography.weight.medium,
   },
   headerActions: {
     flexDirection: 'row',
