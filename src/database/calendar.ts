@@ -398,22 +398,31 @@ export async function searchEvents(query: string): Promise<CalendarEvent[]> {
  * @param startTime - Event start time (ISO string)
  * @param endTime - Event end time (ISO string)
  * @param excludeEventId - Optional event ID to exclude (for editing)
+ * @param isAllDay - Whether the event being checked is all-day (defaults to false)
  * @returns Array of conflicting events with overlap details
  */
 export async function detectConflicts(
   startTime: string,
   endTime: string,
-  excludeEventId?: string
+  excludeEventId?: string,
+  isAllDay: boolean = false
 ): Promise<EventConflict[]> {
+  // All-day events don't conflict with anything
+  if (isAllDay) {
+    return [];
+  }
+
   // Query for overlapping events
   // Events overlap if:
   // 1. Event wraps our timeframe (starts before, ends after)
   // 2. Event starts during our timeframe
   // 3. Event ends during our timeframe
+  // Note: Only timed events (is_all_day = 0) can conflict
 
   const query = `
     SELECT * FROM calendar_events
     WHERE id != ?
+    AND is_all_day = 0
     AND (
       (start_time < ? AND end_time > ?) OR
       (start_time >= ? AND start_time < ?) OR
