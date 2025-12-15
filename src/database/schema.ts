@@ -164,6 +164,26 @@ export const CREATE_TABLES = {
       created_at TEXT NOT NULL
     );
   `,
+
+  focus_blocks: `
+    CREATE TABLE IF NOT EXISTS focus_blocks (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT,
+      duration_minutes INTEGER NOT NULL,
+      actual_minutes INTEGER,
+      task_id TEXT,
+      status TEXT DEFAULT 'scheduled',
+      start_time TEXT,
+      end_time TEXT,
+      phone_in_mode INTEGER DEFAULT 0,
+      break_taken INTEGER DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      synced INTEGER DEFAULT 0,
+      FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE SET NULL
+    );
+  `,
 };
 
 /**
@@ -192,12 +212,17 @@ export const CREATE_INDEXES = {
 
   finance_categories_type: 'CREATE INDEX IF NOT EXISTS idx_categories_type ON finance_categories(type);',
   finance_categories_custom: 'CREATE INDEX IF NOT EXISTS idx_categories_custom ON finance_categories(is_custom);',
+
+  focus_blocks_status: 'CREATE INDEX IF NOT EXISTS idx_focus_blocks_status ON focus_blocks(status);',
+  focus_blocks_task: 'CREATE INDEX IF NOT EXISTS idx_focus_blocks_task ON focus_blocks(task_id);',
+  focus_blocks_start_time: 'CREATE INDEX IF NOT EXISTS idx_focus_blocks_start_time ON focus_blocks(start_time);',
 };
 
 /**
  * Drop all tables (for reset/testing)
  */
 export const DROP_TABLES = [
+  'DROP TABLE IF EXISTS focus_blocks',
   'DROP TABLE IF EXISTS habit_logs',
   'DROP TABLE IF EXISTS habits',
   'DROP TABLE IF EXISTS tasks',
