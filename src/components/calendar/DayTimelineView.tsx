@@ -3,7 +3,7 @@
  * Displays events in a hourly timeline format
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,9 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
+import { detectConflicts } from '../../database/calendar';
 
 interface CalendarEvent {
   id: string;
@@ -40,6 +42,8 @@ export default function DayTimelineView({
   selectedDate,
   onEventPress,
 }: DayTimelineViewProps) {
+  const [eventConflicts, setEventConflicts] = useState<Map<string, number>>(new Map());
+
   // Get current time for indicator
   const currentTime = useMemo(() => new Date(), []);
   const isToday = useMemo(() => {
@@ -56,6 +60,36 @@ export default function DayTimelineView({
     const totalMinutes = (hours - START_HOUR) * 60 + minutes;
     return (totalMinutes / 60) * HOUR_HEIGHT;
   }, [isToday, currentTime]);
+
+  // Check for conflicts after events are loaded
+  useEffect(() => {
+    const checkAllConflicts = async () => {
+      const conflictMap = new Map<string, number>();
+
+      for (const event of events) {
+        // Skip all-day events
+        if (event.isAllDay) continue;
+
+        try {
+          const conflicts = await detectConflicts(
+            event.startTime,
+            event.endTime,
+            event.id,
+            event.isAllDay
+          );
+          conflictMap.set(event.id, conflicts.length);
+        } catch (error) {
+          console.error(`Error checking conflicts for event ${event.id}:`, error);
+        }
+      }
+
+      setEventConflicts(conflictMap);
+    };
+
+    if (events.length > 0) {
+      checkAllConflicts();
+    }
+  }, [events]);
 
   // Filter events for selected date and calculate positions
   const positionedEvents = useMemo(() => {
@@ -144,33 +178,45 @@ export default function DayTimelineView({
 
           {/* Event blocks */}
           <View style={styles.eventsContainer}>
-            {positionedEvents.map(event => (
-              <TouchableOpacity
-                key={event.id}
-                style={[
-                  styles.eventBlock,
-                  {
-                    top: event.top,
-                    height: event.height,
-                  },
-                ]}
-                activeOpacity={0.8}
-                onPress={() => onEventPress(event)}
-              >
-                <Text style={styles.eventTime}>
-                  {formatTime(event.startHours, event.startMinutes)} -{' '}
-                  {formatTime(event.endHours, event.endMinutes)}
-                </Text>
-                <Text style={styles.eventTitle} numberOfLines={2}>
-                  {event.title}
-                </Text>
-                {event.location && (
-                  <Text style={styles.eventLocation} numberOfLines={1}>
-                    📍 {event.location}
+            {positionedEvents.map(event => {
+              const conflictCount = eventConflicts.get(event.id) || 0;
+              return (
+                <TouchableOpacity
+                  key={event.id}
+                  style={[
+                    styles.eventBlock,
+                    {
+                      top: event.top,
+                      height: event.height,
+                    },
+                    conflictCount > 0 && styles.eventBlockWithConflict,
+                  ]}
+                  activeOpacity={0.8}
+                  onPress={() => onEventPress(event)}
+                >
+                  <View style={styles.eventHeader}>
+                    <Text style={styles.eventTime}>
+                      {formatTime(event.startHours, event.startMinutes)} -{' '}
+                      {formatTime(event.endHours, event.endMinutes)}
+                    </Text>
+                    {conflictCount > 0 && (
+                      <View style={styles.conflictIndicator}>
+                        <Icon name="alert-circle" size={14} color="#EF5350" />
+                        <Text style={styles.conflictIndicatorText}>{conflictCount}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.eventTitle} numberOfLines={2}>
+                    {event.title}
                   </Text>
-                )}
-              </TouchableOpacity>
-            ))}
+                  {event.location && (
+                    <Text style={styles.eventLocation} numberOfLines={1}>
+                      📍 {event.location}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
       </ScrollView>
@@ -257,12 +303,24 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: colors.primary.dark,
   },
+  eventBlockWithConflict: {
+    borderLeftWidth: 3,
+    borderLeftColor: '#EF5350',
+    borderRightWidth: 2,
+    borderRightColor: '#EF5350',
+  },
+  eventHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
   eventTime: {
     fontSize: typography.size.xs,
     fontWeight: typography.weight.medium,
     color: colors.primary.contrast,
-    marginBottom: spacing.xs,
     opacity: 0.9,
+    flex: 1,
   },
   eventTitle: {
     fontSize: typography.size.sm,
@@ -274,5 +332,19 @@ const styles = StyleSheet.create({
     fontSize: typography.size.xs,
     color: colors.primary.contrast,
     opacity: 0.9,
+  },
+  conflictIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+    gap: 2,
+  },
+  conflictIndicatorText: {
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.bold,
+    color: '#EF5350',
   },
 });
