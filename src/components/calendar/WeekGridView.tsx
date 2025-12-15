@@ -3,7 +3,7 @@
  * Displays events in a 7-day grid format
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,9 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
+import { detectConflicts } from '../../database/calendar';
 
 interface CalendarEvent {
   id: string;
@@ -38,6 +40,38 @@ export default function WeekGridView({
   selectedDate,
   onEventPress,
 }: WeekGridViewProps) {
+  const [eventConflicts, setEventConflicts] = useState<Map<string, number>>(new Map());
+
+  // Check for conflicts after events are loaded
+  useEffect(() => {
+    const checkAllConflicts = async () => {
+      const conflictMap = new Map<string, number>();
+
+      for (const event of events) {
+        // Skip all-day events
+        if (event.isAllDay) continue;
+
+        try {
+          const conflicts = await detectConflicts(
+            event.startTime,
+            event.endTime,
+            event.id,
+            event.isAllDay
+          );
+          conflictMap.set(event.id, conflicts.length);
+        } catch (error) {
+          console.error(`Error checking conflicts for event ${event.id}:`, error);
+        }
+      }
+
+      setEventConflicts(conflictMap);
+    };
+
+    if (events.length > 0) {
+      checkAllConflicts();
+    }
+  }, [events]);
+
   // Get the week dates (Monday to Sunday)
   const weekDates = useMemo(() => {
     const dates = [];
@@ -167,30 +201,40 @@ export default function WeekGridView({
                         <Text style={styles.emptyDayText}>-</Text>
                       </View>
                     ) : (
-                      dayEvents.map((event, index) => (
-                        <TouchableOpacity
-                          key={event.id}
-                          style={[
-                            styles.eventCard,
-                            index > 0 && styles.eventCardSpacing,
-                          ]}
-                          activeOpacity={0.8}
-                          onPress={() => onEventPress(event)}
-                        >
-                          <View style={styles.eventIndicator} />
-                          <Text style={styles.eventTime}>
-                            {formatTime(event.startTime)}
-                          </Text>
-                          <Text style={styles.eventTitle} numberOfLines={2}>
-                            {event.title}
-                          </Text>
-                          {event.location && (
-                            <Text style={styles.eventLocation} numberOfLines={1}>
-                              📍
+                      dayEvents.map((event, index) => {
+                        const conflictCount = eventConflicts.get(event.id) || 0;
+                        return (
+                          <TouchableOpacity
+                            key={event.id}
+                            style={[
+                              styles.eventCard,
+                              index > 0 && styles.eventCardSpacing,
+                              conflictCount > 0 && styles.eventCardWithConflict,
+                            ]}
+                            activeOpacity={0.8}
+                            onPress={() => onEventPress(event)}
+                          >
+                            <View style={styles.eventCardHeader}>
+                              <Text style={styles.eventTime}>
+                                {formatTime(event.startTime)}
+                              </Text>
+                              {conflictCount > 0 && (
+                                <View style={styles.conflictBadge}>
+                                  <Icon name="alert-circle" size={10} color="#EF5350" />
+                                </View>
+                              )}
+                            </View>
+                            <Text style={styles.eventTitle} numberOfLines={2}>
+                              {event.title}
                             </Text>
-                          )}
-                        </TouchableOpacity>
-                      ))
+                            {event.location && (
+                              <Text style={styles.eventLocation} numberOfLines={1}>
+                                📍
+                              </Text>
+                            )}
+                          </TouchableOpacity>
+                        );
+                      })
                     )}
                   </View>
                 );
@@ -289,24 +333,25 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: colors.primary.main,
   },
+  eventCardWithConflict: {
+    borderLeftColor: '#EF5350',
+    borderRightWidth: 2,
+    borderRightColor: '#EF5350',
+  },
   eventCardSpacing: {
     marginTop: spacing.sm,
   },
-  eventIndicator: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    width: 3,
-    backgroundColor: colors.primary.main,
-    borderTopLeftRadius: borderRadius.sm,
-    borderBottomLeftRadius: borderRadius.sm,
+  eventCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
   },
   eventTime: {
     fontSize: typography.size.xs,
     fontWeight: typography.weight.medium,
     color: colors.text.tertiary,
-    marginBottom: spacing.xs,
+    flex: 1,
   },
   eventTitle: {
     fontSize: typography.size.xs,
@@ -318,5 +363,13 @@ const styles = StyleSheet.create({
     fontSize: typography.size.xs,
     color: colors.text.tertiary,
     marginTop: spacing.xs,
+  },
+  conflictBadge: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#FFF3F3',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
