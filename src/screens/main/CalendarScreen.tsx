@@ -56,6 +56,7 @@ export default function CalendarScreen() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const { updateOptimistically, isPending } = useOptimisticUpdate();
+  const [eventConflicts, setEventConflicts] = useState<Map<string, number>>(new Map());
 
   // Load events from local database
   const loadEvents = useCallback(async () => {
@@ -108,6 +109,36 @@ export default function CalendarScreen() {
   useEffect(() => {
     loadEvents();
   }, [loadEvents, refreshTrigger]);
+
+  // Check for conflicts after events are loaded
+  useEffect(() => {
+    const checkAllConflicts = async () => {
+      const conflictMap = new Map<string, number>();
+
+      for (const event of events) {
+        // Skip all-day events
+        if (event.isAllDay) continue;
+
+        try {
+          const conflicts = await detectConflicts(
+            event.startTime,
+            event.endTime,
+            event.id,
+            event.isAllDay
+          );
+          conflictMap.set(event.id, conflicts.length);
+        } catch (error) {
+          console.error(`Error checking conflicts for event ${event.id}:`, error);
+        }
+      }
+
+      setEventConflicts(conflictMap);
+    };
+
+    if (events.length > 0) {
+      checkAllConflicts();
+    }
+  }, [events]);
 
   // Pull-to-refresh with haptics and timestamp
   const { refreshing, handleRefresh, lastUpdated } = useRefreshControl({
@@ -291,57 +322,79 @@ export default function CalendarScreen() {
             />
           ) : (
             <View style={styles.eventsList}>
-              {events.map((event) => (
-                <TouchableOpacity
-                  key={event.id}
-                  style={styles.eventCard}
-                  activeOpacity={0.9}
-                  onPress={() => {
-                    setSelectedEvent(event);
-                    setShowCreateModal(true);
-                  }}
-                  onLongPress={() => handleDelete(event.id)}
-                >
-                  <View style={styles.eventTimeColumn}>
-                    <Text style={styles.eventTimeText}>
-                      {formatTime(event.startAt || event.startTime)}
-                    </Text>
-                    <View style={styles.eventTimeLine} />
-                    <Text style={styles.eventTimeText}>
-                      {formatTime(event.endAt || event.endTime)}
-                    </Text>
-                  </View>
-
-                  <View style={styles.eventContent}>
-                    <View style={styles.eventHeader}>
-                      <View style={styles.eventTitleRow}>
-                        <Text style={styles.eventTitle}>{event.title}</Text>
-                        {event.recurrence && (
-                          <Text style={styles.recurrenceIcon}>♻️</Text>
-                        )}
-                      </View>
-                      <AppChip
-                        label={formatDate(event.startAt || event.startTime)}
-                        variant="info"
-                        compact
-                      />
+              {events.map((event) => {
+                const conflictCount = eventConflicts.get(event.id) || 0;
+                return (
+                  <TouchableOpacity
+                    key={event.id}
+                    style={styles.eventCard}
+                    activeOpacity={0.9}
+                    onPress={() => {
+                      setSelectedEvent(event);
+                      setShowCreateModal(true);
+                    }}
+                    onLongPress={() => handleDelete(event.id)}
+                  >
+                    <View style={styles.eventTimeColumn}>
+                      <Text style={styles.eventTimeText}>
+                        {formatTime(event.startAt || event.startTime)}
+                      </Text>
+                      <View style={styles.eventTimeLine} />
+                      <Text style={styles.eventTimeText}>
+                        {formatTime(event.endAt || event.endTime)}
+                      </Text>
                     </View>
 
-                    {event.description && (
-                      <Text style={styles.eventDescription} numberOfLines={2}>
-                        {event.description}
-                      </Text>
-                    )}
-
-                    {event.location && (
-                      <View style={styles.eventLocation}>
-                        <Text style={styles.locationIcon}>📍</Text>
-                        <Text style={styles.locationText}>{event.location}</Text>
+                    <View style={styles.eventContent}>
+                      <View style={styles.eventHeader}>
+                        <View style={styles.eventTitleRow}>
+                          <Text style={styles.eventTitle}>{event.title}</Text>
+                          {event.recurrence && (
+                            <Text style={styles.recurrenceIcon}>♻️</Text>
+                          )}
+                          {conflictCount > 0 && (
+                            <View style={styles.conflictBadge}>
+                              <IconButton
+                                icon="alert-circle"
+                                size={16}
+                                iconColor="#EF5350"
+                                style={styles.conflictIcon}
+                              />
+                              <Text style={styles.conflictCount}>{conflictCount}</Text>
+                            </View>
+                          )}
+                        </View>
+                        <AppChip
+                          label={formatDate(event.startAt || event.startTime)}
+                          variant="info"
+                          compact
+                        />
                       </View>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              ))}
+
+                      {event.description && (
+                        <Text style={styles.eventDescription} numberOfLines={2}>
+                          {event.description}
+                        </Text>
+                      )}
+
+                      {event.location && (
+                        <View style={styles.eventLocation}>
+                          <Text style={styles.locationIcon}>📍</Text>
+                          <Text style={styles.locationText}>{event.location}</Text>
+                        </View>
+                      )}
+
+                      {conflictCount > 0 && (
+                        <View style={styles.conflictWarningBar}>
+                          <Text style={styles.conflictWarningText}>
+                            {conflictCount} conflict{conflictCount > 1 ? 's' : ''} detected
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           )}
         </ScrollView>
@@ -431,11 +484,12 @@ const EventFormModal: React.FC<EventFormModalProps> = ({
 
     setIsSubmitting(true);
     try {
-      // Check for conflicts before saving
+      // Check for conflicts before saving (all-day events don't conflict)
       const detectedConflicts = await detectConflicts(
         startTime,
         endTime,
-        event?.id // Pass current event ID if editing
+        event?.id, // Pass current event ID if editing
+        false // isAllDay parameter - would need to be tracked if implementing all-day events
       );
 
       if (detectedConflicts.length > 0) {
@@ -1009,5 +1063,38 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     borderColor: colors.error,
+  },
+  conflictBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3F3',
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+    marginLeft: spacing.xs,
+  },
+  conflictIcon: {
+    margin: 0,
+    padding: 0,
+  },
+  conflictCount: {
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.bold,
+    color: '#EF5350',
+    marginLeft: -4,
+  },
+  conflictWarningBar: {
+    marginTop: spacing.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: '#FFF3E0',
+    borderRadius: borderRadius.sm,
+    borderLeftWidth: 3,
+    borderLeftColor: '#FF9800',
+  },
+  conflictWarningText: {
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.medium,
+    color: '#F57C00',
   },
 });
