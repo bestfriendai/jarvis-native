@@ -26,6 +26,7 @@ import AIChatScreen from '../screens/main/AIChatScreen';
 import TasksScreen from '../screens/main/TasksScreen';
 import ProjectsNavigator from './ProjectsNavigator';
 import HabitsScreen from '../screens/main/HabitsScreen';
+import FocusScreen from '../screens/main/FocusScreen';
 import CalendarScreen from '../screens/main/CalendarScreen';
 import FinanceScreen from '../screens/main/FinanceScreen';
 import SettingsNavigator from './SettingsNavigator';
@@ -178,6 +179,22 @@ export default function MainNavigator() {
           ),
           tabBarLabel: 'Habits',
           headerShown: false, // Habits has its own header
+        }}
+      />
+
+      <Tab.Screen
+        name="Focus"
+        component={FocusScreen}
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              icon="bullseye-arrow"
+              focused={focused}
+              colors={colors}
+            />
+          ),
+          tabBarLabel: 'Focus',
+          headerShown: false, // Focus has its own header
         }}
       />
 
