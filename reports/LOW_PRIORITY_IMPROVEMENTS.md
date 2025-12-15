@@ -38,4 +38,4 @@ Items that would be nice to have but aren't critical for daily use.
 8) Populate version/build dynamically from app config  
 
 **Date Added:** December 13, 2025  
-**Author:** Claude (Cascade)
+**Author:** Madam Claudia

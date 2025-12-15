@@ -184,6 +184,37 @@ export const CREATE_TABLES = {
       FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE SET NULL
     );
   `,
+
+  pomodoro_sessions: `
+    CREATE TABLE IF NOT EXISTS pomodoro_sessions (
+      id TEXT PRIMARY KEY,
+      task_id TEXT,
+      session_number INTEGER NOT NULL,
+      duration_minutes INTEGER NOT NULL,
+      break_minutes INTEGER NOT NULL,
+      status TEXT DEFAULT 'in_progress',
+      started_at TEXT NOT NULL,
+      completed_at TEXT,
+      notes TEXT,
+      created_at TEXT NOT NULL,
+      synced INTEGER DEFAULT 0,
+      FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE SET NULL
+    );
+  `,
+
+  pomodoro_settings: `
+    CREATE TABLE IF NOT EXISTS pomodoro_settings (
+      id TEXT PRIMARY KEY,
+      work_duration INTEGER DEFAULT 25,
+      short_break INTEGER DEFAULT 5,
+      long_break INTEGER DEFAULT 15,
+      sessions_until_long_break INTEGER DEFAULT 4,
+      auto_start_breaks INTEGER DEFAULT 0,
+      auto_start_pomodoros INTEGER DEFAULT 0,
+      notification_sound INTEGER DEFAULT 1,
+      updated_at TEXT NOT NULL
+    );
+  `,
 };
 
 /**
@@ -216,12 +247,18 @@ export const CREATE_INDEXES = {
   focus_blocks_status: 'CREATE INDEX IF NOT EXISTS idx_focus_blocks_status ON focus_blocks(status);',
   focus_blocks_task: 'CREATE INDEX IF NOT EXISTS idx_focus_blocks_task ON focus_blocks(task_id);',
   focus_blocks_start_time: 'CREATE INDEX IF NOT EXISTS idx_focus_blocks_start_time ON focus_blocks(start_time);',
+
+  pomodoro_sessions_task: 'CREATE INDEX IF NOT EXISTS idx_pomodoro_sessions_task ON pomodoro_sessions(task_id);',
+  pomodoro_sessions_status: 'CREATE INDEX IF NOT EXISTS idx_pomodoro_sessions_status ON pomodoro_sessions(status);',
+  pomodoro_sessions_started_at: 'CREATE INDEX IF NOT EXISTS idx_pomodoro_sessions_started_at ON pomodoro_sessions(started_at);',
 };
 
 /**
  * Drop all tables (for reset/testing)
  */
 export const DROP_TABLES = [
+  'DROP TABLE IF EXISTS pomodoro_sessions',
+  'DROP TABLE IF EXISTS pomodoro_settings',
   'DROP TABLE IF EXISTS focus_blocks',
   'DROP TABLE IF EXISTS habit_logs',
   'DROP TABLE IF EXISTS habits',
