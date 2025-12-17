@@ -14,6 +14,7 @@
 **Notes**
 - Haptics are currently no-op to avoid import-time issues. We can add a safe alternative later.
 - If Notifee-specific build errors appear, capture the first stack trace line; we’ll address Android setup as needed.
+- CI status: Android release bundle **passed** after these changes.
 
 **Files touched**
 - `package.json` – add @notifee/react-native
@@ -21,5 +22,10 @@
 - `src/navigation/MainNavigator.tsx` – Pomodoro tab re-enabled
 - `src/types/index.ts` – Pomodoro route restored
 - `src/types/notifee.d.ts` – minimal type shim
+
+**After Action Review (AAR)**
+- Cause: Expo notifications/haptics module-level code triggered Metro bundling failure.
+- Fix: Migrated Pomodoro notifications to Notifee, restored Pomodoro navigation, added TS shim.
+- Validation: Android release bundle now completes; rerun if further changes touch Pomodoro notifications.
 
 — Madam Claudia
