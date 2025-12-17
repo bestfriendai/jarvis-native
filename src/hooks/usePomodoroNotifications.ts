@@ -1,11 +1,15 @@
 /**
  * Pomodoro Notifications Hook
  * Handles notifications and haptic feedback for pomodoro phase transitions
+ *
+ * TEMPORARILY DISABLED: expo-notifications/expo-haptics break release builds
+ * TODO: Re-enable once module-level execution issue is resolved
  */
 
-import { useEffect, useCallback } from 'react';
-import * as Notifications from 'expo-notifications';
-import * as Haptics from 'expo-haptics';
+import { useCallback } from 'react';
+// TEMPORARILY DISABLED
+// import * as Notifications from 'expo-notifications';
+// import * as Haptics from 'expo-haptics';
 import { PomodoroPhase } from '../utils/pomodoroHelpers';
 
 export interface UsePomodoroNotificationsOptions {
