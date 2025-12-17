@@ -25,7 +25,7 @@ import { detectConflicts, EventConflict } from '../../database/calendar';
 import * as undoService from '../../services/undo';
 import { ConflictWarning } from '../../components/calendar/ConflictWarning';
 import { ReminderPicker } from '../../components/calendar/ReminderPicker';
-import { AppButton, AppChip, EmptyState, LoadingState, LastUpdated } from '../../components/ui';
+import { AppButton, AppChip, EmptyState, LoadingState, LastUpdated, SearchBar } from '../../components/ui';
 import { CalendarEventSkeleton } from '../../components/calendar/CalendarEventSkeleton';
 import { RecurrencePicker } from '../../components/RecurrencePicker';
 import type { RecurrenceRule } from '../../types';
@@ -33,6 +33,7 @@ import DayTimelineView from '../../components/calendar/DayTimelineView';
 import WeekGridView from '../../components/calendar/WeekGridView';
 import { useOptimisticUpdate } from '../../hooks/useOptimisticUpdate';
 import { useRefreshControl } from '../../hooks/useRefreshControl';
+import { useDebounce } from '../../hooks/useDebounce';
 import {
   colors,
   typography,
@@ -55,6 +56,8 @@ export default function CalendarScreen() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const { updateOptimistically, isPending } = useOptimisticUpdate();
   const [eventConflicts, setEventConflicts] = useState<Map<string, number>>(new Map());
 
@@ -195,6 +198,18 @@ export default function CalendarScreen() {
     });
   };
 
+  // Apply search filtering
+  const filteredEvents = events.filter((event) => {
+    if (!debouncedSearchQuery) return true;
+
+    const query = debouncedSearchQuery.toLowerCase();
+    const matchesTitle = event.title.toLowerCase().includes(query);
+    const matchesDescription = event.description?.toLowerCase().includes(query);
+    const matchesLocation = event.location?.toLowerCase().includes(query);
+
+    return matchesTitle || matchesDescription || matchesLocation;
+  });
+
   if (isLoading && events.length === 0) {
     return (
       <View style={styles.container}>
@@ -248,6 +263,17 @@ export default function CalendarScreen() {
         />
       </View>
 
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search events..."
+          resultCount={filteredEvents.length}
+          showResultCount={searchQuery.length > 0}
+        />
+      </View>
+
       {/* View Filters */}
       <ScrollView
         horizontal
@@ -269,10 +295,10 @@ export default function CalendarScreen() {
       {viewMode === 'day' ? (
         <View style={styles.content}>
           <DayTimelineView
-            events={events}
+            events={filteredEvents}
             selectedDate={selectedDate}
             onEventPress={(event) => {
-              const fullEvent = events.find(e => e.id === event.id);
+              const fullEvent = filteredEvents.find(e => e.id === event.id);
               if (fullEvent) {
                 setSelectedEvent(fullEvent);
                 setShowCreateModal(true);
@@ -283,10 +309,10 @@ export default function CalendarScreen() {
       ) : viewMode === 'week' ? (
         <View style={styles.content}>
           <WeekGridView
-            events={events}
+            events={filteredEvents}
             selectedDate={selectedDate}
             onEventPress={(event) => {
-              const fullEvent = events.find(e => e.id === event.id);
+              const fullEvent = filteredEvents.find(e => e.id === event.id);
               if (fullEvent) {
                 setSelectedEvent(fullEvent);
                 setShowCreateModal(true);
@@ -309,7 +335,7 @@ export default function CalendarScreen() {
           }
           showsVerticalScrollIndicator={false}
         >
-          {events.length === 0 ? (
+          {filteredEvents.length === 0 ? (
             <EmptyState
               icon="📅"
               title="No events"
@@ -322,7 +348,7 @@ export default function CalendarScreen() {
             />
           ) : (
             <View style={styles.eventsList}>
-              {events.map((event) => {
+              {filteredEvents.map((event) => {
                 const conflictCount = eventConflicts.get(event.id) || 0;
                 return (
                   <TouchableOpacity
@@ -871,6 +897,10 @@ const styles = StyleSheet.create({
     fontSize: typography.size.xs,
     color: colors.primary.main,
     fontWeight: typography.weight.medium,
+  },
+  searchContainer: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
   },
   filterContainer: {
     marginBottom: spacing.md,

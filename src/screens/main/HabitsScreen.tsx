@@ -27,7 +27,7 @@ import { HabitInsightsCard } from '../../components/habits/HabitInsightsCard';
 import { HabitReminderPicker } from '../../components/habits/HabitReminderPicker';
 import { HabitNotesModal } from '../../components/habits/HabitNotesModal';
 import { HabitLogsView } from '../../components/habits/HabitLogsView';
-import { AppButton, AppChip, EmptyState, LoadingState, LastUpdated } from '../../components/ui';
+import { AppButton, AppChip, EmptyState, LoadingState, LastUpdated, SearchBar } from '../../components/ui';
 import { HabitCardSkeleton } from '../../components/habits/HabitCardSkeleton';
 import * as storage from '../../services/storage';
 import { WeeklyCompletionChart, HabitsComparisonChart } from '../../components/charts';
@@ -35,6 +35,7 @@ import * as notificationService from '../../services/notifications';
 import { useOptimisticUpdate } from '../../hooks/useOptimisticUpdate';
 import { useTooltip } from '../../hooks/useTooltip';
 import { useRefreshControl } from '../../hooks/useRefreshControl';
+import { useDebounce } from '../../hooks/useDebounce';
 import Tooltip from '../../components/ui/Tooltip';
 import {
   colors,
@@ -77,6 +78,8 @@ export default function HabitsScreen() {
   const [showHistoryView, setShowHistoryView] = useState(false);
   const [historyHabitId, setHistoryHabitId] = useState<string | null>(null);
   const [historyHabitName, setHistoryHabitName] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const insets = useSafeAreaInsets();
   const { updateOptimistically, isPending } = useOptimisticUpdate();
   const tooltip = useTooltip();
@@ -351,6 +354,29 @@ export default function HabitsScreen() {
   const activeHabits = habits.filter((h) => h.isActive);
   const inactiveHabits = habits.filter((h) => !h.isActive);
 
+  // Apply search filtering
+  const filteredActiveHabits = activeHabits.filter((habit) => {
+    if (!debouncedSearchQuery) return true;
+
+    const query = debouncedSearchQuery.toLowerCase();
+    const matchesName = habit.name.toLowerCase().includes(query);
+    const matchesDescription = habit.description?.toLowerCase().includes(query);
+
+    return matchesName || matchesDescription;
+  });
+
+  const filteredInactiveHabits = inactiveHabits.filter((habit) => {
+    if (!debouncedSearchQuery) return true;
+
+    const query = debouncedSearchQuery.toLowerCase();
+    const matchesName = habit.name.toLowerCase().includes(query);
+    const matchesDescription = habit.description?.toLowerCase().includes(query);
+
+    return matchesName || matchesDescription;
+  });
+
+  const totalFilteredCount = filteredActiveHabits.length + filteredInactiveHabits.length;
+
   if (isLoading && habits.length === 0) {
     return (
       <View style={styles.container}>
@@ -402,6 +428,17 @@ export default function HabitsScreen() {
         />
       </View>
 
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search habits..."
+          resultCount={totalFilteredCount}
+          showResultCount={searchQuery.length > 0}
+        />
+      </View>
+
       {/* Content */}
       <ScrollView
         style={styles.content}
@@ -417,7 +454,7 @@ export default function HabitsScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {activeHabits.length === 0 && inactiveHabits.length === 0 ? (
+        {filteredActiveHabits.length === 0 && filteredInactiveHabits.length === 0 ? (
           <EmptyState
             icon="🎯"
             title="No habits yet"
@@ -431,19 +468,19 @@ export default function HabitsScreen() {
         ) : (
           <>
             {/* Habits Comparison Chart */}
-            {activeHabits.length >= 2 && (
+            {filteredActiveHabits.length >= 2 && (
               <View style={styles.section}>
                 <HabitsComparisonChart
-                  habitIds={activeHabits.slice(0, 5).map((h) => h.id)}
+                  habitIds={filteredActiveHabits.slice(0, 5).map((h) => h.id)}
                 />
               </View>
             )}
 
             {/* Active Habits */}
-            {activeHabits.length > 0 && (
+            {filteredActiveHabits.length > 0 && (
               <View style={styles.section}>
                 <Text style={styles.sectionLabel}>ACTIVE</Text>
-                {activeHabits.map((habit) => (
+                {filteredActiveHabits.map((habit) => (
                   <HabitCard
                     key={habit.id}
                     habit={habit}
@@ -466,10 +503,10 @@ export default function HabitsScreen() {
             )}
 
             {/* Inactive Habits */}
-            {inactiveHabits.length > 0 && (
+            {filteredInactiveHabits.length > 0 && (
               <View style={styles.section}>
                 <Text style={styles.sectionLabel}>INACTIVE</Text>
-                {inactiveHabits.map((habit) => (
+                {filteredInactiveHabits.map((habit) => (
                   <HabitCard
                     key={habit.id}
                     habit={habit}
@@ -1084,6 +1121,10 @@ const styles = StyleSheet.create({
     fontSize: typography.size.xs,
     color: colors.primary.main,
     fontWeight: typography.weight.medium,
+  },
+  searchContainer: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
   },
   content: {
     flex: 1,

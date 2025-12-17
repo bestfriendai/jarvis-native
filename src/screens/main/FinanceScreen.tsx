@@ -22,7 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as financeDB from '../../database/finance';
 import * as budgetsDB from '../../database/budgets';
 import * as undoService from '../../services/undo';
-import { AppButton, AppChip, EmptyState, LoadingState, AppCard, LastUpdated } from '../../components/ui';
+import { AppButton, AppChip, EmptyState, LoadingState, AppCard, LastUpdated, SearchBar } from '../../components/ui';
 import { TransactionCardSkeleton } from '../../components/finance/TransactionCardSkeleton';
 import { MetricCard } from '../../components/MetricCard';
 import { BudgetCard } from '../../components/BudgetCard';
@@ -34,6 +34,7 @@ import { CategoryPicker } from '../../components/finance/CategoryPicker';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useOptimisticUpdate } from '../../hooks/useOptimisticUpdate';
 import { useRefreshControl } from '../../hooks/useRefreshControl';
+import { useDebounce } from '../../hooks/useDebounce';
 import {
   colors,
   typography,
@@ -64,6 +65,8 @@ export default function FinanceScreen() {
   const [budgets, setBudgets] = useState<budgetsDB.BudgetWithSpending[]>([]);
   const [budgetSummary, setBudgetSummary] = useState<budgetsDB.BudgetSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const insets = useSafeAreaInsets();
   const { isPending } = useOptimisticUpdate();
 
@@ -96,28 +99,45 @@ export default function FinanceScreen() {
     loadData();
   }, [loadData]);
 
-  // Filter transactions based on time filter
+  // Filter transactions based on time filter and search
   useEffect(() => {
     const now = new Date();
     let startDate: string;
     let endDate: string;
 
+    // Apply time filter
+    let timeFiltered = transactions;
     if (timeFilter === 'month') {
       startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
       endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+      timeFiltered = transactions.filter(
+        (t) => t.date >= startDate && t.date <= endDate
+      );
     } else if (timeFilter === 'lastMonth') {
       startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
       endDate = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
-    } else {
-      setFilteredTransactions(transactions);
+      timeFiltered = transactions.filter(
+        (t) => t.date >= startDate && t.date <= endDate
+      );
+    }
+
+    // Apply search filter
+    if (!debouncedSearchQuery) {
+      setFilteredTransactions(timeFiltered);
       return;
     }
 
-    const filtered = transactions.filter(
-      (t) => t.date >= startDate && t.date <= endDate
-    );
-    setFilteredTransactions(filtered);
-  }, [transactions, timeFilter]);
+    const query = debouncedSearchQuery.toLowerCase();
+    const searchFiltered = timeFiltered.filter((transaction) => {
+      const matchesDescription = transaction.description?.toLowerCase().includes(query);
+      const matchesCategory = transaction.category?.toLowerCase().includes(query);
+      const matchesAmount = transaction.amount.toString().includes(query);
+
+      return matchesDescription || matchesCategory || matchesAmount;
+    });
+
+    setFilteredTransactions(searchFiltered);
+  }, [transactions, timeFilter, debouncedSearchQuery]);
 
   // Pull-to-refresh with haptics and timestamp
   const { refreshing, handleRefresh, lastUpdated } = useRefreshControl({
@@ -217,6 +237,19 @@ export default function FinanceScreen() {
           <ExportButton transactions={transactions} />
         )}
       </View>
+
+      {/* Search Bar - only show in transactions view */}
+      {viewMode === 'transactions' && (
+        <View style={styles.searchContainer}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search transactions..."
+            resultCount={filteredTransactions.length}
+            showResultCount={searchQuery.length > 0}
+          />
+        </View>
+      )}
 
       {/* View Selector */}
       <View style={styles.viewSelectorContainer}>
@@ -1276,6 +1309,10 @@ const styles = StyleSheet.create({
     fontSize: typography.size.xs,
     color: colors.primary.main,
     fontWeight: typography.weight.medium,
+  },
+  searchContainer: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
   },
   viewSelectorContainer: {
     paddingHorizontal: spacing.lg,

@@ -26,7 +26,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import * as tasksDB from '../../database/tasks';
 import * as undoService from '../../services/undo';
 import type { Project } from '../../database/projects';
-import { AppButton, AppCard, AppChip, EmptyState, LoadingState, LastUpdated } from '../../components/ui';
+import { AppButton, AppCard, AppChip, EmptyState, LoadingState, LastUpdated, SearchBar } from '../../components/ui';
 import { TaskCardSkeleton } from '../../components/tasks/TaskCardSkeleton';
 import { RecurrencePicker } from '../../components/RecurrencePicker';
 import { ProjectPicker } from '../../components/ProjectPicker';
@@ -42,6 +42,7 @@ import { formatDueDate, getDateUrgency, getDaysUntil } from '../../utils/dateUti
 import { useOptimisticUpdate } from '../../hooks/useOptimisticUpdate';
 import { useTooltip } from '../../hooks/useTooltip';
 import { useRefreshControl } from '../../hooks/useRefreshControl';
+import { useDebounce } from '../../hooks/useDebounce';
 import Tooltip from '../../components/ui/Tooltip';
 import {
   colors,
@@ -94,6 +95,8 @@ export default function TasksScreen() {
   const [filters, setFilters] = useState<filterStore.TaskFilters>(filterStore.getFilters());
   const [bulkSelectMode, setBulkSelectMode] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const insets = useSafeAreaInsets();
   const { updateOptimistically, isPending } = useOptimisticUpdate();
   const tooltip = useTooltip();
@@ -334,6 +337,19 @@ export default function TasksScreen() {
 
   const activeFilterCount = filterStore.countActiveFilters(filters);
 
+  // Apply search filtering
+  const filteredTasks = tasks.filter((task) => {
+    if (!debouncedSearchQuery) return true;
+
+    const query = debouncedSearchQuery.toLowerCase();
+    const matchesTitle = task.title.toLowerCase().includes(query);
+    const matchesDescription = task.description?.toLowerCase().includes(query);
+    const matchesTags = task.tags.some(tag => tag.toLowerCase().includes(query));
+    const matchesProject = task.project?.name.toLowerCase().includes(query);
+
+    return matchesTitle || matchesDescription || matchesTags || matchesProject;
+  });
+
   if (isLoading && tasks.length === 0) {
     return (
       <View style={styles.container}>
@@ -441,6 +457,19 @@ export default function TasksScreen() {
         />
       )}
 
+      {/* Search Bar */}
+      {!bulkSelectMode && (
+        <View style={styles.searchContainer}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search tasks..."
+            resultCount={filteredTasks.length}
+            showResultCount={searchQuery.length > 0}
+          />
+        </View>
+      )}
+
       {/* View Mode Selector */}
       {!bulkSelectMode && (
         <View style={styles.viewSelectorContainer}>
@@ -499,7 +528,7 @@ export default function TasksScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {tasks.length === 0 ? (
+        {filteredTasks.length === 0 ? (
           <EmptyState
             icon="📋"
             title="No tasks yet"
@@ -518,7 +547,7 @@ export default function TasksScreen() {
           <>
             {viewMode === 'list' && (
               <View style={styles.listView}>
-                {tasks.map((task) => (
+                {filteredTasks.map((task) => (
                   <SwipeableTaskItem
                     key={task.id}
                     taskId={task.id}
@@ -546,7 +575,7 @@ export default function TasksScreen() {
             )}
             {viewMode === 'kanban' && (
               <KanbanView
-                tasks={tasks}
+                tasks={filteredTasks}
                 onStatusChange={handleStatusChange}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
@@ -557,7 +586,7 @@ export default function TasksScreen() {
             )}
             {viewMode === 'matrix' && (
               <MatrixView
-                tasks={tasks}
+                tasks={filteredTasks}
                 onStatusChange={handleStatusChange}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
@@ -1335,6 +1364,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+  },
+  searchContainer: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
   },
   filterButtonContainer: {
     position: 'relative',
