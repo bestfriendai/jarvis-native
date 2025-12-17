@@ -8,17 +8,6 @@ import * as Notifications from 'expo-notifications';
 import * as Haptics from 'expo-haptics';
 import { PomodoroPhase } from '../utils/pomodoroHelpers';
 
-// Configure notification handler
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
-
 export interface UsePomodoroNotificationsOptions {
   enabled: boolean;
   soundEnabled: boolean;
@@ -39,8 +28,19 @@ export function usePomodoroNotifications(
     soundEnabled: true,
   }
 ): UsePomodoroNotificationsReturn {
-  // Request notification permissions on mount
+  // Configure notification handler and request permissions on mount
   useEffect(() => {
+    // Configure notification handler
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+
     if (options.enabled) {
       requestPermissions();
     }

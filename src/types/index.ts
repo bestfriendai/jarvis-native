@@ -206,6 +206,7 @@ export type MainTabParamList = {
   Projects: undefined;
   Habits: undefined;
   Focus: undefined;
+  Pomodoro: undefined;
   Calendar: undefined;
   Finance: undefined;
   Settings: undefined;

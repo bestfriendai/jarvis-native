@@ -27,6 +27,7 @@ import TasksScreen from '../screens/main/TasksScreen';
 import ProjectsNavigator from './ProjectsNavigator';
 import HabitsScreen from '../screens/main/HabitsScreen';
 import FocusScreen from '../screens/main/FocusScreen';
+import PomodoroScreen from '../screens/main/PomodoroScreen';
 import CalendarScreen from '../screens/main/CalendarScreen';
 import FinanceScreen from '../screens/main/FinanceScreen';
 import SettingsNavigator from './SettingsNavigator';
@@ -195,6 +196,22 @@ export default function MainNavigator() {
           ),
           tabBarLabel: 'Focus',
           headerShown: false, // Focus has its own header
+        }}
+      />
+
+      <Tab.Screen
+        name="Pomodoro"
+        component={PomodoroScreen}
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              icon="timer-outline"
+              focused={focused}
+              colors={colors}
+            />
+          ),
+          tabBarLabel: 'Pomodoro',
+          headerShown: false, // Pomodoro has its own header
         }}
       />
 
