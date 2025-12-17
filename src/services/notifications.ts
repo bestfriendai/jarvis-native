@@ -1,28 +1,22 @@
 /**
  * Notification Service
- * Handles scheduling and managing local notifications using expo-notifications
- *
- * TEMPORARILY DISABLED: expo-notifications breaks release builds
- * TODO: Re-enable once module-level execution issue is resolved
+ * Handles scheduling and managing local notifications using Notifee
  */
 
-// TEMPORARILY DISABLED
-// import * as Notifications from 'expo-notifications';
+import notifee, {
+  AndroidImportance,
+  AuthorizationStatus,
+  Notification,
+  TimestampTrigger,
+  TriggerType,
+  RepeatFrequency,
+} from '@notifee/react-native';
 import { Platform } from 'react-native';
 
 /**
- * Configure how notifications are handled when app is foregrounded
- * TEMPORARILY DISABLED: Causes release build failures
+ * Track whether channels have been created
  */
-// Notifications.setNotificationHandler({
-//   handleNotification: async () => ({
-//     shouldShowAlert: true,
-//     shouldPlaySound: true,
-//     shouldSetBadge: true,
-//     shouldShowBanner: true,
-//     shouldShowList: true,
-//   }),
-// });
+let channelsCreated = false;
 
 export interface ScheduleNotificationParams {
   title: string;
@@ -32,146 +26,178 @@ export interface ScheduleNotificationParams {
 }
 
 /**
+ * Ensure notification channels are created (Android only)
+ */
+async function ensureChannels(): Promise<void> {
+  if (channelsCreated || Platform.OS !== 'android') return;
+
+  try {
+    await notifee.createChannel({
+      id: 'events',
+      name: 'Event Reminders',
+      description: 'Notifications for upcoming calendar events',
+      importance: AndroidImportance.HIGH,
+      vibration: true,
+      sound: 'default',
+    });
+
+    await notifee.createChannel({
+      id: 'habits',
+      name: 'Habit Reminders',
+      description: 'Daily reminders for your habits',
+      importance: AndroidImportance.HIGH,
+      vibration: true,
+      sound: 'default',
+    });
+
+    channelsCreated = true;
+    console.log('[Notifications] Channels created successfully');
+  } catch (error) {
+    console.error('[Notifications] Error creating channels:', error);
+  }
+}
+
+/**
  * Request notification permissions from user
  * @returns true if granted, false otherwise
- * TEMPORARILY DISABLED
  */
 export async function requestPermissions(): Promise<boolean> {
-  // TEMPORARILY DISABLED
-  // const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  // let finalStatus = existingStatus;
+  try {
+    const settings = await notifee.requestPermission();
 
-  // if (existingStatus !== 'granted') {
-  //   const { status } = await Notifications.requestPermissionsAsync();
-  //   finalStatus = status;
-  // }
+    const granted =
+      settings.authorizationStatus === AuthorizationStatus.AUTHORIZED ||
+      settings.authorizationStatus === AuthorizationStatus.PROVISIONAL;
 
-  // if (finalStatus !== 'granted') {
-  //   console.warn('[Notifications] Permission not granted');
-  //   return false;
-  // }
+    if (!granted) {
+      console.warn('[Notifications] Permission not granted');
+      return false;
+    }
 
-  // // For Android, create notification channels
-  // if (Platform.OS === 'android') {
-  //   await Notifications.setNotificationChannelAsync('events', {
-  //     name: 'Event Reminders',
-  //     description: 'Notifications for upcoming calendar events',
-  //     importance: Notifications.AndroidImportance.HIGH,
-  //     vibrationPattern: [0, 250, 250, 250],
-  //     lightColor: '#4A90E2',
-  //     sound: 'default',
-  //   });
+    // Create channels for Android
+    await ensureChannels();
 
-  //   await Notifications.setNotificationChannelAsync('habits', {
-  //     name: 'Habit Reminders',
-  //     description: 'Daily reminders for your habits',
-  //     importance: Notifications.AndroidImportance.HIGH,
-  //     vibrationPattern: [0, 250, 250, 250],
-  //     lightColor: '#10B981',
-  //     sound: 'default',
-  //   });
-  // }
-
-  console.warn('[Notifications] DISABLED - returning false');
-  return false;
+    console.log('[Notifications] Permissions granted');
+    return true;
+  } catch (error) {
+    console.error('[Notifications] Error requesting permissions:', error);
+    return false;
+  }
 }
 
 /**
  * Schedule a local notification for an event reminder
  * @param params - Notification details
- * @returns Notification ID from Expo (for cancellation)
- * TEMPORARILY DISABLED
+ * @returns Notification ID from Notifee (for cancellation)
  */
 export async function scheduleEventNotification(
   params: ScheduleNotificationParams
 ): Promise<string> {
-  // TEMPORARILY DISABLED
-  // const hasPermission = await requestPermissions();
+  try {
+    const hasPermission = await requestPermissions();
 
-  // if (!hasPermission) {
-  //   throw new Error('Notification permission not granted');
-  // }
+    if (!hasPermission) {
+      throw new Error('Notification permission not granted');
+    }
 
-  // // Don't schedule notifications for past times
-  // if (params.triggerDate <= new Date()) {
-  //   throw new Error('Cannot schedule notification for past time');
-  // }
+    // Don't schedule notifications for past times
+    if (params.triggerDate <= new Date()) {
+      throw new Error('Cannot schedule notification for past time');
+    }
 
-  // const trigger: any = Platform.OS === 'android'
-  //   ? { date: params.triggerDate, channelId: 'events' }
-  //   : { date: params.triggerDate };
+    await ensureChannels();
 
-  // const notificationId = await Notifications.scheduleNotificationAsync({
-  //   content: {
-  //     title: params.title,
-  //     body: params.body,
-  //     data: params.data || {},
-  //     sound: true,
-  //     priority: Notifications.AndroidNotificationPriority.HIGH,
-  //   },
-  //   trigger,
-  // });
+    const trigger: TimestampTrigger = {
+      type: TriggerType.TIMESTAMP,
+      timestamp: params.triggerDate.getTime(),
+    };
 
-  // console.log('[Notifications] Scheduled notification:', notificationId, 'for', params.triggerDate);
-  // return notificationId;
-  console.warn('[Notifications] DISABLED - returning empty string');
-  return '';
+    const notification: Notification = {
+      title: params.title,
+      body: params.body,
+      data: params.data || {},
+      android: {
+        channelId: 'events',
+        importance: AndroidImportance.HIGH,
+        pressAction: {
+          id: 'default',
+        },
+      },
+    };
+
+    const notificationId = await notifee.createTriggerNotification(
+      notification,
+      trigger
+    );
+
+    console.log('[Notifications] Scheduled event notification:', notificationId, 'for', params.triggerDate);
+    return notificationId;
+  } catch (error) {
+    console.error('[Notifications] Error scheduling event notification:', error);
+    throw error;
+  }
 }
 
 /**
  * Cancel a scheduled notification
- * @param notificationId - ID returned from scheduleEventNotification
- * TEMPORARILY DISABLED
+ * @param notificationId - ID returned from scheduleEventNotification or scheduleHabitReminder
  */
 export async function cancelNotification(notificationId: string): Promise<void> {
-  // TEMPORARILY DISABLED
-  // try {
-  //   await Notifications.cancelScheduledNotificationAsync(notificationId);
-  //   console.log('[Notifications] Cancelled notification:', notificationId);
-  // } catch (error) {
-  //   console.error('[Notifications] Error cancelling notification:', error);
-  // }
-  console.warn('[Notifications] DISABLED - cancelNotification');
+  try {
+    await notifee.cancelNotification(notificationId);
+    console.log('[Notifications] Cancelled notification:', notificationId);
+  } catch (error) {
+    console.error('[Notifications] Error cancelling notification:', error);
+  }
 }
 
 /**
  * Cancel all scheduled notifications (useful for debugging)
- * TEMPORARILY DISABLED
  */
 export async function cancelAllNotifications(): Promise<void> {
-  // TEMPORARILY DISABLED
-  // await Notifications.cancelAllScheduledNotificationsAsync();
-  // console.log('[Notifications] Cancelled all notifications');
-  console.warn('[Notifications] DISABLED - cancelAllNotifications');
+  try {
+    await notifee.cancelAllNotifications();
+    console.log('[Notifications] Cancelled all notifications');
+  } catch (error) {
+    console.error('[Notifications] Error cancelling all notifications:', error);
+  }
 }
 
 /**
  * Get all currently scheduled notifications (for debugging)
- * TEMPORARILY DISABLED
  */
 export async function getAllScheduledNotifications(): Promise<any[]> {
-  // TEMPORARILY DISABLED
-  // return await Notifications.getAllScheduledNotificationsAsync();
-  console.warn('[Notifications] DISABLED - getAllScheduledNotifications');
-  return [];
+  try {
+    const triggers = await notifee.getTriggerNotifications();
+    console.log('[Notifications] Scheduled notifications:', triggers.length);
+    return triggers;
+  } catch (error) {
+    console.error('[Notifications] Error getting scheduled notifications:', error);
+    return [];
+  }
 }
 
 /**
  * Add listener for notification responses (when user taps notification)
  * @param callback - Function to call with notification data
- * @returns Subscription object (call .remove() to unsubscribe)
- * TEMPORARILY DISABLED
+ * @returns Unsubscribe function
  */
 export function addNotificationResponseListener(
   callback: (data: any) => void
-): any {
-  // TEMPORARILY DISABLED
-  // return Notifications.addNotificationResponseReceivedListener(response => {
-  //   const data = response.notification.request.content.data;
-  //   callback(data);
-  // });
-  console.warn('[Notifications] DISABLED - addNotificationResponseListener');
-  return { remove: () => {} };
+): () => void {
+  try {
+    const unsubscribe = notifee.onForegroundEvent(({ type, detail }) => {
+      if (type === 1 && detail.notification?.data) { // Type 1 is PRESS
+        callback(detail.notification.data);
+      }
+    });
+
+    console.log('[Notifications] Notification response listener added');
+    return unsubscribe;
+  } catch (error) {
+    console.error('[Notifications] Error adding notification response listener:', error);
+    return () => {};
+  }
 }
 
 /**
@@ -179,59 +205,73 @@ export function addNotificationResponseListener(
  * @param habitId - ID of the habit
  * @param habitName - Name of the habit
  * @param reminderTime - Time in "HH:MM" format (24-hour)
- * @returns Notification ID from Expo (for cancellation)
- * TEMPORARILY DISABLED
+ * @returns Notification ID from Notifee (for cancellation)
  */
 export async function scheduleHabitReminder(
   habitId: string,
   habitName: string,
   reminderTime: string
 ): Promise<string> {
-  // TEMPORARILY DISABLED
-  // const hasPermission = await requestPermissions();
+  try {
+    const hasPermission = await requestPermissions();
 
-  // if (!hasPermission) {
-  //   throw new Error('Notification permission not granted');
-  // }
+    if (!hasPermission) {
+      throw new Error('Notification permission not granted');
+    }
 
-  // // Parse reminder time (format: "HH:MM")
-  // const [hours, minutes] = reminderTime.split(':').map(Number);
+    // Parse reminder time (format: "HH:MM")
+    const [hours, minutes] = reminderTime.split(':').map(Number);
 
-  // if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
-  //   throw new Error('Invalid reminder time format. Expected HH:MM in 24-hour format');
-  // }
+    if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      throw new Error('Invalid reminder time format. Expected HH:MM in 24-hour format');
+    }
 
-  // // Create daily trigger
-  // const trigger: any = {
-  //   hour: hours,
-  //   minute: minutes,
-  //   repeats: true,
-  // };
+    await ensureChannels();
 
-  // // Add channel for Android
-  // if (Platform.OS === 'android') {
-  //   trigger.channelId = 'habits';
-  // }
+    // Calculate the next occurrence of this time
+    const now = new Date();
+    const triggerDate = new Date();
+    triggerDate.setHours(hours, minutes, 0, 0);
 
-  // const notificationId = await Notifications.scheduleNotificationAsync({
-  //   content: {
-  //     title: 'Habit Reminder',
-  //     body: `Time to complete: ${habitName}`,
-  //     data: {
-  //       type: 'habit',
-  //       habitId,
-  //       habitName,
-  //     },
-  //     sound: true,
-  //     priority: Notifications.AndroidNotificationPriority.HIGH,
-  //   },
-  //   trigger,
-  // });
+    // If the time has already passed today, schedule for tomorrow
+    if (triggerDate <= now) {
+      triggerDate.setDate(triggerDate.getDate() + 1);
+    }
 
-  // console.log('[Notifications] Scheduled habit reminder:', notificationId, 'at', reminderTime);
-  // return notificationId;
-  console.warn('[Notifications] DISABLED - scheduleHabitReminder');
-  return '';
+    const trigger: TimestampTrigger = {
+      type: TriggerType.TIMESTAMP,
+      timestamp: triggerDate.getTime(),
+      repeatFrequency: RepeatFrequency.DAILY,
+    };
+
+    const notification: Notification = {
+      title: 'Habit Reminder',
+      body: `Time to complete: ${habitName}`,
+      data: {
+        type: 'habit',
+        habitId,
+        habitName,
+      },
+      android: {
+        channelId: 'habits',
+        importance: AndroidImportance.HIGH,
+        pressAction: {
+          id: 'default',
+        },
+      },
+    };
+
+    const notificationId = await notifee.createTriggerNotification(
+      notification,
+      trigger
+    );
+
+    console.log('[Notifications] Scheduled habit reminder:', notificationId, 'at', reminderTime);
+    return notificationId;
+  } catch (error) {
+    console.error('[Notifications] Error scheduling habit reminder:', error);
+    throw error;
+  }
 }
 
 /**
