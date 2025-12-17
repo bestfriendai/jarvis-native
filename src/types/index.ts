@@ -206,7 +206,8 @@ export type MainTabParamList = {
   Projects: undefined;
   Habits: undefined;
   Focus: undefined;
-  Pomodoro: undefined;
+  // TEMPORARILY DISABLED - Pomodoro feature causing build failures
+  // Pomodoro: undefined;
   Calendar: undefined;
   Finance: undefined;
   Settings: undefined;

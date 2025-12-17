@@ -27,7 +27,8 @@ import TasksScreen from '../screens/main/TasksScreen';
 import ProjectsNavigator from './ProjectsNavigator';
 import HabitsScreen from '../screens/main/HabitsScreen';
 import FocusScreen from '../screens/main/FocusScreen';
-import PomodoroScreen from '../screens/main/PomodoroScreen';
+// TEMPORARILY DISABLED - Pomodoro feature causing build failures
+// import PomodoroScreen from '../screens/main/PomodoroScreen';
 import CalendarScreen from '../screens/main/CalendarScreen';
 import FinanceScreen from '../screens/main/FinanceScreen';
 import SettingsNavigator from './SettingsNavigator';
@@ -199,7 +200,8 @@ export default function MainNavigator() {
         }}
       />
 
-      <Tab.Screen
+      {/* TEMPORARILY DISABLED - Pomodoro feature causing build failures */}
+      {/* <Tab.Screen
         name="Pomodoro"
         component={PomodoroScreen}
         options={{
@@ -213,7 +215,7 @@ export default function MainNavigator() {
           tabBarLabel: 'Pomodoro',
           headerShown: false, // Pomodoro has its own header
         }}
-      />
+      /> */}
 
       <Tab.Screen
         name="Calendar"
