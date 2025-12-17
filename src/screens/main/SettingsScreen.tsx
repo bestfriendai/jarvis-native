@@ -170,38 +170,9 @@ export default function SettingsScreen() {
   };
 
   const handleNotificationToggle = async (value: boolean) => {
-    // TEMPORARILY DISABLED
-    // if (value) {
-    //   // Request permission when turning on
-    //   const { status: existingStatus } = await Notifications.getPermissionsAsync();
-
-    //   if (existingStatus !== 'granted') {
-    //     const { status } = await Notifications.requestPermissionsAsync();
-    //     setNotificationsPermissionStatus(status);
-    //     setNotificationsEnabled(status === 'granted');
-
-    //     if (status !== 'granted') {
-    Alert.alert('Notifications Disabled', 'Notifications are temporarily disabled.');
-    if (false) {
-          Alert.alert(
-            'Permission Denied',
-            'Please enable notifications in your device settings to receive alerts for tasks and events.',
-            [{ text: 'OK' }]
-          );
-        }
-      } else {
-        setNotificationsEnabled(true);
-      }
-    } else {
-      // Just update local state when turning off
-      // Note: Can't revoke permissions programmatically on iOS/Android
-      setNotificationsEnabled(false);
-      Alert.alert(
-        'Notifications Disabled',
-        'You won\'t receive notifications for tasks and events. To fully disable, go to device settings.',
-        [{ text: 'OK' }]
-      );
-    }
+    // TEMPORARILY DISABLED - notifications not available in release builds
+    Alert.alert('Notifications Disabled', 'Notifications are temporarily disabled due to build compatibility issues.');
+    setNotificationsEnabled(false);
   };
 
   const handleHabitNotesPromptToggle = async (value: boolean) => {
