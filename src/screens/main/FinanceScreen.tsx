@@ -183,12 +183,14 @@ export default function FinanceScreen() {
 
   const formatCurrency = (value: number | undefined | null) => {
     if (value == null) return '$0';
+    // Stored amounts are in cents; normalize to dollars for display
+    const normalized = value / 100;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(normalized);
   };
 
   if (isLoading && !summary) {

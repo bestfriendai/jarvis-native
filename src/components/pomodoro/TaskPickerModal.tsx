@@ -211,10 +211,10 @@ export function TaskPickerModal({ visible, onClose, onSelect, currentTaskId }: T
                           {formatDate(task.dueDate)}
                         </Text>
                       )}
-                      {task.projectName && (
+                      {task.project?.name && (
                         <View style={styles.projectBadge}>
                           <Text style={styles.projectName} numberOfLines={1}>
-                            {task.projectName}
+                            {task.project.name}
                           </Text>
                         </View>
                       )}

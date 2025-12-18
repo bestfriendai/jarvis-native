@@ -89,7 +89,7 @@ export default function App() {
 
   // Set up notification tap handler
   useEffect(() => {
-    const subscription = notificationService.addNotificationResponseListener((data) => {
+    const unsubscribe = notificationService.addNotificationResponseListener((data) => {
       console.log('[App] Notification tapped:', data);
 
       // Handle habit reminders
@@ -109,9 +109,7 @@ export default function App() {
       }
     });
 
-    return () => {
-      subscription.remove();
-    };
+    return unsubscribe;
   }, []);
 
   if (!isReady) {

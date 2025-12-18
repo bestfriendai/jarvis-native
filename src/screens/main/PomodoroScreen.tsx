@@ -183,7 +183,7 @@ export default function PomodoroScreen() {
   const handleTaskSelected = async (task: Task | null) => {
     // Update the task ID in the timer state if needed
     // For now, start the timer with the selected task
-    await startWork(task?.id || null);
+    await startWork(task?.id || undefined);
     await playHapticFeedback('warning');
   };
 

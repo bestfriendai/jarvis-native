@@ -4,6 +4,7 @@
 **Date:** December 14, 2025
 **Project:** Jarvis Native - Life Dashboard
 **Status:** Phase 1 Complete (100%) - Ready for Tier 2/3 Implementation
+**Latest (Dec 18, 2025):** Notifications migrated to Notifee; Pomodoro re-enabled; Android release builds passing.
 
 ---
 

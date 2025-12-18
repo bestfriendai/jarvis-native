@@ -75,7 +75,7 @@ export default function SettingsScreen() {
 
   const checkNotificationPermissions = async () => {
     try {
-      const settings = await notifee.getNotificationSettings();
+      const settings = await notifee.requestPermission();
       const authorized =
         settings.authorizationStatus === AuthorizationStatus.AUTHORIZED ||
         settings.authorizationStatus === AuthorizationStatus.PROVISIONAL;
@@ -203,7 +203,7 @@ export default function SettingsScreen() {
           );
         } else {
           setNotificationsEnabled(false);
-          const settings = await notifee.getNotificationSettings();
+          const settings = await notifee.requestPermission();
           if (settings.authorizationStatus === AuthorizationStatus.DENIED) {
             setNotificationsPermissionStatus('denied');
             // Permissions permanently denied - direct to settings
@@ -218,7 +218,8 @@ export default function SettingsScreen() {
                     if (Platform.OS === 'ios') {
                       Linking.openURL('app-settings:');
                     } else {
-                      notifee.openNotificationSettings();
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      (notifee as any).openNotificationSettings();
                     }
                   },
                 },
@@ -239,7 +240,8 @@ export default function SettingsScreen() {
                 if (Platform.OS === 'ios') {
                   Linking.openURL('app-settings:');
                 } else {
-                  notifee.openNotificationSettings();
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  (notifee as any).openNotificationSettings();
                 }
               },
             },

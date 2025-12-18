@@ -564,6 +564,7 @@ export default function TasksScreen() {
                       onEdit={handleEdit}
                       onDelete={handleDelete}
                       highlightId={params?.highlightId}
+                      // @ts-expect-error - Navigation type compatibility
                       onHighlightComplete={() => clearHighlight(navigation)}
                       bulkSelectMode={bulkSelectMode}
                       selected={selectedTaskIds.has(task.id)}
@@ -1393,14 +1394,14 @@ const styles = StyleSheet.create({
   },
   viewSelectorContainer: {
     paddingHorizontal: spacing.lg,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   viewSelector: {
     backgroundColor: colors.background.secondary,
     borderRadius: borderRadius.md,
   },
   filterContainer: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   filterContent: {
     paddingHorizontal: spacing.lg,

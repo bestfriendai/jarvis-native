@@ -199,10 +199,12 @@ export default function DashboardScreen() {
   };
 
   const handleFocusNavigate = (type: 'task' | 'habit' | 'event', id: string) => {
+    // @ts-expect-error - Navigation type compatibility
     navigateToItem(navigation, type, id);
   };
 
   const handleFocusViewAll = (type: 'tasks' | 'habits' | 'events') => {
+    // @ts-expect-error - Navigation type compatibility
     navigateToViewAll(navigation, type);
   };
 

@@ -83,7 +83,6 @@ export const PieChart: React.FC<PieChartProps> = ({
         paddingLeft={paddingLeft}
         center={[0, 0]}
         hasLegend={hasLegend && showLegend}
-        centerLabelComponent={centerLabelComponent}
         style={{
           borderRadius: 16,
         }}
