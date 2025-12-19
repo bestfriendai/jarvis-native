@@ -33,29 +33,21 @@ export function TaskPickerModal({ visible, onClose, onSelect, currentTaskId }: T
   const { colors } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const insets = useSafeAreaInsets();
 
+  // Reset state when modal opens and load tasks
   useEffect(() => {
     if (visible) {
+      setIsLoading(true);
+      setSearchQuery('');
       loadTasks();
+    } else {
+      // Reset state when modal closes
+      setTasks([]);
+      setIsLoading(true);
     }
   }, [visible]);
-
-  useEffect(() => {
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      setFilteredTasks(
-        tasks.filter(
-          (task) =>
-            task.title.toLowerCase().includes(query) ||
-            task.description?.toLowerCase().includes(query)
-        )
-      );
-    } else {
-      setFilteredTasks(tasks);
-    }
-  }, [searchQuery, tasks]);
 
   const loadTasks = async () => {
     try {
@@ -67,11 +59,21 @@ export function TaskPickerModal({ visible, onClose, onSelect, currentTaskId }: T
       });
       console.log('[TaskPickerModal] Loaded tasks:', loadedTasks.length, loadedTasks);
       setTasks(loadedTasks);
-      setFilteredTasks(loadedTasks);
     } catch (error) {
       console.error('[TaskPickerModal] Error loading tasks:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  // Compute filtered tasks directly from state (no separate state needed)
+  const filteredTasks = searchQuery.trim()
+    ? tasks.filter(
+        (task) =>
+          task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          task.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : tasks;
 
   const handleSelect = (task: Task) => {
     onSelect(task);
@@ -178,7 +180,11 @@ export function TaskPickerModal({ visible, onClose, onSelect, currentTaskId }: T
             style={styles.taskList}
             showsVerticalScrollIndicator={false}
           >
-            {filteredTasks.length === 0 ? (
+            {isLoading ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>Loading tasks...</Text>
+              </View>
+            ) : filteredTasks.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyStateIcon}>📋</Text>
                 <Text style={styles.emptyStateText}>
