@@ -59,14 +59,15 @@ export function TaskPickerModal({ visible, onClose, onSelect, currentTaskId }: T
       });
 
       const loadedTasks =
-        openTasks.length > 0
+        (openTasks?.length ?? 0) > 0
           ? openTasks
           : await tasksDB.getTasks({ sortField: 'updatedAt', sortDirection: 'desc' });
 
-      console.log('[TaskPickerModal] Loaded tasks:', loadedTasks.length);
-      setTasks(loadedTasks);
+      console.log('[TaskPickerModal] Loaded tasks:', loadedTasks?.length ?? 0, loadedTasks);
+      setTasks(loadedTasks ?? []);  // Ensure we always set an array
     } catch (error) {
       console.error('[TaskPickerModal] Error loading tasks:', error);
+      setTasks([]);  // Explicitly set empty on error
     } finally {
       setIsLoading(false);
     }

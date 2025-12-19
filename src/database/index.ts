@@ -288,7 +288,7 @@ export async function executeQuery<T>(
   const db = await getDatabase();
   try {
     const result = await db.getAllAsync<T>(sql, params);
-    return result;
+    return result ?? [];  // Ensure we always return an array
   } catch (error) {
     console.error('[DB] Query error:', error);
     throw error;
