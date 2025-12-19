@@ -53,13 +53,13 @@ import {
   announceForAccessibility,
 } from '../../utils/accessibility';
 import {
-  colors,
   typography,
   spacing,
   borderRadius,
   shadows,
   animation,
 } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
 import { PRIORITY_COLORS, PRIORITY_LABELS, PRIORITY_ICONS } from '../../constants/priorities';
 import { sortTasks, isOverdue } from '../../utils/taskSorting';
 
@@ -89,6 +89,7 @@ const STATUS_LABELS: Record<TaskStatus, string> = {
 };
 
 export default function TasksScreen() {
+  const { colors } = useTheme();
   const route = useRoute();
   const navigation = useNavigation();
   const params = route.params as { highlightId?: string; scrollTo?: boolean } | undefined;
@@ -821,7 +822,7 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
             <Icon
               name={PRIORITY_ICONS[task.priority]}
               size={12}
-              color="#FFFFFF"
+              color={colors.primary.contrast}
             />
           </View>
         )}
@@ -863,7 +864,7 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
                   importantForAccessibility="no-hide-descendants"
                 >
                   {selected && (
-                    <Icon name="check" size={16} color="#FFFFFF" />
+                    <Icon name="check" size={16} color={colors.primary.contrast} />
                   )}
                 </View>
               </TouchableOpacity>
@@ -1617,7 +1618,6 @@ const styles = StyleSheet.create({
     borderColor: colors.primary.main,
   },
   checkmark: {
-    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: typography.weight.bold,
   },
@@ -1711,7 +1711,6 @@ const styles = StyleSheet.create({
   },
   overdueCornerText: {
     fontSize: 9,
-    color: '#FFFFFF',
     fontWeight: typography.weight.bold,
     letterSpacing: 0.5,
   },
@@ -1726,13 +1725,13 @@ const styles = StyleSheet.create({
     fontWeight: typography.weight.semibold,
   },
   dueThisWeekBadge: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: `${colors.warning}20`,
     borderWidth: 1,
-    borderColor: '#F59E0B',
+    borderColor: colors.warning,
   },
   dueThisWeekText: {
     fontSize: typography.size.xs,
-    color: '#F59E0B',
+    color: colors.warning,
     fontWeight: typography.weight.medium,
   },
   dueFutureBadge: {

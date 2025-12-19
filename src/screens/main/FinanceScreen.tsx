@@ -36,17 +36,18 @@ import { useOptimisticUpdate } from '../../hooks/useOptimisticUpdate';
 import { useRefreshControl } from '../../hooks/useRefreshControl';
 import { useDebounce } from '../../hooks/useDebounce';
 import {
-  colors,
   typography,
   spacing,
   borderRadius,
   shadows,
 } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
 
 type ViewMode = 'overview' | 'assets' | 'liabilities' | 'transactions' | 'budgets';
 type TimeFilter = 'month' | 'lastMonth' | 'all';
 
 export default function FinanceScreen() {
+  const { colors } = useTheme();
   const [viewMode, setViewMode] = useState<ViewMode>('overview');
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('month');
   const [showAssetModal, setShowAssetModal] = useState(false);
@@ -1341,7 +1342,7 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
   },
   viewTabTextActive: {
-    color: '#FFFFFF',
+    color: colors.primary.contrast,
   },
   content: {
     flex: 1,
@@ -1507,7 +1508,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.weight.medium,
   },
   filterChipTextActive: {
-    color: '#FFFFFF',
+    color: colors.primary.contrast,
   },
   // Transaction styles
   transactionSummary: {
@@ -1657,7 +1658,7 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
   },
   typeButtonTextActive: {
-    color: '#FFFFFF',
+    color: colors.primary.contrast,
   },
   modalFooter: {
     flexDirection: 'row',

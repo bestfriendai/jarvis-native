@@ -708,6 +708,100 @@ export async function getHabitCompletionDates(
   }
 }
 
+/**
+ * OPTIMIZED: Get all habits with stats in a single optimized query
+ * This replaces the N+1 query pattern where stats were fetched separately for each habit
+ * Performance: 60+ queries reduced to 1 query for 20 habits
+ */
+export interface HabitWithStats extends Habit {
+  completionsToday: number;
+  completionRate30Days: number;
+  stats: {
+    totalDays: number;
+    completedDays: number;
+    completionRate: number;
+  };
+}
+
+export async function getHabitsWithStats(): Promise<HabitWithStats[]> {
+  const today = new Date().toISOString().split('T')[0];
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const startDate = thirtyDaysAgo.toISOString().split('T')[0];
+
+  // Single optimized query with subqueries for all stats
+  const sql = `
+    SELECT
+      h.*,
+
+      -- Today's completion count
+      COALESCE(
+        (SELECT COUNT(*) FROM habit_logs
+         WHERE habit_id = h.id AND date = ? AND completed = 1),
+        0
+      ) as completionsToday,
+
+      -- 30-day completion count
+      COALESCE(
+        (SELECT COUNT(*) FROM habit_logs
+         WHERE habit_id = h.id AND date >= ? AND date <= ? AND completed = 1),
+        0
+      ) as completedLast30Days,
+
+      -- All-time total days tracked
+      COALESCE(
+        (SELECT COUNT(DISTINCT date) FROM habit_logs
+         WHERE habit_id = h.id),
+        0
+      ) as totalDays,
+
+      -- All-time completed days
+      COALESCE(
+        (SELECT COUNT(*) FROM habit_logs
+         WHERE habit_id = h.id AND completed = 1),
+        0
+      ) as completedDays
+
+    FROM habits h
+    ORDER BY h.created_at DESC
+  `;
+
+  const rows = await executeQuery<any>(sql, [today, startDate, today]);
+
+  // Map to HabitWithStats
+  return rows.map(row => {
+    const habit = rowToHabit({
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      cadence: row.cadence,
+      target_count: row.target_count,
+      current_streak: row.current_streak,
+      longest_streak: row.longest_streak,
+      reminder_time: row.reminder_time,
+      notification_id: row.notification_id,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      synced: row.synced,
+    });
+
+    const completedLast30Days = row.completedLast30Days || 0;
+    const totalDays = row.totalDays || 0;
+    const completedDays = row.completedDays || 0;
+
+    return {
+      ...habit,
+      completionsToday: row.completionsToday || 0,
+      completionRate30Days: Math.round((completedLast30Days / 30) * 100),
+      stats: {
+        totalDays,
+        completedDays,
+        completionRate: totalDays > 0 ? Math.round((completedDays / totalDays) * 100) : 0,
+      },
+    };
+  });
+}
+
 export default {
   getHabits,
   getHabit,
@@ -725,4 +819,5 @@ export default {
   getTodayIncompleteHabitsCount,
   getHabitCompletionTimes,
   getHabitCompletionDates,
+  getHabitsWithStats,
 };

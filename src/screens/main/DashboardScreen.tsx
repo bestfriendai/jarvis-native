@@ -34,13 +34,13 @@ import { navigateToItem, navigateToViewAll } from '../../utils/navigation';
 import { calculatePercentageChange } from '../../utils/chartUtils';
 import { useRefreshControl } from '../../hooks/useRefreshControl';
 import {
-  colors,
   typography,
   spacing,
   borderRadius,
   shadows,
   textStyles,
 } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
 import {
   makeButton,
   makeTextInput,
@@ -49,6 +49,7 @@ import {
 } from '../../utils/accessibility';
 
 export default function DashboardScreen() {
+  const { colors } = useTheme();
   const navigation = useNavigation();
   const [metrics, setMetrics] = useState<dashboardDB.TodayMetrics | null>(null);
   const [macroGoals, setMacroGoals] = useState<dashboardDB.MacroGoal[]>([]);
@@ -583,7 +584,7 @@ const QuickCaptureCard: React.FC<QuickCaptureCardProps> = ({
               {isSaving ? (
                 <ActivityIndicator
                   size="small"
-                  color="#FFFFFF"
+                  color={colors.primary.contrast}
                   accessible={true}
                   accessibilityLabel="Saving"
                 />
@@ -751,7 +752,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: typography.size.sm,
     fontWeight: typography.weight.semibold,
-    color: '#FFFFFF',
+    color: colors.primary.contrast,
   },
   saveButtonTextDisabled: {
     color: colors.text.disabled,

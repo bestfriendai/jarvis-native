@@ -21,18 +21,19 @@ import { RootStackParamList } from '../../types';
 import { useAuthStore } from '../../store/authStore';
 import { AppButton } from '../../components/ui';
 import {
-  colors,
   typography,
   spacing,
   borderRadius,
   shadows,
 } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
 
 type LoginScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Login'>;
 };
 
 export default function LoginScreen({ navigation }: LoginScreenProps) {
+  const { colors } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -215,7 +216,7 @@ const styles = StyleSheet.create({
   logo: {
     fontSize: typography.size['4xl'],
     fontWeight: typography.weight.bold,
-    color: '#FFFFFF',
+    color: colors.primary.contrast,
   },
   title: {
     fontSize: typography.size['3xl'],

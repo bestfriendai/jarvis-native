@@ -30,7 +30,8 @@ import * as Speech from 'expo-speech';
 import { ChatMessage } from '../../types';
 import { aiApi } from '../../services/ai.api';
 import { EmptyState } from '../../components/ui';
-import { colors, typography, spacing, borderRadius, textStyles, shadows } from '../../theme';
+import { typography, spacing, borderRadius, textStyles, shadows } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
 
 const QUICK_PROMPTS = [
   { id: '1', icon: '✅', label: 'What should I focus on today?', prompt: 'Based on my tasks and schedule, what should I focus on today?' },
@@ -42,6 +43,7 @@ const QUICK_PROMPTS = [
 ];
 
 export default function AIChatScreen() {
+  const { colors } = useTheme();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -317,7 +319,7 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   userMessageText: {
-    color: '#FFFFFF',
+    color: colors.primary.contrast,
     fontSize: typography.size.base,
     lineHeight: typography.size.base * typography.lineHeight.relaxed,
     fontWeight: typography.weight.regular,

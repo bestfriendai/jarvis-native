@@ -20,6 +20,9 @@ import {
 // Icons (using simple text for now - in production use react-native-vector-icons)
 import { IconButton, Badge } from 'react-native-paper';
 
+// Error Boundary
+import { ErrorBoundary } from '../components/ErrorBoundary';
+
 // Screens
 import DashboardScreen from '../screens/main/DashboardScreen';
 import AIChatScreen from '../screens/main/AIChatScreen';
@@ -107,7 +110,6 @@ export default function MainNavigator() {
     >
       <Tab.Screen
         name="Dashboard"
-        component={DashboardScreen}
         options={{
           tabBarIcon: ({ focused }) => (
             <TabIcon icon="view-dashboard" focused={focused} colors={colors} />
@@ -115,11 +117,16 @@ export default function MainNavigator() {
           tabBarLabel: 'Home',
           headerShown: false, // Dashboard has its own header
         }}
-      />
+      >
+        {() => (
+          <ErrorBoundary>
+            <DashboardScreen />
+          </ErrorBoundary>
+        )}
+      </Tab.Screen>
 
       <Tab.Screen
         name="AIChat"
-        component={AIChatScreen}
         options={({ navigation }) => ({
           tabBarIcon: ({ focused }) => (
             <TabIcon icon="robot" focused={focused} colors={colors} />
@@ -135,11 +142,16 @@ export default function MainNavigator() {
             />
           ),
         })}
-      />
+      >
+        {() => (
+          <ErrorBoundary>
+            <AIChatScreen />
+          </ErrorBoundary>
+        )}
+      </Tab.Screen>
 
       <Tab.Screen
         name="Tasks"
-        component={TasksScreen}
         options={{
           tabBarIcon: ({ focused }) => (
             <TabIcon
@@ -152,11 +164,16 @@ export default function MainNavigator() {
           tabBarLabel: 'Tasks',
           headerShown: false, // Tasks has its own header
         }}
-      />
+      >
+        {() => (
+          <ErrorBoundary>
+            <TasksScreen />
+          </ErrorBoundary>
+        )}
+      </Tab.Screen>
 
       <Tab.Screen
         name="Projects"
-        component={ProjectsNavigator}
         options={{
           tabBarIcon: ({ focused }) => (
             <TabIcon icon="folder-outline" focused={focused} colors={colors} />
@@ -164,11 +181,16 @@ export default function MainNavigator() {
           tabBarLabel: 'Projects',
           headerShown: false, // ProjectsNavigator has its own headers
         }}
-      />
+      >
+        {() => (
+          <ErrorBoundary>
+            <ProjectsNavigator />
+          </ErrorBoundary>
+        )}
+      </Tab.Screen>
 
       <Tab.Screen
         name="Habits"
-        component={HabitsScreen}
         options={{
           tabBarIcon: ({ focused }) => (
             <TabIcon
@@ -181,11 +203,16 @@ export default function MainNavigator() {
           tabBarLabel: 'Habits',
           headerShown: false, // Habits has its own header
         }}
-      />
+      >
+        {() => (
+          <ErrorBoundary>
+            <HabitsScreen />
+          </ErrorBoundary>
+        )}
+      </Tab.Screen>
 
       <Tab.Screen
         name="Focus"
-        component={FocusScreen}
         options={{
           tabBarIcon: ({ focused }) => (
             <TabIcon
@@ -197,11 +224,16 @@ export default function MainNavigator() {
           tabBarLabel: 'Focus',
           headerShown: false, // Focus has its own header
         }}
-      />
+      >
+        {() => (
+          <ErrorBoundary>
+            <FocusScreen />
+          </ErrorBoundary>
+        )}
+      </Tab.Screen>
 
       <Tab.Screen
         name="Pomodoro"
-        component={PomodoroScreen}
         options={{
           tabBarIcon: ({ focused }) => (
             <TabIcon
@@ -213,11 +245,16 @@ export default function MainNavigator() {
           tabBarLabel: 'Pomodoro',
           headerShown: false, // Pomodoro has its own header
         }}
-      />
+      >
+        {() => (
+          <ErrorBoundary>
+            <PomodoroScreen />
+          </ErrorBoundary>
+        )}
+      </Tab.Screen>
 
       <Tab.Screen
         name="Calendar"
-        component={CalendarScreen}
         options={{
           tabBarIcon: ({ focused }) => (
             <TabIcon
@@ -230,11 +267,16 @@ export default function MainNavigator() {
           tabBarLabel: 'Calendar',
           headerShown: false, // Calendar has its own header
         }}
-      />
+      >
+        {() => (
+          <ErrorBoundary>
+            <CalendarScreen />
+          </ErrorBoundary>
+        )}
+      </Tab.Screen>
 
       <Tab.Screen
         name="Finance"
-        component={FinanceScreen}
         options={{
           tabBarIcon: ({ focused }) => (
             <TabIcon icon="wallet" focused={focused} colors={colors} />
@@ -242,11 +284,16 @@ export default function MainNavigator() {
           tabBarLabel: 'Finance',
           headerShown: false, // Finance has its own header
         }}
-      />
+      >
+        {() => (
+          <ErrorBoundary>
+            <FinanceScreen />
+          </ErrorBoundary>
+        )}
+      </Tab.Screen>
 
       <Tab.Screen
         name="Settings"
-        component={SettingsNavigator}
         options={{
           tabBarIcon: ({ focused }) => (
             <TabIcon icon="cog" focused={focused} colors={colors} />
@@ -255,7 +302,13 @@ export default function MainNavigator() {
           title: 'Settings',
           headerShown: false, // SettingsNavigator has its own headers
         }}
-      />
+      >
+        {() => (
+          <ErrorBoundary>
+            <SettingsNavigator />
+          </ErrorBoundary>
+        )}
+      </Tab.Screen>
     </Tab.Navigator>
   );
 }

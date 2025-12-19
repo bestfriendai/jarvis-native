@@ -38,12 +38,12 @@ import { useRefreshControl } from '../../hooks/useRefreshControl';
 import { useDebounce } from '../../hooks/useDebounce';
 import Tooltip from '../../components/ui/Tooltip';
 import {
-  colors,
   typography,
   spacing,
   borderRadius,
   shadows,
 } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
 import {
   makeButton,
   makeCheckbox,
@@ -65,6 +65,7 @@ interface Habit extends habitsDB.Habit {
 }
 
 export default function HabitsScreen() {
+  const { colors } = useTheme();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
   const [showHeatmap, setShowHeatmap] = useState(false);
@@ -1235,7 +1236,7 @@ const styles = StyleSheet.create({
   logButtonText: {
     fontSize: typography.size.sm,
     fontWeight: typography.weight.semibold,
-    color: '#FFFFFF',
+    color: colors.primary.contrast,
   },
   logButtonTextCompleted: {
     color: colors.primary.main,

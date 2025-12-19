@@ -35,12 +35,12 @@ import { useOptimisticUpdate } from '../../hooks/useOptimisticUpdate';
 import { useRefreshControl } from '../../hooks/useRefreshControl';
 import { useDebounce } from '../../hooks/useDebounce';
 import {
-  colors,
   typography,
   spacing,
   borderRadius,
   shadows,
 } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
 
 interface CalendarEvent extends calendarDB.CalendarEvent {
   isRecurring?: boolean;
@@ -49,6 +49,7 @@ interface CalendarEvent extends calendarDB.CalendarEvent {
 }
 
 export default function CalendarScreen() {
+  const { colors } = useTheme();
   const [viewMode, setViewMode] = useState<'agenda' | 'day' | 'week'>('agenda');
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -383,7 +384,7 @@ export default function CalendarScreen() {
                               <IconButton
                                 icon="alert-circle"
                                 size={16}
-                                iconColor="#EF5350"
+                                iconColor={colors.error}
                                 style={styles.conflictIcon}
                               />
                               <Text style={styles.conflictCount}>{conflictCount}</Text>
@@ -1097,7 +1098,7 @@ const styles = StyleSheet.create({
   conflictBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF3F3',
+    backgroundColor: `${colors.error}15`,
     paddingHorizontal: spacing.xs,
     paddingVertical: 2,
     borderRadius: borderRadius.sm,
@@ -1110,21 +1111,21 @@ const styles = StyleSheet.create({
   conflictCount: {
     fontSize: typography.size.xs,
     fontWeight: typography.weight.bold,
-    color: '#EF5350',
+    color: colors.error,
     marginLeft: -4,
   },
   conflictWarningBar: {
     marginTop: spacing.sm,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
-    backgroundColor: '#FFF3E0',
+    backgroundColor: `${colors.warning}15`,
     borderRadius: borderRadius.sm,
     borderLeftWidth: 3,
-    borderLeftColor: '#FF9800',
+    borderLeftColor: colors.warning,
   },
   conflictWarningText: {
     fontSize: typography.size.xs,
     fontWeight: typography.weight.medium,
-    color: '#F57C00',
+    color: colors.warning,
   },
 });

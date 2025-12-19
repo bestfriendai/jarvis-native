@@ -115,6 +115,9 @@ export const getColors = (mode: 'dark' | 'light' = 'dark') => {
 // Export default colors (dark mode for backwards compatibility)
 export const colors = darkColors;
 
+// Export type for colors
+export type ColorScheme = typeof darkColors;
+
 // ============================================================================
 // TYPOGRAPHY
 // ============================================================================

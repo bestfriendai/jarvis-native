@@ -8,7 +8,7 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  FlatList,
   RefreshControl,
   TextInput,
   TouchableOpacity,
@@ -141,71 +141,64 @@ export default function ProjectsScreen() {
       </View>
 
       {/* Project List */}
-      <ScrollView
+      <FlatList
+        data={showArchived ? archivedProjects : activeProjects}
+        renderItem={({ item: project }) => (
+          <ProjectCard
+            project={project}
+            onPress={() => handleProjectPress(project)}
+            onEdit={() => handleEditProject(project)}
+          />
+        )}
+        keyExtractor={(item) => item.id}
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-        {/* Active Projects */}
-        {!showArchived && activeProjects.length > 0 && (
-          <View style={styles.section}>
-            {activeProjects.map((project) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                onPress={() => handleProjectPress(project)}
-                onEdit={() => handleEditProject(project)}
-              />
-            ))}
-          </View>
-        )}
-
-        {/* Archived Projects */}
-        {showArchived && (
-          <View style={styles.section}>
+        ListHeaderComponent={
+          showArchived && archivedProjects.length > 0 ? (
             <Text style={styles.sectionTitle}>Archived Projects</Text>
-            {archivedProjects.length > 0 ? (
-              archivedProjects.map((project) => (
-                <ProjectCard
-                  key={project.id}
-                  project={project}
-                  onPress={() => handleProjectPress(project)}
-                  onEdit={() => handleEditProject(project)}
-                />
-              ))
-            ) : (
+          ) : null
+        }
+        ListEmptyComponent={() => {
+          if (showArchived) {
+            return (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>No archived projects</Text>
                 <Text style={styles.emptySubtext}>
                   Archive projects to hide them from your active list
                 </Text>
               </View>
-            )}
-          </View>
-        )}
+            );
+          }
 
-        {/* Empty State - No Projects */}
-        {!showArchived && activeProjects.length === 0 && !searchQuery && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>📁</Text>
-            <Text style={styles.emptyText}>No projects yet</Text>
-            <Text style={styles.emptySubtext}>
-              Create your first project to organize your tasks
-            </Text>
-          </View>
-        )}
+          if (searchQuery) {
+            return (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyIcon}>🔍</Text>
+                <Text style={styles.emptyText}>No projects found</Text>
+                <Text style={styles.emptySubtext}>
+                  Try adjusting your search terms
+                </Text>
+              </View>
+            );
+          }
 
-        {/* Empty State - No Search Results */}
-        {activeProjects.length === 0 && searchQuery && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>🔍</Text>
-            <Text style={styles.emptyText}>No projects found</Text>
-            <Text style={styles.emptySubtext}>
-              Try adjusting your search terms
-            </Text>
-          </View>
-        )}
-      </ScrollView>
+          return (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyIcon}>📁</Text>
+              <Text style={styles.emptyText}>No projects yet</Text>
+              <Text style={styles.emptySubtext}>
+                Create your first project to organize your tasks
+              </Text>
+            </View>
+          );
+        }}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
+        windowSize={10}
+        initialNumToRender={10}
+      />
 
       {/* FAB - Create Project */}
       <FAB

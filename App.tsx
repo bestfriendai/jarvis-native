@@ -6,7 +6,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, ActivityIndicator, Text, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { PaperProvider, MD3LightTheme } from 'react-native-paper';
+import { PaperProvider } from 'react-native-paper';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainerRef } from '@react-navigation/native';
@@ -16,6 +16,8 @@ import RootNavigator from './src/navigation/RootNavigator';
 import { initDatabase } from './src/database';
 import { needsSeeding, seedDatabase } from './src/database/seed';
 import { useThemeStore } from './src/store/themeStore';
+import { ThemeProvider } from './src/theme/ThemeProvider';
+import { getColors, spacing, typography } from './src/theme';
 import * as notificationService from './src/services/notifications';
 import { toastConfig } from './src/components/ui/UndoToast';
 
@@ -29,21 +31,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
-// Custom theme (can be extended later)
-const theme = {
-  ...MD3LightTheme,
-  colors: {
-    ...MD3LightTheme.colors,
-    primary: '#007AFF',
-    secondary: '#5856D6',
-    error: '#FF3B30',
-    background: '#F2F2F7',
-    surface: '#FFFFFF',
-    onSurface: '#000000',
-    onBackground: '#000000',
-  },
-};
 
 export default function App() {
   const [isReady, setIsReady] = useState(false);
@@ -113,19 +100,21 @@ export default function App() {
   }, []);
 
   if (!isReady) {
+    const colors = getColors(themeMode);
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.loadingText}>Initializing Jarvis...</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background.primary }]}>
+        <ActivityIndicator size="large" color={colors.primary.main} />
+        <Text style={[styles.loadingText, { color: colors.text.secondary }]}>Initializing Jarvis...</Text>
       </View>
     );
   }
 
   if (initError) {
+    const colors = getColors(themeMode);
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.errorText}>Initialization Error</Text>
-        <Text style={styles.errorMessage}>{initError}</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background.primary }]}>
+        <Text style={[styles.errorText, { color: colors.error }]}>Initialization Error</Text>
+        <Text style={[styles.errorMessage, { color: colors.text.secondary }]}>{initError}</Text>
       </View>
     );
   }
@@ -133,11 +122,13 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
-        <PaperProvider theme={theme}>
-          <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
-          <RootNavigator navigationRef={navigationRef} />
-          <Toast config={toastConfig} />
-        </PaperProvider>
+        <ThemeProvider>
+          <PaperProvider>
+            <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
+            <RootNavigator navigationRef={navigationRef} />
+            <Toast config={toastConfig} />
+          </PaperProvider>
+        </ThemeProvider>
       </QueryClientProvider>
     </SafeAreaProvider>
   );
@@ -148,23 +139,19 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F2F2F7',
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
+    marginTop: spacing.base,
+    fontSize: typography.size.base,
   },
   errorText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FF3B30',
-    marginBottom: 8,
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    marginBottom: spacing.sm,
   },
   errorMessage: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.size.sm,
     textAlign: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: spacing['2xl'],
   },
 });
