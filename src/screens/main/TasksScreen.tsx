@@ -337,17 +337,27 @@ export default function TasksScreen() {
 
   const activeFilterCount = filterStore.countActiveFilters(filters);
 
-  // Apply search filtering
+  // Apply search and status filtering
   const filteredTasks = tasks.filter((task) => {
-    if (!debouncedSearchQuery) return true;
+    // Apply quick status filter (from chips)
+    if (filterStatus !== 'all' && task.status !== filterStatus) {
+      return false;
+    }
 
-    const query = debouncedSearchQuery.toLowerCase();
-    const matchesTitle = task.title.toLowerCase().includes(query);
-    const matchesDescription = task.description?.toLowerCase().includes(query);
-    const matchesTags = task.tags.some(tag => tag.toLowerCase().includes(query));
-    const matchesProject = task.project?.name.toLowerCase().includes(query);
+    // Apply search filter
+    if (debouncedSearchQuery) {
+      const query = debouncedSearchQuery.toLowerCase();
+      const matchesTitle = task.title.toLowerCase().includes(query);
+      const matchesDescription = task.description?.toLowerCase().includes(query);
+      const matchesTags = task.tags.some(tag => tag.toLowerCase().includes(query));
+      const matchesProject = task.project?.name.toLowerCase().includes(query);
 
-    return matchesTitle || matchesDescription || matchesTags || matchesProject;
+      if (!matchesTitle && !matchesDescription && !matchesTags && !matchesProject) {
+        return false;
+      }
+    }
+
+    return true;
   });
 
   if (isLoading && tasks.length === 0) {
