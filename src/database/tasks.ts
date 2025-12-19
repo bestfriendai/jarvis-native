@@ -79,6 +79,15 @@ export interface UpdateTaskData extends Partial<CreateTaskData> {
 /**
  * Convert database row to Task object
  */
+function safeParseJson<T>(value: string | undefined | null, fallback: T): T {
+  if (!value) return fallback;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
 function rowToTask(row: TaskRow): Task {
   return {
     id: row.id,
@@ -91,8 +100,8 @@ function rowToTask(row: TaskRow): Task {
     dueDate: row.due_date,
     completedAt: row.completed_at,
     projectId: row.project_id,
-    tags: row.tags ? JSON.parse(row.tags) : [],
-    recurrence: row.recurrence_rule ? JSON.parse(row.recurrence_rule) : undefined,
+    tags: safeParseJson<string[]>(row.tags, []),
+    recurrence: safeParseJson<RecurrenceRule | undefined>(row.recurrence_rule, undefined),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     synced: row.synced === 1,

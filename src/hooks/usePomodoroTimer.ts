@@ -39,6 +39,7 @@ interface UsePomodoroTimerReturn {
   skip: () => Promise<void>;
   loadSettings: () => Promise<void>;
   resetTimer: () => void;
+  setTaskId: (taskId?: string) => void;
 }
 
 export function usePomodoroTimer(): UsePomodoroTimerReturn {
@@ -325,6 +326,14 @@ export function usePomodoroTimer(): UsePomodoroTimerReturn {
     clearPersistedState();
   }, []);
 
+  // Set task ID without starting timer
+  const setTaskId = useCallback((taskId?: string) => {
+    setState((prev) => ({
+      ...prev,
+      taskId,
+    }));
+  }, []);
+
   return {
     state,
     settings,
@@ -337,5 +346,6 @@ export function usePomodoroTimer(): UsePomodoroTimerReturn {
     skip,
     loadSettings,
     resetTimer,
+    setTaskId,
   };
 }

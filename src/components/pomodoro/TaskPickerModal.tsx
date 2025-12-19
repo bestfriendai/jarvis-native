@@ -38,39 +38,20 @@ export function TaskPickerModal({ visible, onClose, onSelect, currentTaskId }: T
 
   const loadTasks = useCallback(async () => {
     try {
-      // Call getTasks with NO parameters - simplest possible call
-      console.log('[TaskPickerModal] Loading tasks...');
-      const allTasks = await tasksDB.getTasks();
-
-      console.log('[TaskPickerModal] Raw result:', allTasks);
-      console.log('[TaskPickerModal] Tasks count:', allTasks?.length ?? 0);
-      console.log('[TaskPickerModal] Tasks array:', JSON.stringify(allTasks, null, 2));
-
-      if (!allTasks || allTasks.length === 0) {
-        console.log('[TaskPickerModal] No tasks found in database');
-        setTasks([]);
-        return;
-      }
-
-      // Filter in memory for open tasks
-      const openTasks = allTasks.filter((task) =>
-        ['todo', 'in_progress', 'blocked'].includes(task.status)
-      );
-
-      console.log('[TaskPickerModal] Open tasks filtered:', openTasks.length);
-      console.log('[TaskPickerModal] Open tasks:', JSON.stringify(openTasks.map(t => ({ id: t.id, title: t.title, status: t.status })), null, 2));
-
-      // Prefer open tasks, but show all if none are open
-      const tasksToShow = openTasks.length > 0 ? openTasks : allTasks;
-      setTasks(tasksToShow);
+      // Load only active tasks (not completed/cancelled)
+      const activeTasks = await tasksDB.getTasks({
+        statuses: ['todo', 'in_progress', 'blocked'],
+        sortField: 'dueDate',
+        sortDirection: 'asc',
+      });
+      setTasks(activeTasks || []);
     } catch (error) {
       console.error('[TaskPickerModal] Error loading tasks:', error);
-      console.error('[TaskPickerModal] Error stack:', error);
       setTasks([]);
     } finally {
       setIsLoading(false);
     }
-  }, []); // No dependencies - function is stable
+  }, []);
 
   // Reset state when modal opens and load tasks
   useEffect(() => {
@@ -99,15 +80,16 @@ export function TaskPickerModal({ visible, onClose, onSelect, currentTaskId }: T
     : tasks;
 
   const handleSelect = (task: Task) => {
-    onSelect(task);
-    onClose();
     setSearchQuery('');
+    onClose();
+    // Delay the onSelect call slightly to ensure modal closes first
+    setTimeout(() => onSelect(task), 100);
   };
 
   const handleNoTask = () => {
-    onSelect(null);
-    onClose();
     setSearchQuery('');
+    onClose();
+    setTimeout(() => onSelect(null), 100);
   };
 
   const getPriorityColor = (priority: string) => {
@@ -174,7 +156,6 @@ export function TaskPickerModal({ visible, onClose, onSelect, currentTaskId }: T
               placeholderTextColor={colors.text.tertiary}
               value={searchQuery}
               onChangeText={setSearchQuery}
-              autoFocus
             />
           </View>
 
@@ -202,6 +183,7 @@ export function TaskPickerModal({ visible, onClose, onSelect, currentTaskId }: T
           <ScrollView
             style={styles.taskList}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
             {isLoading ? (
               <View style={styles.emptyState}>

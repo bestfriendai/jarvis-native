@@ -35,7 +35,7 @@ export default function PomodoroScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const { state, settings, startWork, pause, resume, stop, skip, loadSettings } =
+  const { state, settings, startWork, pause, resume, stop, skip, loadSettings, setTaskId } =
     usePomodoroTimer();
 
   const {
@@ -180,11 +180,10 @@ export default function PomodoroScreen() {
     setShowTaskPicker(true);
   };
 
-  const handleTaskSelected = async (task: Task | null) => {
-    // Update the task ID in the timer state if needed
-    // For now, start the timer with the selected task
-    await startWork(task?.id || undefined);
-    await playHapticFeedback('warning');
+  const handleTaskSelected = (task: Task | null) => {
+    // Just link the task, don't auto-start timer
+    setTaskId(task?.id);
+    playHapticFeedback('success');
   };
 
   const handleSaveSettings = async (newSettings: Partial<pomodoroDB.PomodoroSettings>) => {
