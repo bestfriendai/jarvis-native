@@ -3,7 +3,7 @@
  * Modal for selecting a task to link to a Pomodoro session
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -36,20 +36,7 @@ export function TaskPickerModal({ visible, onClose, onSelect, currentTaskId }: T
   const [isLoading, setIsLoading] = useState(true);
   const insets = useSafeAreaInsets();
 
-  // Reset state when modal opens and load tasks
-  useEffect(() => {
-    if (visible) {
-      setIsLoading(true);
-      setSearchQuery('');
-      loadTasks();
-    } else {
-      // Reset state when modal closes
-      setTasks([]);
-      setIsLoading(true);
-    }
-  }, [visible]);
-
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
     try {
       // Call getTasks with NO parameters - simplest possible call
       console.log('[TaskPickerModal] Loading tasks...');
@@ -83,7 +70,24 @@ export function TaskPickerModal({ visible, onClose, onSelect, currentTaskId }: T
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []); // No dependencies - function is stable
+
+  // Reset state when modal opens and load tasks
+  useEffect(() => {
+    if (visible) {
+      setIsLoading(true);
+      setSearchQuery('');
+      // Immediately invoke async function
+      loadTasks().catch((error) => {
+        console.error('[TaskPickerModal] Failed to load tasks in useEffect:', error);
+        setIsLoading(false);
+      });
+    } else {
+      // Reset state when modal closes (but keep isLoading false so next open works)
+      setTasks([]);
+      setIsLoading(false);
+    }
+  }, [visible, loadTasks]);
 
   // Compute filtered tasks directly from state (no separate state needed)
   const filteredTasks = searchQuery.trim()
