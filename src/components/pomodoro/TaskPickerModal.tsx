@@ -51,23 +51,33 @@ export function TaskPickerModal({ visible, onClose, onSelect, currentTaskId }: T
 
   const loadTasks = async () => {
     try {
-      // Prefer open tasks, but fall back to all tasks if none match
-      const openTasks = await tasksDB.getTasks({
-        statuses: ['todo', 'in_progress', 'blocked'],
-        sortField: 'dueDate',
-        sortDirection: 'asc',
+      // Load ALL tasks first to ensure we get data
+      const allTasks = await tasksDB.getTasks({
+        sortField: 'updatedAt',
+        sortDirection: 'desc',
       });
 
-      const loadedTasks =
-        (openTasks?.length ?? 0) > 0
-          ? openTasks
-          : await tasksDB.getTasks({ sortField: 'updatedAt', sortDirection: 'desc' });
+      console.log('[TaskPickerModal] All tasks loaded:', allTasks?.length ?? 0);
 
-      console.log('[TaskPickerModal] Loaded tasks:', loadedTasks?.length ?? 0, loadedTasks);
-      setTasks(loadedTasks ?? []);  // Ensure we always set an array
+      if (!allTasks || allTasks.length === 0) {
+        console.log('[TaskPickerModal] No tasks found in database');
+        setTasks([]);
+        return;
+      }
+
+      // Filter in memory for open tasks
+      const openTasks = allTasks.filter((task) =>
+        ['todo', 'in_progress', 'blocked'].includes(task.status)
+      );
+
+      console.log('[TaskPickerModal] Open tasks:', openTasks.length);
+
+      // Prefer open tasks, but show all if none are open
+      const tasksToShow = openTasks.length > 0 ? openTasks : allTasks;
+      setTasks(tasksToShow);
     } catch (error) {
       console.error('[TaskPickerModal] Error loading tasks:', error);
-      setTasks([]);  // Explicitly set empty on error
+      setTasks([]);
     } finally {
       setIsLoading(false);
     }
