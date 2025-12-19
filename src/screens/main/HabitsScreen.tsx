@@ -44,6 +44,12 @@ import {
   borderRadius,
   shadows,
 } from '../../theme';
+import {
+  makeButton,
+  makeCheckbox,
+  makeHabitLabel,
+  announceForAccessibility,
+} from '../../utils/accessibility';
 
 type HabitCadence = 'daily' | 'weekly' | 'monthly';
 
@@ -86,35 +92,23 @@ export default function HabitsScreen() {
 
   // Load habits from local database
   const loadHabits = useCallback(async () => {
+    const startTime = Date.now();
+
     try {
-      const loadedHabits = await habitsDB.getHabits();
+      // OPTIMIZED: Single database query with all stats
+      // Replaces N+1 query pattern (3 queries per habit)
+      const habitsWithStatus = await habitsDB.getHabitsWithStats();
 
-      // Check completion status and get stats for each habit
-      const today = new Date().toISOString().split('T')[0];
-      const habitsWithStatus = await Promise.all(
-        loadedHabits.map(async (habit) => {
-          const isCompleted = await habitsDB.isHabitCompletedToday(habit.id);
-          const stats = await habitsDB.getHabitStats(habit.id);
+      const loadTime = Date.now() - startTime;
+      console.log(`[HabitsScreen] Loaded ${habitsWithStatus.length} habits in ${loadTime}ms`);
 
-          // Calculate 30-day completion rate
-          const thirtyDaysAgo = new Date();
-          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-          const startDate = thirtyDaysAgo.toISOString().split('T')[0];
-          const logs = await habitsDB.getHabitLogs(habit.id, startDate, today);
-          const completedLast30 = logs.filter(l => l.completed).length;
-          const completionRate30Days = (completedLast30 / 30) * 100;
+      // Map to the expected format with isActive flag
+      const mappedHabits = habitsWithStatus.map(habit => ({
+        ...habit,
+        isActive: true, // All habits are active by default
+      }));
 
-          return {
-            ...habit,
-            isActive: true, // All habits are active by default
-            completionsToday: isCompleted ? 1 : 0,
-            completionRate30Days,
-            stats,
-          };
-        })
-      );
-
-      setHabits(habitsWithStatus);
+      setHabits(mappedHabits);
     } catch (error) {
       console.error('Error loading habits:', error);
       Alert.alert('Error', 'Failed to load habits');
@@ -172,7 +166,10 @@ export default function HabitsScreen() {
         );
 
         await updateOptimistically(
-          () => setHabits(updatedHabits),
+          () => {
+            setHabits(updatedHabits);
+            announceForAccessibility(`${habit.name} marked as incomplete`);
+          },
           async () => {
             await habitsDB.logHabitCompletion(habitId, today, false);
             await loadHabits();
@@ -207,6 +204,7 @@ export default function HabitsScreen() {
       () => {
         setHabits(updatedHabits);
         Vibration.vibrate(50); // Haptic feedback
+        announceForAccessibility(`${habit.name} completed`);
       },
       async () => {
         const today = new Date().toISOString().split('T')[0];
@@ -232,6 +230,7 @@ export default function HabitsScreen() {
           if (message) {
             setCelebratingHabitId(habitId);
             setCelebrationMessage(message);
+            announceForAccessibility(message);
             Vibration.vibrate([100, 50, 100]);
             setTimeout(() => setCelebratingHabitId(null), 3000);
           }
@@ -425,6 +424,7 @@ export default function HabitsScreen() {
             setShowCreateModal(true);
           }}
           size="small"
+          {...makeButton('Create new habit', 'Double tap to create a new habit')}
         />
       </View>
 
@@ -564,6 +564,7 @@ export default function HabitsScreen() {
                 icon="close"
                 onPress={() => setShowHeatmap(false)}
                 iconColor={colors.text.tertiary}
+                {...makeButton('Close heatmap', 'Double tap to close heatmap view')}
               />
             </View>
             {heatmapHabit && (
@@ -608,6 +609,7 @@ export default function HabitsScreen() {
               icon="close"
               onPress={() => setShowInsightsModal(false)}
               iconColor={colors.text.tertiary}
+              {...makeButton('Close insights', 'Double tap to close insights view')}
             />
           </View>
 
@@ -718,6 +720,15 @@ const HabitCard: React.FC<HabitCardProps> = ({
         onPressOut={handlePressOut}
         activeOpacity={0.9}
         style={[styles.habitCard, !habit.isActive && styles.habitCardInactive]}
+        {...makeButton(
+          makeHabitLabel({
+            name: habit.name,
+            currentStreak: habit.currentStreak,
+            completedToday: isCompletedToday,
+            frequency: habit.cadence,
+          }),
+          'Double tap to edit habit details'
+        )}
       >
         <View style={styles.habitContent}>
           <View style={styles.habitHeader}>
@@ -796,6 +807,13 @@ const HabitCard: React.FC<HabitCardProps> = ({
                   styles.logButton,
                   isCompletedToday && styles.logButtonCompleted,
                 ]}
+                {...makeCheckbox(
+                  `Log ${habit.name}`,
+                  isCompletedToday,
+                  isCompletedToday
+                    ? 'Double tap to mark as incomplete'
+                    : 'Double tap to mark as complete'
+                )}
               >
                 <Text
                   style={[
@@ -814,30 +832,35 @@ const HabitCard: React.FC<HabitCardProps> = ({
             <TouchableOpacity
               onPress={() => onViewHistory(habit.id, habit.name)}
               style={styles.actionButton}
+              {...makeButton('History', `View completion history for ${habit.name}`)}
             >
               <Text style={styles.actionButtonText}>History</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => onViewInsights(habit.id, habit.name)}
               style={styles.actionButton}
+              {...makeButton('Insights', `View insights for ${habit.name}`)}
             >
               <Text style={styles.actionButtonText}>Insights</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => onViewHeatmap(habit)}
               style={styles.actionButton}
+              {...makeButton('Heatmap', `View activity heatmap for ${habit.name}`)}
             >
               <Text style={styles.actionButtonText}>Heatmap</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => onEdit(habit)}
               style={styles.actionButton}
+              {...makeButton('Edit', `Edit ${habit.name} details`)}
             >
               <Text style={styles.actionButtonText}>Edit</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => onDelete(habit.id)}
               style={styles.actionButton}
+              {...makeButton('Delete', `Delete ${habit.name}`)}
             >
               <Text style={[styles.actionButtonText, styles.deleteText]}>
                 Delete

@@ -41,6 +41,12 @@ import {
   shadows,
   textStyles,
 } from '../../theme';
+import {
+  makeButton,
+  makeTextInput,
+  formatCurrencyForA11y,
+  announceForAccessibility,
+} from '../../utils/accessibility';
 
 export default function DashboardScreen() {
   const navigation = useNavigation();
@@ -288,6 +294,7 @@ export default function DashboardScreen() {
               size={24}
               onPress={() => navigation.navigate('Search' as never)}
               style={styles.searchButton}
+              {...makeButton('Search', 'Double tap to search tasks, habits, and finances')}
             />
           </View>
         </View>
@@ -320,6 +327,11 @@ export default function DashboardScreen() {
                   trendData?.tasks ? calculateMetricPercentageChange(trendData.tasks) : undefined
                 }
                 onPress={() => handleOpenChart('tasks', 'Tasks Completed')}
+                accessible={true}
+                accessibilityLabel={`Tasks completed today: ${metrics.starts}. ${
+                  metrics.starts >= 3 ? 'Great momentum!' : 'Keep building momentum'
+                }`}
+                accessibilityHint="Double tap to view detailed chart"
               />
               <MetricCard
                 label="Habits completed"
@@ -331,6 +343,9 @@ export default function DashboardScreen() {
                   trendData?.habits ? calculateMetricPercentageChange(trendData.habits) : undefined
                 }
                 onPress={() => handleOpenChart('habits', 'Habits Completed')}
+                accessible={true}
+                accessibilityLabel={`Habits completed today: ${metrics.studyMinutes}`}
+                accessibilityHint="Double tap to view detailed chart"
               />
               <MetricCard
                 label="Cash on hand"
@@ -344,6 +359,12 @@ export default function DashboardScreen() {
                     : undefined
                 }
                 onPress={() => handleOpenChart('spending', 'Daily Spending')}
+                accessible={true}
+                accessibilityLabel={`Cash on hand: ${formatCurrencyForA11y(
+                  metrics.cash || 0,
+                  metrics.currency
+                )}`}
+                accessibilityHint="Double tap to view spending chart"
               />
             </View>
           </View>
@@ -369,8 +390,19 @@ export default function DashboardScreen() {
                     : styles.budgetAlertWarning,
                 ]}
                 onPress={() => navigation.navigate('Finance' as never)}
+                {...makeButton(
+                  `Budget alert: ${budget.category}, ${Math.round(budget.percentUsed)}% used, ${formatCash(
+                    budget.remaining,
+                    budget.currency
+                  )} remaining`,
+                  'Double tap to view budget details'
+                )}
               >
-                <View style={styles.budgetAlertIcon}>
+                <View
+                  style={styles.budgetAlertIcon}
+                  accessible={false}
+                  importantForAccessibility="no-hide-descendants"
+                >
                   <IconButton
                     icon={budget.status === 'exceeded' ? 'alert-octagon' : 'alert-circle'}
                     size={20}
@@ -378,7 +410,11 @@ export default function DashboardScreen() {
                     style={{ margin: 0 }}
                   />
                 </View>
-                <View style={styles.budgetAlertContent}>
+                <View
+                  style={styles.budgetAlertContent}
+                  accessible={false}
+                  importantForAccessibility="no-hide-descendants"
+                >
                   <Text style={styles.budgetAlertCategory}>{budget.category}</Text>
                   <Text style={styles.budgetAlertText}>
                     {Math.round(budget.percentUsed)}% used • {formatCash(budget.remaining, budget.currency)} remaining
@@ -389,6 +425,8 @@ export default function DashboardScreen() {
                   size={20}
                   iconColor={colors.text.tertiary}
                   style={{ margin: 0 }}
+                  accessible={false}
+                  importantForAccessibility="no-hide-descendants"
                 />
               </TouchableOpacity>
             ))}
@@ -482,10 +520,12 @@ const QuickCaptureCard: React.FC<QuickCaptureCardProps> = ({
     setIsSaving(true);
     try {
       await onSave(value.trim());
+      announceForAccessibility(`${title} saved successfully`);
       setValue('');
       setIsExpanded(false);
     } catch (error) {
       console.error(`Error saving ${title}:`, error);
+      announceForAccessibility(`Failed to save ${title}`);
     } finally {
       setIsSaving(false);
     }
@@ -514,6 +554,7 @@ const QuickCaptureCard: React.FC<QuickCaptureCardProps> = ({
             autoFocus
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
+            {...makeTextInput(`Quick capture ${title}`, value, placeholder)}
           />
           <View style={styles.quickCaptureButtons}>
             <TouchableOpacity
@@ -522,6 +563,7 @@ const QuickCaptureCard: React.FC<QuickCaptureCardProps> = ({
                 setIsExpanded(false);
               }}
               style={styles.cancelButton}
+              {...makeButton('Cancel', `Cancel ${title} capture`)}
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
@@ -532,9 +574,19 @@ const QuickCaptureCard: React.FC<QuickCaptureCardProps> = ({
                 styles.saveButton,
                 (!value.trim() || isSaving) && styles.saveButtonDisabled,
               ]}
+              {...makeButton(
+                `Save ${title}`,
+                `Double tap to save ${title.toLowerCase()}`,
+                !value.trim() || isSaving
+              )}
             >
               {isSaving ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
+                <ActivityIndicator
+                  size="small"
+                  color="#FFFFFF"
+                  accessible={true}
+                  accessibilityLabel="Saving"
+                />
               ) : (
                 <Text
                   style={[
@@ -553,6 +605,7 @@ const QuickCaptureCard: React.FC<QuickCaptureCardProps> = ({
           onPress={() => setIsExpanded(true)}
           style={styles.expandButton}
           activeOpacity={0.7}
+          {...makeButton(`Add ${title}`, `Double tap to capture a new ${title.toLowerCase()}`)}
         >
           <Text style={styles.expandButtonText}>+ Add {title}</Text>
         </TouchableOpacity>

@@ -45,6 +45,14 @@ import { useRefreshControl } from '../../hooks/useRefreshControl';
 import { useDebounce } from '../../hooks/useDebounce';
 import Tooltip from '../../components/ui/Tooltip';
 import {
+  makeButton,
+  makeCheckbox,
+  makeTextInput,
+  makeImage,
+  makeTaskLabel,
+  announceForAccessibility,
+} from '../../utils/accessibility';
+import {
   colors,
   typography,
   spacing,
@@ -87,7 +95,7 @@ export default function TasksScreen() {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>('all');
+  const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all' | 'overdue'>('all');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -340,7 +348,11 @@ export default function TasksScreen() {
   // Apply search and status filtering
   const filteredTasks = tasks.filter((task) => {
     // Apply quick status filter (from chips)
-    if (filterStatus !== 'all' && task.status !== filterStatus) {
+    if (filterStatus === 'overdue') {
+      if (!isOverdue(task.dueDate, task.status)) {
+        return false;
+      }
+    } else if (filterStatus !== 'all' && task.status !== filterStatus) {
       return false;
     }
 
@@ -416,6 +428,7 @@ export default function TasksScreen() {
               size={24}
               onPress={toggleBulkSelectMode}
               iconColor={colors.text.primary}
+              {...makeButton('Exit bulk select mode', 'Double tap to exit selection mode')}
             />
           ) : (
             <>
@@ -424,6 +437,7 @@ export default function TasksScreen() {
                 size={24}
                 onPress={toggleBulkSelectMode}
                 iconColor={colors.text.secondary}
+                {...makeButton('Bulk select mode', 'Double tap to select multiple tasks')}
               />
               <View style={styles.filterButtonContainer}>
                 <IconButton
@@ -432,9 +446,17 @@ export default function TasksScreen() {
                   onPress={() => setShowFilterModal(true)}
                   iconColor={activeFilterCount > 0 ? colors.primary.main : colors.text.secondary}
                   style={styles.filterButton}
+                  {...makeButton(
+                    activeFilterCount > 0 ? `Filters, ${activeFilterCount} active` : 'Filters',
+                    'Double tap to open filter options'
+                  )}
                 />
                 {activeFilterCount > 0 && (
-                  <View style={styles.filterCountBadge}>
+                  <View
+                    style={styles.filterCountBadge}
+                    accessible={false}
+                    importantForAccessibility="no-hide-descendants"
+                  >
                     <Text style={styles.filterCountText}>{activeFilterCount}</Text>
                   </View>
                 )}
@@ -446,6 +468,7 @@ export default function TasksScreen() {
                   setShowCreateModal(true);
                 }}
                 size="small"
+                {...makeButton('Create new task', 'Double tap to create a new task')}
               />
             </>
           )}
@@ -482,14 +505,19 @@ export default function TasksScreen() {
 
       {/* View Mode Selector */}
       {!bulkSelectMode && (
-        <View style={styles.viewSelectorContainer}>
+        <View
+          style={styles.viewSelectorContainer}
+          accessible={true}
+          accessibilityRole="radiogroup"
+          accessibilityLabel="View mode selector"
+        >
           <SegmentedButtons
             value={viewMode}
             onValueChange={(value) => setViewMode(value as ViewMode)}
             buttons={[
-              { value: 'list', label: 'List' },
-              { value: 'kanban', label: 'Board' },
-              { value: 'matrix', label: 'Matrix' },
+              { value: 'list', label: 'List', accessibilityLabel: 'List view' },
+              { value: 'kanban', label: 'Board', accessibilityLabel: 'Board view' },
+              { value: 'matrix', label: 'Matrix', accessibilityLabel: 'Matrix view' },
             ]}
             style={styles.viewSelector}
             theme={{
@@ -511,10 +539,10 @@ export default function TasksScreen() {
           style={styles.filterContainer}
           contentContainerStyle={styles.filterContent}
         >
-          {(['all', 'todo', 'in_progress', 'completed'] as const).map((status) => (
+          {(['all', 'overdue', 'todo', 'in_progress', 'completed'] as const).map((status) => (
             <AppChip
               key={status}
-              label={status === 'all' ? 'All' : STATUS_LABELS[status]}
+              label={status === 'all' ? 'All' : status === 'overdue' ? 'Overdue' : STATUS_LABELS[status]}
               selected={filterStatus === status}
               onPress={() => setFilterStatus(status)}
               style={styles.filterChip}
@@ -524,91 +552,126 @@ export default function TasksScreen() {
       )}
 
       {/* Content */}
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={colors.primary.main}
-            colors={[colors.primary.main]}
-            progressBackgroundColor={colors.background.primary}
-          />
-        }
-        showsVerticalScrollIndicator={false}
-      >
-        {filteredTasks.length === 0 ? (
-          <EmptyState
-            icon="📋"
-            title="No tasks yet"
-            description={
-              viewMode === 'list' && filterStatus !== 'all'
-                ? `No ${filterStatus.replace('_', ' ')} tasks`
-                : 'Create your first task to get started'
-            }
-            actionLabel="Create Task"
-            onAction={() => {
-              setSelectedTask(null);
-              setShowCreateModal(true);
-            }}
-          />
-        ) : (
-          <>
-            {viewMode === 'list' && (
-              <View style={styles.listView}>
-                {filteredTasks.map((task) => (
-                  <SwipeableTaskItem
-                    key={task.id}
-                    taskId={task.id}
-                    taskTitle={task.title}
-                    isCompleted={task.status === 'completed'}
-                    onComplete={() => handleStatusChange(task.id, 'completed')}
-                    onUncomplete={() => handleStatusChange(task.id, 'todo')}
-                    onDelete={() => handleDelete(task.id)}
-                    disabled={bulkSelectMode}
-                  >
-                    <TaskCard
-                      task={task}
-                      onStatusChange={handleStatusChange}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
-                      highlightId={params?.highlightId}
-                      // @ts-expect-error - Navigation type compatibility
-                      onHighlightComplete={() => clearHighlight(navigation)}
-                      bulkSelectMode={bulkSelectMode}
-                      selected={selectedTaskIds.has(task.id)}
-                      onToggleSelect={() => toggleTaskSelection(task.id)}
-                    />
-                  </SwipeableTaskItem>
-                ))}
-              </View>
-            )}
-            {viewMode === 'kanban' && (
-              <KanbanView
-                tasks={filteredTasks}
+      {viewMode === 'list' ? (
+        <FlatList
+          data={filteredTasks}
+          renderItem={({ item: task }) => (
+            <SwipeableTaskItem
+              key={task.id}
+              taskId={task.id}
+              taskTitle={task.title}
+              isCompleted={task.status === 'completed'}
+              onComplete={() => handleStatusChange(task.id, 'completed')}
+              onUncomplete={() => handleStatusChange(task.id, 'todo')}
+              onDelete={() => handleDelete(task.id)}
+              disabled={bulkSelectMode}
+            >
+              <TaskCard
+                task={task}
                 onStatusChange={handleStatusChange}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                highlightId={params?.highlightId}
+                // @ts-expect-error - Navigation type compatibility
+                onHighlightComplete={() => clearHighlight(navigation)}
                 bulkSelectMode={bulkSelectMode}
-                selectedTaskIds={selectedTaskIds}
-                onToggleSelect={toggleTaskSelection}
+                selected={selectedTaskIds.has(task.id)}
+                onToggleSelect={() => toggleTaskSelection(task.id)}
               />
-            )}
-            {viewMode === 'matrix' && (
-              <MatrixView
-                tasks={filteredTasks}
-                onStatusChange={handleStatusChange}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                bulkSelectMode={bulkSelectMode}
-                selectedTaskIds={selectedTaskIds}
-                onToggleSelect={toggleTaskSelection}
-              />
-            )}
-          </>
-        )}
-      </ScrollView>
+            </SwipeableTaskItem>
+          )}
+          keyExtractor={(item) => item.id}
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.primary.main}
+              colors={[colors.primary.main]}
+              progressBackgroundColor={colors.background.primary}
+              accessibilityLabel="Pull to refresh tasks"
+            />
+          }
+          showsVerticalScrollIndicator={false}
+          accessible={false}
+          accessibilityLabel={`Tasks list, ${filteredTasks.length} ${filteredTasks.length === 1 ? 'task' : 'tasks'}`}
+          ListEmptyComponent={() => (
+            <EmptyState
+              icon="📋"
+              title="No tasks yet"
+              description={
+                filterStatus !== 'all'
+                  ? `No ${filterStatus.replace('_', ' ')} tasks`
+                  : 'Create your first task to get started'
+              }
+              actionLabel="Create Task"
+              onAction={() => {
+                setSelectedTask(null);
+                setShowCreateModal(true);
+              }}
+            />
+          )}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          updateCellsBatchingPeriod={50}
+          windowSize={10}
+          initialNumToRender={15}
+        />
+      ) : (
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.primary.main}
+              colors={[colors.primary.main]}
+              progressBackgroundColor={colors.background.primary}
+            />
+          }
+          showsVerticalScrollIndicator={false}
+        >
+          {filteredTasks.length === 0 ? (
+            <EmptyState
+              icon="📋"
+              title="No tasks yet"
+              description="Create your first task to get started"
+              actionLabel="Create Task"
+              onAction={() => {
+                setSelectedTask(null);
+                setShowCreateModal(true);
+              }}
+            />
+          ) : (
+            <>
+              {viewMode === 'kanban' && (
+                <KanbanView
+                  tasks={filteredTasks}
+                  onStatusChange={handleStatusChange}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  bulkSelectMode={bulkSelectMode}
+                  selectedTaskIds={selectedTaskIds}
+                  onToggleSelect={toggleTaskSelection}
+                />
+              )}
+              {viewMode === 'matrix' && (
+                <MatrixView
+                  tasks={filteredTasks}
+                  onStatusChange={handleStatusChange}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  bulkSelectMode={bulkSelectMode}
+                  selectedTaskIds={selectedTaskIds}
+                  onToggleSelect={toggleTaskSelection}
+                />
+              )}
+            </>
+          )}
+        </ScrollView>
+      )}
 
       {/* Create/Edit Modal */}
       <TaskFormModal
@@ -664,7 +727,7 @@ interface TaskCardProps {
   onToggleSelect?: () => void;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({
+const TaskCard: React.FC<TaskCardProps> = React.memo(({
   task,
   onStatusChange,
   onEdit,
@@ -741,10 +804,20 @@ const TaskCard: React.FC<TaskCardProps> = ({
           shouldHighlight && styles.taskCardHighlight,
           selected && styles.taskCardSelected,
         ]}
+        {...makeButton(
+          makeTaskLabel(task),
+          bulkSelectMode
+            ? 'Double tap to toggle selection'
+            : 'Double tap to edit task details'
+        )}
       >
         {/* Priority Badge - Top Right Corner */}
         {task.priority && !compact && (
-          <View style={[styles.priorityCornerBadge, { backgroundColor: priorityColor }]}>
+          <View
+            style={[styles.priorityCornerBadge, { backgroundColor: priorityColor }]}
+            accessible={false}
+            importantForAccessibility="no-hide-descendants"
+          >
             <Icon
               name={PRIORITY_ICONS[task.priority]}
               size={12}
@@ -755,10 +828,14 @@ const TaskCard: React.FC<TaskCardProps> = ({
 
         {/* Overdue Badge - Top Right Corner (below priority if both exist) */}
         {taskIsOverdue && !isCompleted && (
-          <View style={[
-            styles.overdueCornerBadge,
-            task.priority && !compact ? { top: 36 } : { top: 8 }
-          ]}>
+          <View
+            style={[
+              styles.overdueCornerBadge,
+              task.priority && !compact ? { top: 36 } : { top: 8 }
+            ]}
+            accessible={false}
+            importantForAccessibility="no-hide-descendants"
+          >
             <Text style={styles.overdueCornerText}>OVERDUE</Text>
           </View>
         )}
@@ -770,12 +847,20 @@ const TaskCard: React.FC<TaskCardProps> = ({
               <TouchableOpacity
                 onPress={onToggleSelect}
                 style={styles.checkbox}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                {...makeCheckbox(
+                  `Select ${task.title}`,
+                  selected,
+                  'Double tap to toggle selection'
+                )}
               >
                 <View
                   style={[
                     styles.checkboxInner,
                     selected && styles.checkboxSelected,
                   ]}
+                  accessible={false}
+                  importantForAccessibility="no-hide-descendants"
                 >
                   {selected && (
                     <Icon name="check" size={16} color="#FFFFFF" />
@@ -785,19 +870,30 @@ const TaskCard: React.FC<TaskCardProps> = ({
             ) : (
               // Normal completion checkbox
               <TouchableOpacity
-                onPress={() =>
-                  onStatusChange(
-                    task.id,
-                    isCompleted ? 'todo' : 'completed'
-                  )
-                }
+                onPress={() => {
+                  const newStatus = isCompleted ? 'todo' : 'completed';
+                  onStatusChange(task.id, newStatus);
+                  announceForAccessibility(
+                    isCompleted
+                      ? `${task.title} marked as incomplete`
+                      : `${task.title} completed`
+                  );
+                }}
                 style={styles.checkbox}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                {...makeCheckbox(
+                  `Mark ${task.title} as ${isCompleted ? 'incomplete' : 'complete'}`,
+                  isCompleted,
+                  `Double tap to ${isCompleted ? 'uncomplete' : 'complete'} task`
+                )}
               >
                 <View
                   style={[
                     styles.checkboxInner,
                     isCompleted && styles.checkboxChecked,
                   ]}
+                  accessible={false}
+                  importantForAccessibility="no-hide-descendants"
                 >
                   {isCompleted && (
                     <Text style={styles.checkmark}>✓</Text>
@@ -903,6 +999,16 @@ const TaskCard: React.FC<TaskCardProps> = ({
                   );
                 })()}
 
+                {/* Completion date badge for completed tasks */}
+                {isCompleted && task.completedAt && (
+                  <View style={[styles.dueDateBadge, styles.completedBadge]}>
+                    <Icon name="check-circle" size={14} color={colors.success} />
+                    <Text style={[styles.dueDateText, styles.completedText]}>
+                      Completed {formatDueDate(task.completedAt)}
+                    </Text>
+                  </View>
+                )}
+
                 {/* Project badge */}
                 {task.project && (
                   <View
@@ -934,12 +1040,14 @@ const TaskCard: React.FC<TaskCardProps> = ({
                 <TouchableOpacity
                   onPress={() => onEdit(task)}
                   style={styles.actionButton}
+                  {...makeButton(`Edit ${task.title}`, 'Double tap to edit task details')}
                 >
                   <Text style={styles.actionButtonText}>Edit</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => onDelete(task.id)}
                   style={styles.actionButton}
+                  {...makeButton(`Delete ${task.title}`, 'Double tap to delete task')}
                 >
                   <Text style={[styles.actionButtonText, styles.deleteText]}>
                     Delete
@@ -952,7 +1060,19 @@ const TaskCard: React.FC<TaskCardProps> = ({
       </TouchableOpacity>
     </Animated.View>
   );
-};
+}, (prevProps, nextProps) => {
+  // Custom comparison for better performance - only re-render if these change
+  return (
+    prevProps.task.id === nextProps.task.id &&
+    prevProps.task.status === nextProps.task.status &&
+    prevProps.task.title === nextProps.task.title &&
+    prevProps.task.updatedAt === nextProps.task.updatedAt &&
+    prevProps.bulkSelectMode === nextProps.bulkSelectMode &&
+    prevProps.selected === nextProps.selected &&
+    prevProps.compact === nextProps.compact &&
+    prevProps.highlightId === nextProps.highlightId
+  );
+});
 
 // Kanban View Component
 interface KanbanViewProps {
@@ -1201,6 +1321,7 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
                 icon="close"
                 onPress={onClose}
                 iconColor={colors.text.tertiary}
+                {...makeButton('Close', 'Double tap to close and discard changes')}
               />
             </View>
 
@@ -1218,6 +1339,7 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
                   style={[styles.input, titleFocused && styles.inputFocused]}
                   onFocus={() => setTitleFocused(true)}
                   onBlur={() => setTitleFocused(false)}
+                  {...makeTextInput('Task title', title, 'Enter a title for your task')}
                 />
               </View>
 
@@ -1237,6 +1359,7 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
                   numberOfLines={4}
                   onFocus={() => setDescFocused(true)}
                   onBlur={() => setDescFocused(false)}
+                  {...makeTextInput('Task description', description, 'Enter a detailed description for your task')}
                 />
               </View>
 
@@ -1297,6 +1420,7 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
                 onPress={onClose}
                 variant="outline"
                 style={styles.modalButton}
+                {...makeButton('Cancel', 'Double tap to cancel and discard changes')}
               />
               <AppButton
                 title={task ? 'Update' : 'Create'}
@@ -1304,6 +1428,11 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
                 loading={isSubmitting}
                 disabled={!title.trim()}
                 style={styles.modalButton}
+                {...makeButton(
+                  task ? 'Update task' : 'Create task',
+                  task ? 'Double tap to save changes' : 'Double tap to create new task',
+                  !title.trim()
+                )}
               />
             </View>
           </View>
@@ -1625,6 +1754,16 @@ const styles = StyleSheet.create({
   },
   dueDateText: {
     fontSize: typography.size.xs,
+  },
+  completedBadge: {
+    backgroundColor: `${colors.success}20`,
+    borderWidth: 1,
+    borderColor: colors.success,
+  },
+  completedText: {
+    fontSize: typography.size.xs,
+    color: colors.success,
+    fontWeight: typography.weight.medium,
   },
   projectBadge: {
     backgroundColor: colors.background.tertiary,
