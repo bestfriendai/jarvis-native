@@ -51,13 +51,19 @@ export function TaskPickerModal({ visible, onClose, onSelect, currentTaskId }: T
 
   const loadTasks = async () => {
     try {
-      // Load only active tasks (todo and in_progress)
-      const loadedTasks = await tasksDB.getTasks({
-        statuses: ['todo', 'in_progress'],
+      // Prefer open tasks, but fall back to all tasks if none match
+      const openTasks = await tasksDB.getTasks({
+        statuses: ['todo', 'in_progress', 'blocked'],
         sortField: 'dueDate',
         sortDirection: 'asc',
       });
-      console.log('[TaskPickerModal] Loaded tasks:', loadedTasks.length, loadedTasks);
+
+      const loadedTasks =
+        openTasks.length > 0
+          ? openTasks
+          : await tasksDB.getTasks({ sortField: 'updatedAt', sortDirection: 'desc' });
+
+      console.log('[TaskPickerModal] Loaded tasks:', loadedTasks.length);
       setTasks(loadedTasks);
     } catch (error) {
       console.error('[TaskPickerModal] Error loading tasks:', error);
