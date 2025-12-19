@@ -39,6 +39,7 @@ import {
   spacing,
   borderRadius,
   shadows,
+  getColors,
 } from '../../theme';
 import { useTheme } from '../../theme/ThemeProvider';
 
@@ -856,6 +857,8 @@ const EventFormModal: React.FC<EventFormModalProps> = ({
     </Modal>
   );
 };
+
+const colors = getColors();
 
 const styles = StyleSheet.create({
   container: {

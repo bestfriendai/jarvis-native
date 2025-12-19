@@ -15,7 +15,7 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
-import { typography, spacing, borderRadius, shadows, animation } from '../../theme';
+import { typography, spacing, borderRadius, shadows, animation, getColors } from '../../theme';
 import { useTheme } from '../../theme/ThemeProvider';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
@@ -167,6 +167,8 @@ export const AppButton: React.FC<AppButtonProps> = ({
     </Animated.View>
   );
 };
+
+const colors = getColors();
 
 const styles = StyleSheet.create({
   button: {

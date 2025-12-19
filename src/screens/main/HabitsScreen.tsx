@@ -42,6 +42,7 @@ import {
   spacing,
   borderRadius,
   shadows,
+  getColors,
 } from '../../theme';
 import { useTheme } from '../../theme/ThemeProvider';
 import {
@@ -573,6 +574,7 @@ export default function HabitsScreen() {
                 habitId={heatmapHabit.id}
                 completions={[]}
                 weeks={12}
+                habitName={heatmapHabit.name}
               />
             )}
           </View>
@@ -1103,6 +1105,8 @@ const HabitFormModal: React.FC<HabitFormModalProps> = ({
     </Modal>
   );
 };
+
+const colors = getColors();
 
 const styles = StyleSheet.create({
   container: {

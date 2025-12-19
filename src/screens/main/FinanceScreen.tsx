@@ -40,6 +40,7 @@ import {
   spacing,
   borderRadius,
   shadows,
+  getColors,
 } from '../../theme';
 import { useTheme } from '../../theme/ThemeProvider';
 
@@ -1270,6 +1271,8 @@ const LiabilityFormModal: React.FC<LiabilityFormModalProps> = ({
     </Modal>
   );
 };
+
+const colors = getColors();
 
 const styles = StyleSheet.create({
   container: {

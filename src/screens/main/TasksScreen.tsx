@@ -58,6 +58,7 @@ import {
   borderRadius,
   shadows,
   animation,
+  getColors,
 } from '../../theme';
 import { useTheme } from '../../theme/ThemeProvider';
 import { PRIORITY_COLORS, PRIORITY_LABELS, PRIORITY_ICONS } from '../../constants/priorities';
@@ -633,7 +634,7 @@ export default function TasksScreen() {
           }
           showsVerticalScrollIndicator={false}
         >
-          {filteredTasks.length === 0 ? (
+          {filteredTasks.length === 0 && (
             <EmptyState
               icon="📋"
               title="No tasks yet"
@@ -1290,6 +1291,8 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
     </Modal>
   );
 };
+
+const colors = getColors();
 
 const styles = StyleSheet.create({
   container: {

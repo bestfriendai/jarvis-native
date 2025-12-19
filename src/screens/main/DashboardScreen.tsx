@@ -39,6 +39,7 @@ import {
   borderRadius,
   shadows,
   textStyles,
+  getColors,
 } from '../../theme';
 import { useTheme } from '../../theme/ThemeProvider';
 import {
@@ -614,6 +615,8 @@ const QuickCaptureCard: React.FC<QuickCaptureCardProps> = ({
     </View>
   );
 };
+
+const colors = getColors();
 
 const styles = StyleSheet.create({
   container: {

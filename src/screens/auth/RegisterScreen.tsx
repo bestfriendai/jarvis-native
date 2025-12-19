@@ -25,6 +25,7 @@ import {
   spacing,
   borderRadius,
   shadows,
+  getColors,
 } from '../../theme';
 import { useTheme } from '../../theme/ThemeProvider';
 
@@ -266,6 +267,8 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
     </KeyboardAvoidingView>
   );
 }
+
+const colors = getColors();
 
 const styles = StyleSheet.create({
   container: {

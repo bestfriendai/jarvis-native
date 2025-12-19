@@ -11,6 +11,7 @@ import { ChartCard } from './ChartCard';
 import { baseChartConfig } from '../../utils/charts/chartConfig';
 import { getHabitComparisonData, HabitComparisonData } from '../../utils/charts/habitCharts';
 import { colors, typography, spacing } from '../../theme';
+import { getChartDescription, getChartDataTable } from '../../utils/chartAccessibility';
 
 interface HabitsComparisonChartProps {
   habitIds: string[];
@@ -47,6 +48,22 @@ export const HabitsComparisonChart: React.FC<HabitsComparisonChartProps> = ({
 
   const isEmpty = !data || data.datasets[0].data.every((v) => v === 0);
 
+  // Generate accessibility description
+  const chartDataPoints = data?.labels.map((label, index) => ({
+    label: label as string,
+    value: data.datasets[0].data[index] as number,
+  })) || [];
+
+  const accessibilityDescription = data
+    ? getChartDescription(chartDataPoints, {
+        title: 'Habit comparison for last 30 days',
+        type: 'bar',
+        unit: '%',
+      })
+    : 'No habit comparison data available';
+
+  const dataTable = data ? getChartDataTable(chartDataPoints, { unit: '%' }) : '';
+
   return (
     <ChartCard
       title="Habit Comparison"
@@ -54,53 +71,78 @@ export const HabitsComparisonChart: React.FC<HabitsComparisonChartProps> = ({
       onAction={onViewDetails}
       actionLabel={onViewDetails ? 'Details' : undefined}
     >
-      <BaseChart
-        isLoading={isLoading}
-        error={error}
-        isEmpty={isEmpty}
-        emptyMessage="Select habits to compare"
-        height={220}
+      <View
+        accessible={true}
+        accessibilityLabel={accessibilityDescription}
+        accessibilityRole="image"
+        accessibilityHint="Double tap for detailed view"
       >
-        {data && (
-          <>
-            <BarChart
-              data={{
-                labels: data.labels,
-                datasets: data.datasets,
-              }}
-              width={screenWidth - 64}
-              height={220}
-              chartConfig={{
-                ...baseChartConfig,
-                decimalPlaces: 0,
-                color: (opacity = 1) => colors.primary.main,
-                fillShadowGradientFrom: colors.primary.main,
-                fillShadowGradientTo: colors.primary.main,
-              }}
-              yAxisLabel=""
-              yAxisSuffix="%"
-              fromZero
-              showBarTops={false}
-              withInnerLines
-              style={styles.chart}
-              verticalLabelRotation={data.labels.length > 3 ? 30 : 0}
-            />
-            <View style={styles.legend}>
-              <View style={styles.legendItem}>
-                <View
-                  style={[
-                    styles.legendDot,
-                    { backgroundColor: colors.primary.main },
-                  ]}
+        <BaseChart
+          isLoading={isLoading}
+          error={error}
+          isEmpty={isEmpty}
+          emptyMessage="Select habits to compare"
+          height={220}
+        >
+          {data && (
+            <>
+              <View
+                accessible={false}
+                importantForAccessibility="no-hide-descendants"
+              >
+                <BarChart
+                  data={{
+                    labels: data.labels,
+                    datasets: data.datasets,
+                  }}
+                  width={screenWidth - 64}
+                  height={220}
+                  chartConfig={{
+                    ...baseChartConfig,
+                    decimalPlaces: 0,
+                    color: (opacity = 1) => colors.primary.main,
+                    fillShadowGradientFrom: colors.primary.main,
+                    fillShadowGradientTo: colors.primary.main,
+                  }}
+                  yAxisLabel=""
+                  yAxisSuffix="%"
+                  fromZero
+                  showBarTops={false}
+                  withInnerLines
+                  style={styles.chart}
+                  verticalLabelRotation={data.labels.length > 3 ? 30 : 0}
                 />
-                <Text style={styles.legendText}>
-                  Completion Rate (Last 30 days)
-                </Text>
               </View>
-            </View>
-          </>
-        )}
-      </BaseChart>
+              <View
+                style={styles.legend}
+                accessible={false}
+                importantForAccessibility="no-hide-descendants"
+              >
+                <View style={styles.legendItem}>
+                  <View
+                    style={[
+                      styles.legendDot,
+                      { backgroundColor: colors.primary.main },
+                    ]}
+                  />
+                  <Text style={styles.legendText}>
+                    Completion Rate (Last 30 days)
+                  </Text>
+                </View>
+              </View>
+
+              {/* Hidden text alternative for screen readers */}
+              <Text
+                style={styles.hiddenText}
+                accessible={false}
+                importantForAccessibility="no-hide-descendants"
+              >
+                {dataTable}
+              </Text>
+            </>
+          )}
+        </BaseChart>
+      </View>
     </ChartCard>
   );
 };
@@ -129,6 +171,12 @@ const styles = StyleSheet.create({
     fontSize: typography.size.sm,
     color: colors.text.secondary,
     fontWeight: typography.weight.medium,
+  },
+  hiddenText: {
+    position: 'absolute',
+    width: 0,
+    height: 0,
+    opacity: 0,
   },
 });
 

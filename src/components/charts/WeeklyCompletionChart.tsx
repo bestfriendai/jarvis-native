@@ -5,12 +5,13 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { View, Dimensions, StyleSheet } from 'react-native';
+import { View, Dimensions, StyleSheet, Text } from 'react-native';
 import { BarChart } from 'react-native-chart-kit';
 import { BaseChart } from './BaseChart';
 import { baseChartConfig } from '../../utils/charts/chartConfig';
 import { getWeeklyCompletionData, WeeklyCompletionData } from '../../utils/charts/habitCharts';
 import { colors } from '../../theme';
+import { getChartDescription, getChartDataTable } from '../../utils/chartAccessibility';
 
 interface WeeklyCompletionChartProps {
   habitId: string;
@@ -65,33 +66,72 @@ export const WeeklyCompletionChart: React.FC<WeeklyCompletionChartProps> = ({
     },
   };
 
+  // Generate accessibility description
+  const chartDataPoints = data?.labels.map((label, index) => ({
+    label: label as string,
+    value: data.datasets[0].data[index] as number,
+  })) || [];
+
+  const completedDays = chartDataPoints.filter(p => p.value > 0).length;
+  const accessibilityDescription = data
+    ? `Weekly completion chart. ${completedDays} out of 7 days completed. ${getChartDescription(chartDataPoints, {
+        title: 'Last 7 days',
+        type: 'bar',
+        unit: ' completions',
+      })}`
+    : 'No weekly completion data available';
+
+  const dataTable = data ? getChartDataTable(chartDataPoints, { unit: ' completions' }) : '';
+
   return (
-    <BaseChart
-      isLoading={isLoading}
-      error={error}
-      isEmpty={isEmpty}
-      emptyMessage="No activity yet"
-      height={chartHeight}
+    <View
+      accessible={true}
+      accessibilityLabel={accessibilityDescription}
+      accessibilityRole="image"
     >
-      {data && (
-        <BarChart
-          data={{
-            labels: data.labels,
-            datasets: data.datasets,
-          }}
-          width={chartWidth}
-          height={chartHeight}
-          chartConfig={compactConfig}
-          yAxisLabel=""
-          yAxisSuffix=""
-          fromZero
-          showBarTops={false}
-          withInnerLines={!compact}
-          style={styles.chart}
-          verticalLabelRotation={0}
-        />
-      )}
-    </BaseChart>
+      <BaseChart
+        isLoading={isLoading}
+        error={error}
+        isEmpty={isEmpty}
+        emptyMessage="No activity yet"
+        height={chartHeight}
+      >
+        {data && (
+          <>
+            <View
+              accessible={false}
+              importantForAccessibility="no-hide-descendants"
+            >
+              <BarChart
+                data={{
+                  labels: data.labels,
+                  datasets: data.datasets,
+                }}
+                width={chartWidth}
+                height={chartHeight}
+                chartConfig={compactConfig}
+                yAxisLabel=""
+                yAxisSuffix=""
+                fromZero
+                showBarTops={false}
+                withInnerLines={!compact}
+                style={styles.chart}
+                verticalLabelRotation={0}
+              />
+            </View>
+
+            {/* Hidden text alternative for screen readers */}
+            <Text
+              style={styles.hiddenText}
+              accessible={false}
+              importantForAccessibility="no-hide-descendants"
+            >
+              {dataTable}
+            </Text>
+          </>
+        )}
+      </BaseChart>
+    </View>
   );
 };
 
@@ -99,6 +139,12 @@ const styles = StyleSheet.create({
   chart: {
     marginVertical: 4,
     borderRadius: 8,
+  },
+  hiddenText: {
+    position: 'absolute',
+    width: 0,
+    height: 0,
+    opacity: 0,
   },
 });
 

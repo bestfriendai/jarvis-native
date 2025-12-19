@@ -11,6 +11,7 @@ import { ChartCard } from './ChartCard';
 import { baseChartConfig } from '../../utils/charts/chartConfig';
 import { getMonthlyComparisonData, MonthlyComparisonData } from '../../utils/charts/financeCharts';
 import { colors, typography, spacing } from '../../theme';
+import { getMonthlyComparisonDescription, getChartDataTable } from '../../utils/chartAccessibility';
 
 interface MonthlyComparisonChartProps {
   months?: number;
@@ -47,6 +48,23 @@ export const MonthlyComparisonChart: React.FC<MonthlyComparisonChartProps> = ({
 
   const isEmpty = !data || data.datasets.every((ds) => ds.data.every((v) => v === 0));
 
+  // Generate accessibility description
+  const monthlyData = data?.labels.map((label, index) => ({
+    month: label as string,
+    income: (data.datasets[0]?.data[index] as number) || 0,
+    expenses: (data.datasets[1]?.data[index] as number) || 0,
+  })) || [];
+
+  const accessibilityDescription = data
+    ? getMonthlyComparisonDescription(monthlyData)
+    : 'No monthly comparison data available';
+
+  // Generate data table
+  const incomePoints = monthlyData.map(m => ({ label: `${m.month} Income`, value: m.income }));
+  const expensePoints = monthlyData.map(m => ({ label: `${m.month} Expenses`, value: m.expenses }));
+  const allPoints = [...incomePoints, ...expensePoints];
+  const dataTable = data ? getChartDataTable(allPoints, { unit: '$' }) : '';
+
   return (
     <ChartCard
       title="Income vs Expenses"
@@ -54,53 +72,78 @@ export const MonthlyComparisonChart: React.FC<MonthlyComparisonChartProps> = ({
       onAction={onViewDetails}
       actionLabel={onViewDetails ? 'Details' : undefined}
     >
-      <BaseChart
-        isLoading={isLoading}
-        error={error}
-        isEmpty={isEmpty}
-        emptyMessage="No financial data yet"
-        height={220}
+      <View
+        accessible={true}
+        accessibilityLabel={accessibilityDescription}
+        accessibilityRole="image"
+        accessibilityHint="Double tap for detailed view"
       >
-        {data && (
-          <>
-            <BarChart
-              data={{
-                labels: data.labels,
-                datasets: data.datasets,
-              }}
-              width={screenWidth - 64}
-              height={220}
-              chartConfig={{
-                ...baseChartConfig,
-                decimalPlaces: 0,
-              }}
-              yAxisLabel="$"
-              yAxisSuffix="k"
-              fromZero
-              showBarTops={false}
-              withInnerLines
-              style={styles.chart}
-              verticalLabelRotation={0}
-            />
-            <View style={styles.legend}>
-              {data.legend.map((label, index) => (
-                <View key={label} style={styles.legendItem}>
-                  <View
-                    style={[
-                      styles.legendDot,
-                      {
-                        backgroundColor:
-                          index === 0 ? colors.success : colors.error,
-                      },
-                    ]}
-                  />
-                  <Text style={styles.legendText}>{label}</Text>
-                </View>
-              ))}
-            </View>
-          </>
-        )}
-      </BaseChart>
+        <BaseChart
+          isLoading={isLoading}
+          error={error}
+          isEmpty={isEmpty}
+          emptyMessage="No financial data yet"
+          height={220}
+        >
+          {data && (
+            <>
+              <View
+                accessible={false}
+                importantForAccessibility="no-hide-descendants"
+              >
+                <BarChart
+                  data={{
+                    labels: data.labels,
+                    datasets: data.datasets,
+                  }}
+                  width={screenWidth - 64}
+                  height={220}
+                  chartConfig={{
+                    ...baseChartConfig,
+                    decimalPlaces: 0,
+                  }}
+                  yAxisLabel="$"
+                  yAxisSuffix="k"
+                  fromZero
+                  showBarTops={false}
+                  withInnerLines
+                  style={styles.chart}
+                  verticalLabelRotation={0}
+                />
+              </View>
+              <View
+                style={styles.legend}
+                accessible={false}
+                importantForAccessibility="no-hide-descendants"
+              >
+                {data.legend.map((label, index) => (
+                  <View key={label} style={styles.legendItem}>
+                    <View
+                      style={[
+                        styles.legendDot,
+                        {
+                          backgroundColor:
+                            index === 0 ? colors.success : colors.error,
+                        },
+                      ]}
+                    />
+                    <Text style={styles.legendText}>{label}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Hidden text alternative for screen readers */}
+              <Text
+                style={styles.hiddenText}
+                accessible={false}
+                importantForAccessibility="no-hide-descendants"
+              >
+                {dataTable}
+              </Text>
+            </>
+          )}
+        </BaseChart>
+      </View>
     </ChartCard>
   );
 };
@@ -130,6 +173,12 @@ const styles = StyleSheet.create({
     fontSize: typography.size.sm,
     color: colors.text.secondary,
     fontWeight: typography.weight.medium,
+  },
+  hiddenText: {
+    position: 'absolute',
+    width: 0,
+    height: 0,
+    opacity: 0,
   },
 });
 

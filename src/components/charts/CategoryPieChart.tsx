@@ -11,6 +11,7 @@ import { ChartCard } from './ChartCard';
 import { baseChartConfig } from '../../utils/charts/chartConfig';
 import { getCategoryBreakdownData, CategoryBreakdownData } from '../../utils/charts/financeCharts';
 import { colors, typography, spacing } from '../../theme';
+import { getChartDescription, getChartDataTable } from '../../utils/chartAccessibility';
 
 interface CategoryPieChartProps {
   month?: string;
@@ -58,6 +59,23 @@ export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({
       }))
     : [];
 
+  // Generate accessibility description
+  const chartDataPoints = data?.labels.map((label, index) => ({
+    label: label,
+    value: data.data[index],
+  })) || [];
+
+  const total = chartDataPoints.reduce((sum, point) => sum + point.value, 0);
+  const accessibilityDescription = data
+    ? getChartDescription(chartDataPoints, {
+        title: 'Category breakdown',
+        type: 'pie',
+        unit: '$',
+      })
+    : 'No category data available';
+
+  const dataTable = data ? getChartDataTable(chartDataPoints, { unit: '$' }) : '';
+
   return (
     <ChartCard
       title="Category Breakdown"
@@ -65,42 +83,67 @@ export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({
       onAction={onViewDetails}
       actionLabel={onViewDetails ? 'Details' : undefined}
     >
-      <BaseChart
-        isLoading={isLoading}
-        error={error}
-        isEmpty={isEmpty}
-        emptyMessage="No spending data yet"
-        height={260}
+      <View
+        accessible={true}
+        accessibilityLabel={accessibilityDescription}
+        accessibilityRole="image"
+        accessibilityHint="Double tap for detailed view"
       >
-        {data && (
-          <>
-            <PieChart
-              data={pieData}
-              width={screenWidth - 64}
-              height={220}
-              chartConfig={baseChartConfig}
-              accessor="population"
-              backgroundColor="transparent"
-              paddingLeft="15"
-              absolute
-              hasLegend={false}
-              style={styles.chart}
-            />
-            <View style={styles.legend}>
-              {data.labels.map((label, index) => (
-                <View key={label} style={styles.legendItem}>
-                  <View
-                    style={[styles.legendDot, { backgroundColor: data.colors[index] }]}
-                  />
-                  <Text style={styles.legendText}>
-                    {label} (${data.data[index].toFixed(0)})
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </>
-        )}
-      </BaseChart>
+        <BaseChart
+          isLoading={isLoading}
+          error={error}
+          isEmpty={isEmpty}
+          emptyMessage="No spending data yet"
+          height={260}
+        >
+          {data && (
+            <>
+              <View
+                accessible={false}
+                importantForAccessibility="no-hide-descendants"
+              >
+                <PieChart
+                  data={pieData}
+                  width={screenWidth - 64}
+                  height={220}
+                  chartConfig={baseChartConfig}
+                  accessor="population"
+                  backgroundColor="transparent"
+                  paddingLeft="15"
+                  absolute
+                  hasLegend={false}
+                  style={styles.chart}
+                />
+              </View>
+              <View
+                style={styles.legend}
+                accessible={false}
+                importantForAccessibility="no-hide-descendants"
+              >
+                {data.labels.map((label, index) => (
+                  <View key={label} style={styles.legendItem}>
+                    <View
+                      style={[styles.legendDot, { backgroundColor: data.colors[index] }]}
+                    />
+                    <Text style={styles.legendText}>
+                      {label} (${data.data[index].toFixed(0)})
+                    </Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Hidden text alternative for screen readers */}
+              <Text
+                style={styles.hiddenText}
+                accessible={false}
+                importantForAccessibility="no-hide-descendants"
+              >
+                {dataTable}
+              </Text>
+            </>
+          )}
+        </BaseChart>
+      </View>
     </ChartCard>
   );
 };
@@ -130,6 +173,12 @@ const styles = StyleSheet.create({
   legendText: {
     fontSize: typography.size.xs,
     color: colors.text.secondary,
+  },
+  hiddenText: {
+    position: 'absolute',
+    width: 0,
+    height: 0,
+    opacity: 0,
   },
 });
 

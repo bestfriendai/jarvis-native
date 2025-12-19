@@ -25,6 +25,7 @@ import {
   spacing,
   borderRadius,
   shadows,
+  getColors,
 } from '../../theme';
 import { useTheme } from '../../theme/ThemeProvider';
 
@@ -188,6 +189,8 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     </KeyboardAvoidingView>
   );
 }
+
+const colors = getColors();
 
 const styles = StyleSheet.create({
   container: {

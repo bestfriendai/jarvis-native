@@ -30,7 +30,7 @@ import * as Speech from 'expo-speech';
 import { ChatMessage } from '../../types';
 import { aiApi } from '../../services/ai.api';
 import { EmptyState } from '../../components/ui';
-import { typography, spacing, borderRadius, textStyles, shadows } from '../../theme';
+import { typography, spacing, borderRadius, textStyles, shadows, getColors } from '../../theme';
 import { useTheme } from '../../theme/ThemeProvider';
 
 const QUICK_PROMPTS = [
@@ -237,6 +237,8 @@ export default function AIChatScreen() {
     </KeyboardAvoidingView>
   );
 }
+
+const colors = getColors();
 
 const styles = StyleSheet.create({
   container: {
