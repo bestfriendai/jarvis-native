@@ -26,7 +26,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import * as tasksDB from '../../database/tasks';
 import * as undoService from '../../services/undo';
 import type { Project } from '../../database/projects';
-import { AppButton, AppCard, AppChip, EmptyState, LoadingState, LastUpdated, SearchBar } from '../../components/ui';
+import { AppButton, AppCard, AppChip, EmptyState, LoadingState, LastUpdated, SearchBar, AnimatedListItem } from '../../components/ui';
 import { TaskCardSkeleton } from '../../components/tasks/TaskCardSkeleton';
 import { RecurrencePicker } from '../../components/RecurrencePicker';
 import { ProjectPicker } from '../../components/ProjectPicker';
@@ -582,30 +582,32 @@ export default function TasksScreen() {
       {viewMode === 'list' ? (
         <FlatList
           data={filteredTasks}
-          renderItem={({ item: task }) => (
-            <SwipeableTaskItem
-              key={task.id}
-              taskId={task.id}
-              taskTitle={task.title}
-              isCompleted={task.status === 'completed'}
-              onComplete={() => handleStatusChange(task.id, 'completed')}
-              onUncomplete={() => handleStatusChange(task.id, 'todo')}
-              onDelete={() => handleDelete(task.id)}
-              disabled={bulkSelectMode}
-            >
-              <TaskCard
-                task={task}
-                onStatusChange={handleStatusChange}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                highlightId={params?.highlightId}
-                // @ts-expect-error - Navigation type compatibility
-                onHighlightComplete={() => clearHighlight(navigation)}
-                bulkSelectMode={bulkSelectMode}
-                selected={selectedTaskIds.has(task.id)}
-                onToggleSelect={() => toggleTaskSelection(task.id)}
-              />
-            </SwipeableTaskItem>
+          renderItem={({ item: task, index }) => (
+            <AnimatedListItem index={index} delay={30} duration={400}>
+              <SwipeableTaskItem
+                key={task.id}
+                taskId={task.id}
+                taskTitle={task.title}
+                isCompleted={task.status === 'completed'}
+                onComplete={() => handleStatusChange(task.id, 'completed')}
+                onUncomplete={() => handleStatusChange(task.id, 'todo')}
+                onDelete={() => handleDelete(task.id)}
+                disabled={bulkSelectMode}
+              >
+                <TaskCard
+                  task={task}
+                  onStatusChange={handleStatusChange}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  highlightId={params?.highlightId}
+                  // @ts-expect-error - Navigation type compatibility
+                  onHighlightComplete={() => clearHighlight(navigation)}
+                  bulkSelectMode={bulkSelectMode}
+                  selected={selectedTaskIds.has(task.id)}
+                  onToggleSelect={() => toggleTaskSelection(task.id)}
+                />
+              </SwipeableTaskItem>
+            </AnimatedListItem>
           )}
           keyExtractor={(item) => item.id}
           style={styles.content}
