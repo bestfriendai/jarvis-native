@@ -27,6 +27,8 @@ import { HabitInsightsCard } from '../../components/habits/HabitInsightsCard';
 import { HabitReminderPicker } from '../../components/habits/HabitReminderPicker';
 import { HabitNotesModal } from '../../components/habits/HabitNotesModal';
 import { HabitLogsView } from '../../components/habits/HabitLogsView';
+import { StreakBadge } from '../../components/habits/StreakBadge';
+import { CelebrationOverlay } from '../../components/habits/CelebrationOverlay';
 import { AppButton, AppChip, EmptyState, LoadingState, LastUpdated, SearchBar } from '../../components/ui';
 import { HabitCardSkeleton } from '../../components/habits/HabitCardSkeleton';
 import * as storage from '../../services/storage';
@@ -208,7 +210,7 @@ export default function HabitsScreen() {
     await updateOptimistically(
       () => {
         setHabits(updatedHabits);
-        Vibration.vibrate(50); // Haptic feedback
+        hapticUtils.hapticSuccess(); // Success haptic
         announceForAccessibility(`${habit.name} completed`);
       },
       async () => {
@@ -236,8 +238,10 @@ export default function HabitsScreen() {
             setCelebratingHabitId(habitId);
             setCelebrationMessage(message);
             announceForAccessibility(message);
-            Vibration.vibrate([100, 50, 100]);
-            setTimeout(() => setCelebratingHabitId(null), 3000);
+            // Haptic burst pattern for milestone celebration
+            hapticUtils.hapticSuccess();
+            setTimeout(() => hapticUtils.hapticLight(), 100);
+            setTimeout(() => hapticUtils.hapticSuccess(), 200);
           }
 
           // Show tooltip on first habit completion
@@ -590,22 +594,12 @@ export default function HabitsScreen() {
         </View>
       </Modal>
 
-      {/* Celebration Modal */}
-      {celebratingHabitId && (
-        <Modal
-          visible={true}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setCelebratingHabitId(null)}
-        >
-          <View style={styles.celebrationOverlay}>
-            <Animated.View style={styles.celebrationContent}>
-              <Text style={styles.celebrationEmoji}>🎉</Text>
-              <Text style={styles.celebrationText}>{celebrationMessage}</Text>
-            </Animated.View>
-          </View>
-        </Modal>
-      )}
+      {/* Celebration Overlay */}
+      <CelebrationOverlay
+        visible={!!celebratingHabitId}
+        message={celebrationMessage}
+        onDismiss={() => setCelebratingHabitId(null)}
+      />
 
       {/* Insights Modal */}
       <Modal
@@ -707,6 +701,7 @@ const HabitCard: React.FC<HabitCardProps> = ({
   getMilestoneBadges,
 }) => {
   const [scaleValue] = useState(new Animated.Value(1));
+  const [isExpanded, setIsExpanded] = useState(false);
   const isCompletedToday = (habit.completionsToday || 0) > 0;
 
   const handlePressIn = () => {
@@ -725,10 +720,14 @@ const HabitCard: React.FC<HabitCardProps> = ({
     }).start();
   };
 
+  const handleCardPress = () => {
+    setIsExpanded(!isExpanded);
+  };
+
   return (
     <Animated.View style={{ transform: [{ scale: scaleValue }] }}>
       <TouchableOpacity
-        onPress={() => onEdit(habit)}
+        onPress={handleCardPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         activeOpacity={0.9}
@@ -740,7 +739,7 @@ const HabitCard: React.FC<HabitCardProps> = ({
             completedToday: isCompletedToday,
             frequency: habit.cadence,
           }),
-          'Double tap to edit habit details'
+          isExpanded ? 'Double tap to collapse details' : 'Double tap to expand details'
         )}
       >
         <View style={styles.habitContent}>
@@ -753,72 +752,43 @@ const HabitCard: React.FC<HabitCardProps> = ({
                 </Text>
               )}
 
-              {/* Meta row with enhanced stats */}
+              {/* Meta row with simplified stats */}
               <View style={styles.habitMeta}>
                 <AppChip label={habit.cadence} compact />
 
-                {/* Current Streak */}
-                <View style={styles.streakContainer}>
-                  <Text style={styles.streakIcon}>🔥</Text>
-                  <Text style={styles.streakText}>
-                    {habit.currentStreak || 0} day
-                    {(habit.currentStreak || 0) !== 1 ? 's' : ''}
-                  </Text>
-                </View>
-
-                {/* Best Streak */}
-                {habit.longestStreak > 0 && habit.longestStreak > habit.currentStreak && (
-                  <View style={styles.bestStreakContainer}>
-                    <Text style={styles.bestStreakLabel}>Best:</Text>
-                    <Text style={styles.bestStreakValue}>{habit.longestStreak}</Text>
-                  </View>
-                )}
+                {/* Current Streak with new StreakBadge component */}
+                <StreakBadge
+                  streakDays={habit.currentStreak || 0}
+                  size="compact"
+                />
               </View>
 
-              {/* 30-day completion rate */}
+              {/* Simple Progress Ring - 30-day completion rate */}
               {habit.completionRate30Days !== undefined && (
-                <View style={styles.completionRateRow}>
-                  <View style={styles.completionRateBar}>
+                <View style={styles.progressContainer}>
+                  <View style={styles.progressRing}>
+                    <View style={styles.progressRingBackground} />
                     <View
                       style={[
-                        styles.completionRateFill,
+                        styles.progressRingFill,
                         { width: `${Math.min(100, habit.completionRate30Days)}%` },
                       ]}
                     />
                   </View>
-                  <Text style={styles.completionRateText}>
-                    {Math.round(habit.completionRate30Days)}% (30 days)
+                  <Text style={styles.progressText}>
+                    {Math.round(habit.completionRate30Days)}%
                   </Text>
                 </View>
               )}
-
-              {/* Weekly Activity Chart */}
-              <View style={styles.chartContainer}>
-                <WeeklyCompletionChart habitId={habit.id} compact />
-              </View>
-
-              {/* Milestone Badges */}
-              {(() => {
-                const badges = getMilestoneBadges(habit.currentStreak, habit.longestStreak);
-                return badges.length > 0 ? (
-                  <View style={styles.badgesRow}>
-                    {badges.map((badge, index) => (
-                      <View key={index} style={styles.badge}>
-                        <Text style={styles.badgeText}>{badge}</Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : null;
-              })()}
             </View>
 
-            {/* Log Button */}
+            {/* Large Log Button - Primary Action */}
             {habit.isActive && (
               <TouchableOpacity
                 onPress={() => onLogToday(habit.id)}
                 style={[
-                  styles.logButton,
-                  isCompletedToday && styles.logButtonCompleted,
+                  styles.logButtonLarge,
+                  isCompletedToday && styles.logButtonCompletedLarge,
                 ]}
                 {...makeCheckbox(
                   `Log ${habit.name}`,
@@ -830,70 +800,78 @@ const HabitCard: React.FC<HabitCardProps> = ({
               >
                 <Text
                   style={[
-                    styles.logButtonText,
-                    isCompletedToday && styles.logButtonTextCompleted,
+                    styles.logButtonTextLarge,
+                    isCompletedToday && styles.logButtonTextCompletedLarge,
                   ]}
                 >
-                  {isCompletedToday ? '✓ Done' : '+ Log'}
+                  {isCompletedToday ? '✓' : '+'}
                 </Text>
               </TouchableOpacity>
             )}
           </View>
 
-          {/* Actions */}
-          <View style={styles.habitActions}>
-            <TouchableOpacity
-              onPress={() => onViewHistory(habit.id, habit.name)}
-              style={styles.actionButton}
-              {...makeButton('History', `View completion history for ${habit.name}`)}
-            >
-              <Text style={styles.actionButtonText}>History</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => onViewInsights(habit.id, habit.name)}
-              style={styles.actionButton}
-              {...makeButton('Insights', `View insights for ${habit.name}`)}
-            >
-              <Text style={styles.actionButtonText}>Insights</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => onViewHeatmap(habit)}
-              style={styles.actionButton}
-              {...makeButton('Heatmap', `View activity heatmap for ${habit.name}`)}
-            >
-              <Text style={styles.actionButtonText}>Heatmap</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => onEdit(habit)}
-              style={styles.actionButton}
-              {...makeButton('Edit', `Edit ${habit.name} details`)}
-            >
-              <Text style={styles.actionButtonText}>Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => onDelete(habit.id)}
-              style={styles.actionButton}
-              {...makeButton('Delete', `Delete ${habit.name}`)}
-            >
-              <Text style={[styles.actionButtonText, styles.deleteText]}>
-                Delete
-              </Text>
-            </TouchableOpacity>
-          </View>
+          {/* Expanded Detail View - shown on tap */}
+          {isExpanded && (
+            <View style={styles.expandedDetails}>
+              {/* Action Buttons */}
+              <View style={styles.detailActions}>
+                <TouchableOpacity
+                  onPress={() => onViewHistory(habit.id, habit.name)}
+                  style={styles.detailActionButton}
+                  {...makeButton('History', `View completion history for ${habit.name}`)}
+                >
+                  <Text style={styles.detailActionText}>📊 History</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => onViewInsights(habit.id, habit.name)}
+                  style={styles.detailActionButton}
+                  {...makeButton('Insights', `View insights for ${habit.name}`)}
+                >
+                  <Text style={styles.detailActionText}>💡 Insights</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => onViewHeatmap(habit)}
+                  style={styles.detailActionButton}
+                  {...makeButton('Heatmap', `View activity heatmap for ${habit.name}`)}
+                >
+                  <Text style={styles.detailActionText}>🔥 Heatmap</Text>
+                </TouchableOpacity>
+              </View>
 
-          {/* Active Toggle */}
-          <View style={styles.toggleRow}>
-            <Text style={styles.toggleLabel}>Active</Text>
-            <Switch
-              value={habit.isActive}
-              onValueChange={onToggleActive}
-              trackColor={{
-                false: colors.background.tertiary,
-                true: `${colors.primary.main}80`,
-              }}
-              thumbColor={habit.isActive ? colors.primary.main : colors.text.disabled}
-            />
-          </View>
+              <View style={styles.detailActions}>
+                <TouchableOpacity
+                  onPress={() => onEdit(habit)}
+                  style={styles.detailActionButton}
+                  {...makeButton('Edit', `Edit ${habit.name} details`)}
+                >
+                  <Text style={styles.detailActionText}>✏️ Edit</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => onDelete(habit.id)}
+                  style={styles.detailActionButton}
+                  {...makeButton('Delete', `Delete ${habit.name}`)}
+                >
+                  <Text style={[styles.detailActionText, styles.deleteActionText]}>
+                    🗑️ Delete
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Active Toggle */}
+              <View style={styles.detailToggleRow}>
+                <Text style={styles.detailToggleLabel}>Active</Text>
+                <Switch
+                  value={habit.isActive}
+                  onValueChange={onToggleActive}
+                  trackColor={{
+                    false: colors.background.tertiary,
+                    true: `${colors.primary.main}80`,
+                  }}
+                  thumbColor={habit.isActive ? colors.primary.main : colors.text.disabled}
+                />
+              </View>
+            </View>
+          )}
         </View>
       </TouchableOpacity>
     </Animated.View>
@@ -1220,59 +1198,89 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginTop: spacing.sm,
   },
-  streakContainer: {
+  // Progress Ring styles (replaces progress bar)
+  progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: spacing.sm,
+    marginTop: spacing.md,
   },
-  streakIcon: {
-    fontSize: 14,
+  progressRing: {
+    flex: 1,
+    height: 8,
+    borderRadius: borderRadius.full,
+    overflow: 'hidden',
+    position: 'relative',
   },
-  streakText: {
-    fontSize: typography.size.sm,
-    fontWeight: typography.weight.medium,
-    color: colors.primary.main,
+  progressRingBackground: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.background.tertiary,
   },
-  logButton: {
+  progressRingFill: {
+    height: '100%',
     backgroundColor: colors.primary.main,
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.sm,
-    minWidth: 80,
-    alignItems: 'center',
+    borderRadius: borderRadius.full,
   },
-  logButtonCompleted: {
+  progressText: {
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.tertiary,
+    minWidth: 40,
+    textAlign: 'right',
+  },
+  // Large Log Button styles (primary action)
+  logButtonLarge: {
+    backgroundColor: colors.primary.main,
+    width: 56,
+    height: 56,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.md,
+  },
+  logButtonCompletedLarge: {
     backgroundColor: 'transparent',
-    borderWidth: 1.5,
+    borderWidth: 2.5,
     borderColor: colors.primary.main,
   },
-  logButtonText: {
-    fontSize: typography.size.sm,
-    fontWeight: typography.weight.semibold,
+  logButtonTextLarge: {
+    fontSize: typography.size['3xl'],
+    fontWeight: typography.weight.bold,
     color: colors.primary.contrast,
   },
-  logButtonTextCompleted: {
+  logButtonTextCompletedLarge: {
     color: colors.primary.main,
   },
-  habitActions: {
+  // Expanded details styles
+  expandedDetails: {
+    marginTop: spacing.lg,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.subtle,
+  },
+  detailActions: {
     flexDirection: 'row',
-    justifyContent: 'flex-start',
-    marginTop: spacing.md,
-    gap: spacing.md,
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
-  actionButton: {
-    paddingVertical: spacing.xs,
+  detailActionButton: {
+    flex: 1,
+    backgroundColor: colors.background.tertiary,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
   },
-  actionButtonText: {
+  detailActionText: {
     fontSize: typography.size.sm,
     fontWeight: typography.weight.medium,
-    color: colors.primary.main,
+    color: colors.text.secondary,
   },
-  deleteText: {
+  deleteActionText: {
     color: colors.error,
   },
-  toggleRow: {
+  detailToggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -1281,7 +1289,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border.subtle,
   },
-  toggleLabel: {
+  detailToggleLabel: {
     fontSize: typography.size.sm,
     color: colors.text.tertiary,
   },
@@ -1385,98 +1393,6 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     flex: 1,
-  },
-  // Best streak styles
-  bestStreakContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    backgroundColor: colors.background.tertiary,
-    borderRadius: borderRadius.sm,
-  },
-  bestStreakLabel: {
-    fontSize: typography.size.xs,
-    color: colors.text.tertiary,
-  },
-  bestStreakValue: {
-    fontSize: typography.size.xs,
-    fontWeight: typography.weight.semibold,
-    color: colors.primary.main,
-  },
-  // Completion rate styles
-  completionRateRow: {
-    marginTop: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  completionRateBar: {
-    flex: 1,
-    height: 6,
-    backgroundColor: colors.background.tertiary,
-    borderRadius: borderRadius.full,
-    overflow: 'hidden',
-  },
-  completionRateFill: {
-    height: '100%',
-    backgroundColor: colors.primary.main,
-    borderRadius: borderRadius.full,
-  },
-  completionRateText: {
-    fontSize: typography.size.xs,
-    color: colors.text.tertiary,
-    minWidth: 80,
-  },
-  chartContainer: {
-    marginTop: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  // Badge styles
-  badgesRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-    marginTop: spacing.sm,
-  },
-  badge: {
-    backgroundColor: colors.background.tertiary,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.sm,
-    borderWidth: 1,
-    borderColor: colors.primary.main,
-  },
-  badgeText: {
-    fontSize: typography.size.xs,
-    color: colors.text.secondary,
-    fontWeight: typography.weight.medium,
-  },
-  // Celebration modal styles
-  celebrationOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  celebrationContent: {
-    backgroundColor: colors.background.secondary,
-    borderRadius: borderRadius.xl,
-    padding: spacing['2xl'],
-    alignItems: 'center',
-    minWidth: 250,
-    ...shadows.lg,
-  },
-  celebrationEmoji: {
-    fontSize: 64,
-    marginBottom: spacing.base,
-  },
-  celebrationText: {
-    fontSize: typography.size.xl,
-    fontWeight: typography.weight.bold,
-    color: colors.primary.main,
-    textAlign: 'center',
   },
   // Insights modal styles
   insightsModalContainer: {
