@@ -9,11 +9,8 @@ import notifee, {
   Notification,
   TimestampTrigger,
   TriggerType,
-} from '@notifee/react-native';
-
-// Import RepeatFrequency and EventType from the trigger and notification modules
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { RepeatFrequency } = require('@notifee/react-native');
+  RepeatFrequency,
+} from './notifee-wrapper';
 // For EventType, we'll use the numeric value directly (0 = DISMISSED, 1 = PRESS, etc.)
 import { Platform } from 'react-native';
 

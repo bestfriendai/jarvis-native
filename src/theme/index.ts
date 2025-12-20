@@ -17,12 +17,12 @@ const darkColors = {
     contrast: '#FFFFFF',
   },
 
-  // Dark Mode Backgrounds
+  // Dark Mode Backgrounds - Elevated Dark theme with near-black backgrounds
   background: {
-    primary: '#0F172A',    // Deepest - main app background
-    secondary: '#1E293B',  // Cards, elevated surfaces
-    tertiary: '#334155',   // Subtle highlights, borders
-    elevated: '#475569',   // Modals, dropdowns
+    primary: '#050A18',    // Near black - main app background for maximum contrast
+    secondary: '#0A1628',  // Cards, elevated surfaces - rich dark blue
+    tertiary: '#141E30',   // Subtle highlights, borders
+    elevated: '#1A2538',   // Modals, dropdowns
   },
 
   // Text Colors (optimized for dark backgrounds)
@@ -49,11 +49,14 @@ const darkColors = {
     error: '#EF4444',
   },
 
-  // Gradient definitions
+  // Gradient definitions - Elevated Dark gradients
   gradient: {
-    primary: ['#10B981', '#059669'],
-    card: ['#1E293B', '#334155'],
-    overlay: ['rgba(15, 23, 42, 0)', 'rgba(15, 23, 42, 0.9)'],
+    primary: ['#10B981', '#059669'],       // Emerald gradient for primary actions
+    cyan: ['#06B6D4', '#0891B2'],          // Cyan gradient for accents
+    accent: ['#8B5CF6', '#3B82F6'],        // Purple-to-blue gradient for special elements
+    card: ['#0A1628', '#141E30'],          // Subtle card background gradient
+    overlay: ['rgba(5, 10, 24, 0)', 'rgba(5, 10, 24, 0.95)'], // Updated for new darker background
+    glass: ['rgba(10, 22, 40, 0.6)', 'rgba(20, 30, 48, 0.3)'], // Glass effect overlay
   },
 };
 
@@ -200,14 +203,14 @@ export const spacing = {
 
 export const borderRadius = {
   none: 0,
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 20,
-  '2xl': 24,
-  '3xl': 32,
-  full: 9999,
+  xs: 6,       // Slightly increased for modern feel
+  sm: 10,      // Increased
+  md: 14,      // Increased
+  lg: 22,      // Elevated Dark default - more rounded for modern cards
+  xl: 26,      // Increased
+  '2xl': 32,   // Kept for large modals
+  '3xl': 40,   // Increased for hero elements
+  full: 9999,  // Full circle
 };
 
 // ============================================================================
@@ -258,13 +261,41 @@ export const shadows = {
     shadowRadius: 24,
     elevation: 12,
   },
-  // Colored glow for primary elements
+  // Colored glow shadows for modern UI effects
   glow: {
     shadowColor: '#10B981',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.35,
     shadowRadius: 12,
     elevation: 6,
+  },
+  glowPrimary: {
+    shadowColor: '#10B981',  // Emerald glow
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  glowCyan: {
+    shadowColor: '#06B6D4',  // Cyan glow
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.45,
+    shadowRadius: 14,
+    elevation: 8,
+  },
+  glowPurple: {
+    shadowColor: '#8B5CF6',  // Purple glow
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 14,
+    elevation: 8,
+  },
+  glowAccent: {
+    shadowColor: '#3B82F6',  // Blue glow for special elements
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.45,
+    shadowRadius: 16,
+    elevation: 8,
   },
 };
 

@@ -15,6 +15,7 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { typography, spacing, borderRadius, shadows, animation, getColors } from '../../theme';
 import { useTheme } from '../../theme/ThemeProvider';
 
@@ -140,6 +141,30 @@ export const AppButton: React.FC<AppButtonProps> = ({
     return colors.primary.main;
   };
 
+  // Determine if this button should use a gradient
+  const useGradient = variant === 'primary' || variant === 'danger';
+  const gradientColors = variant === 'primary'
+    ? colors.gradient.primary
+    : ['#EF4444', '#DC2626']; // Danger gradient
+
+  const buttonContent = (
+    <>
+      {loading ? (
+        <ActivityIndicator size="small" color={getLoaderColor()} />
+      ) : (
+        <View style={styles.content}>
+          {icon && iconPosition === 'left' && (
+            <View style={styles.iconLeft}>{icon}</View>
+          )}
+          <Text style={[...getTextStyles(), textStyle]}>{buttonText}</Text>
+          {icon && iconPosition === 'right' && (
+            <View style={styles.iconRight}>{icon}</View>
+          )}
+        </View>
+      )}
+    </>
+  );
+
   return (
     <Animated.View style={{ transform: [{ scale: scaleValue }] }}>
       <TouchableOpacity
@@ -148,19 +173,20 @@ export const AppButton: React.FC<AppButtonProps> = ({
         onPressOut={handlePressOut}
         disabled={disabled || loading}
         activeOpacity={0.8}
-        style={[...getButtonStyles(), style]}
+        style={[styles.touchable, fullWidth && styles.fullWidth, style]}
       >
-        {loading ? (
-          <ActivityIndicator size="small" color={getLoaderColor()} />
+        {useGradient ? (
+          <LinearGradient
+            colors={gradientColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[...getButtonStyles(), styles.gradientButton]}
+          >
+            {buttonContent}
+          </LinearGradient>
         ) : (
-          <View style={styles.content}>
-            {icon && iconPosition === 'left' && (
-              <View style={styles.iconLeft}>{icon}</View>
-            )}
-            <Text style={[...getTextStyles(), textStyle]}>{buttonText}</Text>
-            {icon && iconPosition === 'right' && (
-              <View style={styles.iconRight}>{icon}</View>
-            )}
+          <View style={getButtonStyles()}>
+            {buttonContent}
           </View>
         )}
       </TouchableOpacity>
@@ -171,11 +197,17 @@ export const AppButton: React.FC<AppButtonProps> = ({
 const colors = getColors();
 
 const styles = StyleSheet.create({
+  touchable: {
+    // Wrapper for touch handling
+  },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: borderRadius.md,
+  },
+  gradientButton: {
+    // Additional styles for gradient buttons - no backgroundColor needed
   },
   // Size variants
   small: {
@@ -195,8 +227,8 @@ const styles = StyleSheet.create({
   },
   // Variant styles
   primaryButton: {
-    backgroundColor: colors.primary.main,
-    ...shadows.sm,
+    // Gradient handles background - just add glow shadow
+    ...shadows.glowPrimary,
   },
   secondaryButton: {
     backgroundColor: colors.background.tertiary,
@@ -210,7 +242,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   dangerButton: {
-    backgroundColor: colors.error,
+    // Gradient handles background - standard shadow
     ...shadows.sm,
   },
   // Disabled state

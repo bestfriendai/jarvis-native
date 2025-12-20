@@ -26,7 +26,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import * as tasksDB from '../../database/tasks';
 import * as undoService from '../../services/undo';
 import type { Project } from '../../database/projects';
-import { AppButton, AppCard, AppChip, EmptyState, LoadingState, LastUpdated, SearchBar, AnimatedListItem } from '../../components/ui';
+import { AppButton, AppCard, AppChip, EmptyState, LoadingState, LastUpdated, SearchBar, AnimatedListItem, FloatingActionButton } from '../../components/ui';
 import { TaskCardSkeleton } from '../../components/tasks/TaskCardSkeleton';
 import { RecurrencePicker } from '../../components/RecurrencePicker';
 import { ProjectPicker } from '../../components/ProjectPicker';
@@ -488,15 +488,6 @@ export default function TasksScreen() {
                   </View>
                 )}
               </View>
-              <AppButton
-                title="New Task"
-                onPress={() => {
-                  setSelectedTask(null);
-                  setShowCreateModal(true);
-                }}
-                size="small"
-                {...makeButton('Create new task', 'Double tap to create a new task')}
-              />
             </>
           )}
         </View>
@@ -625,22 +616,53 @@ export default function TasksScreen() {
           showsVerticalScrollIndicator={false}
           accessible={false}
           accessibilityLabel={`Tasks list, ${filteredTasks.length} ${filteredTasks.length === 1 ? 'task' : 'tasks'}`}
-          ListEmptyComponent={() => (
-            <EmptyState
-              icon="📋"
-              title="No tasks yet"
-              description={
-                filterStatus !== 'all'
-                  ? `No ${filterStatus.replace('_', ' ')} tasks`
-                  : 'Create your first task to get started'
+          ListEmptyComponent={() => {
+            // Context-specific empty states based on UX psychology principles
+            const getEmptyStateProps = () => {
+              switch (filterStatus) {
+                case 'completed':
+                  return {
+                    icon: '✨',
+                    title: 'Nothing completed today',
+                    description: 'Time to tackle your tasks!',
+                    actionLabel: undefined,
+                    onAction: undefined,
+                  };
+                case 'cancelled':
+                  return {
+                    icon: '✅',
+                    title: 'No cancelled tasks',
+                    description: 'All your tasks are on track',
+                    actionLabel: undefined,
+                    onAction: undefined,
+                  };
+                default:
+                  return {
+                    icon: '🚀',
+                    title: filterStatus === 'all' ? 'Ready to be productive?' : `No ${filterStatus.replace('_', ' ')} tasks`,
+                    description: filterStatus === 'all'
+                      ? 'Add your first task and start checking things off'
+                      : 'Great! Tap the + button to add a new task',
+                    actionLabel: filterStatus === 'all' ? 'Add First Task' : 'Add Task',
+                    onAction: () => {
+                      setSelectedTask(null);
+                      setShowCreateModal(true);
+                    },
+                  };
               }
-              actionLabel="Create Task"
-              onAction={() => {
-                setSelectedTask(null);
-                setShowCreateModal(true);
-              }}
-            />
-          )}
+            };
+
+            const props = getEmptyStateProps();
+            return (
+              <EmptyState
+                icon={props.icon}
+                title={props.title}
+                description={props.description}
+                actionLabel={props.actionLabel}
+                onAction={props.onAction}
+              />
+            );
+          }}
           removeClippedSubviews={true}
           maxToRenderPerBatch={10}
           updateCellsBatchingPeriod={50}
@@ -713,6 +735,17 @@ export default function TasksScreen() {
         onDismiss={tooltip.hideTooltip}
         position="bottom"
       />
+
+      {/* Floating Action Button - Only show when not in bulk select mode */}
+      {!bulkSelectMode && (
+        <FloatingActionButton
+          icon="plus"
+          onPress={() => {
+            setSelectedTask(null);
+            setShowCreateModal(true);
+          }}
+        />
+      )}
     </View>
   );
 }
@@ -931,12 +964,9 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
 
           {!compact && (
             <>
-              {/* Meta info */}
+              {/* Simplified Meta info - Only priority + urgent due dates */}
               <View style={styles.taskMeta}>
-                {/* Task Latency Badge */}
-                <TaskLatencyBadge task={task as any} showIcon />
-
-                {/* Priority badge with dot */}
+                {/* Priority badge with dot - always show if exists */}
                 {task.priority && (
                   <View style={styles.priorityBadge}>
                     <View
@@ -951,44 +981,41 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
                   </View>
                 )}
 
-                {/* Enhanced Due date badge with color coding */}
+                {/* Due date badge - ONLY show if urgent (overdue, today, or this week) */}
                 {task.dueDate && !isCompleted && (() => {
                   const urgency = getDateUrgency(task.dueDate);
                   const daysUntil = getDaysUntil(task.dueDate);
                   const formattedDate = formatDueDate(task.dueDate);
 
-                  // Choose badge style based on urgency
+                  // Only show if urgent
+                  if (urgency !== 'overdue' && urgency !== 'today' && urgency !== 'this-week') {
+                    return null;
+                  }
+
                   const badgeStyle = urgency === 'overdue'
                     ? styles.overdueBadge
                     : urgency === 'today'
                     ? styles.dueTodayBadge
-                    : urgency === 'this-week'
-                    ? styles.dueThisWeekBadge
-                    : styles.dueFutureBadge;
+                    : styles.dueThisWeekBadge;
 
                   const textStyle = urgency === 'overdue'
                     ? styles.overdueText
                     : urgency === 'today'
                     ? styles.dueTodayText
-                    : urgency === 'this-week'
-                    ? styles.dueThisWeekText
-                    : styles.dueFutureText;
+                    : styles.dueThisWeekText;
 
                   const icon = urgency === 'overdue'
                     ? 'alert-circle'
                     : urgency === 'today'
                     ? 'clock-alert'
-                    : urgency === 'this-week'
-                    ? 'calendar-clock'
-                    : 'calendar';
+                    : 'calendar-clock';
 
                   return (
                     <View style={[styles.dueDateBadge, badgeStyle]}>
                       <Icon name={icon} size={14} color={
                         urgency === 'overdue' ? colors.error :
                         urgency === 'today' ? colors.warning :
-                        urgency === 'this-week' ? '#F59E0B' :
-                        colors.text.tertiary
+                        '#F59E0B'
                       } />
                       <Text style={[styles.dueDateText, textStyle]}>
                         {urgency === 'overdue'
@@ -1003,60 +1030,17 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
                   );
                 })()}
 
-                {/* Completion date badge for completed tasks */}
-                {isCompleted && task.completedAt && (
-                  <View style={[styles.dueDateBadge, styles.completedBadge]}>
-                    <Icon name="check-circle" size={14} color={colors.success} />
-                    <Text style={[styles.dueDateText, styles.completedText]}>
-                      Completed {formatDueDate(task.completedAt)}
-                    </Text>
-                  </View>
-                )}
-
-                {/* Project badge */}
+                {/* Project - shown as subtle text instead of badge */}
                 {task.project && (
-                  <View
+                  <Text
                     style={[
-                      styles.projectBadge,
-                      task.project.color && {
-                        backgroundColor: `${task.project.color}20`,
-                      },
+                      styles.projectText,
+                      task.project.color && { color: task.project.color },
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.projectBadgeText,
-                        task.project.color && { color: task.project.color },
-                      ]}
-                    >
-                      {task.project.name}
-                    </Text>
-                  </View>
-                )}
-
-                {task.tags.slice(0, 2).map((tag) => (
-                  <AppChip key={tag} label={`#${tag}`} compact />
-                ))}
-              </View>
-
-              {/* Actions */}
-              <View style={styles.taskActions}>
-                <TouchableOpacity
-                  onPress={() => onEdit(task)}
-                  style={styles.actionButton}
-                  {...makeButton(`Edit ${task.title}`, 'Double tap to edit task details')}
-                >
-                  <Text style={styles.actionButtonText}>Edit</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => onDelete(task.id)}
-                  style={styles.actionButton}
-                  {...makeButton(`Delete ${task.title}`, 'Double tap to delete task')}
-                >
-                  <Text style={[styles.actionButtonText, styles.deleteText]}>
-                    Delete
+                    {task.project.name}
                   </Text>
-                </TouchableOpacity>
+                )}
               </View>
             </>
           )}
@@ -1671,6 +1655,11 @@ const styles = StyleSheet.create({
   projectBadgeText: {
     fontSize: typography.size.xs,
     color: colors.text.secondary,
+    fontWeight: typography.weight.medium,
+  },
+  projectText: {
+    fontSize: typography.size.xs,
+    color: colors.text.tertiary,
     fontWeight: typography.weight.medium,
   },
   taskActions: {

@@ -5,6 +5,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, ViewStyle, DimensionValue } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, borderRadius } from '../../theme';
 
 interface SkeletonProps {
@@ -82,13 +83,23 @@ export const Skeleton: React.FC<SkeletonProps> = ({
       >
         <Animated.View
           style={[
-            styles.shimmerOverlay,
+            styles.shimmerContainer,
             {
-              opacity: shimmerOpacity,
               transform: [{ translateX: shimmerTranslateX }],
             },
           ]}
-        />
+        >
+          <LinearGradient
+            colors={[
+              'rgba(255, 255, 255, 0.0)',
+              'rgba(255, 255, 255, 0.15)',
+              'rgba(255, 255, 255, 0.0)',
+            ]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.shimmerGradient}
+          />
+        </Animated.View>
       </View>
     );
   }
@@ -168,12 +179,17 @@ const styles = StyleSheet.create({
   textContainer: {
     width: '100%',
   },
-  shimmerOverlay: {
+  shimmerContainer: {
     position: 'absolute',
     top: 0,
-    left: 0,
+    left: '-100%',
     right: 0,
     bottom: 0,
-    backgroundColor: colors.background.secondary,
+    width: '300%',
+  },
+  shimmerGradient: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
   },
 });

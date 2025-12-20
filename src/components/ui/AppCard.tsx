@@ -11,9 +11,10 @@ import {
   Animated,
   ViewStyle,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, borderRadius, shadows, animation } from '../../theme';
 
-type CardVariant = 'default' | 'elevated' | 'outlined' | 'filled';
+type CardVariant = 'default' | 'elevated' | 'outlined' | 'filled' | 'glass';
 
 interface AppCardProps {
   children: React.ReactNode;
@@ -76,6 +77,9 @@ export const AppCard: React.FC<AppCardProps> = ({
       case 'filled':
         baseStyles.push(styles.filledCard);
         break;
+      case 'glass':
+        baseStyles.push(styles.glassCard);
+        break;
     }
 
     return baseStyles;
@@ -91,6 +95,23 @@ export const AppCard: React.FC<AppCardProps> = ({
     </>
   );
 
+  // Wrap glass cards in LinearGradient
+  const renderCardContent = () => {
+    if (variant === 'glass') {
+      return (
+        <LinearGradient
+          colors={colors.gradient.glass}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={getCardStyles()}
+        >
+          {cardContent}
+        </LinearGradient>
+      );
+    }
+    return cardContent;
+  };
+
   if (onPress) {
     return (
       <Animated.View style={[{ transform: [{ scale: scaleValue }] }, style]}>
@@ -99,11 +120,19 @@ export const AppCard: React.FC<AppCardProps> = ({
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
           activeOpacity={0.9}
-          style={getCardStyles()}
+          style={variant === 'glass' ? styles.card : getCardStyles()}
         >
-          {cardContent}
+          {renderCardContent()}
         </TouchableOpacity>
       </Animated.View>
+    );
+  }
+
+  if (variant === 'glass') {
+    return (
+      <View style={[styles.card, style]}>
+        {renderCardContent()}
+      </View>
     );
   }
 
@@ -136,6 +165,12 @@ const styles = StyleSheet.create({
   },
   filledCard: {
     backgroundColor: colors.background.tertiary,
+  },
+  glassCard: {
+    // Glass effect - gradient background with border and shadow
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)', // Subtle white border for glass effect
+    ...shadows.md,
   },
   header: {
     paddingHorizontal: spacing.base,

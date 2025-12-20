@@ -11,7 +11,7 @@ import notifee, {
   Notification,
   TimestampTrigger,
   TriggerType,
-} from '@notifee/react-native';
+} from '../services/notifee-wrapper';
 import { PomodoroPhase } from '../utils/pomodoroHelpers';
 
 export interface UsePomodoroNotificationsOptions {

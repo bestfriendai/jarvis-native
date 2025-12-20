@@ -6,8 +6,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { IconButton } from 'react-native-paper';
+import { LinearGradient } from 'expo-linear-gradient';
 import { TodaysFocus, TodaysFocusItem } from '../database/dashboard';
 import { colors, typography, spacing, borderRadius, shadows } from '../theme';
+import { AppCard } from './ui/AppCard';
 
 interface TodaysFocusCardProps {
   focus: TodaysFocus;
@@ -121,127 +123,174 @@ export const TodaysFocusCard: React.FC<TodaysFocusCardProps> = ({
     );
   };
 
+  // Get the single top priority item (UX research: single focus reduces cognitive load)
+  const allItems = [...focus.tasks, ...focus.habits, ...focus.events];
+  const topItem = allItems.sort((a, b) => {
+    // Sort by: overdue > high priority > medium priority > low priority
+    if (a.isOverdue && !b.isOverdue) return -1;
+    if (!a.isOverdue && b.isOverdue) return 1;
+    const priorityOrder: any = { urgent: 0, high: 1, medium: 2, low: 3 };
+    return (priorityOrder[a.priority || 'low'] || 3) - (priorityOrder[b.priority || 'low'] || 3);
+  })[0];
+
   if (focus.summary.totalItems === 0) {
     return (
-      <View style={styles.card}>
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>Today's Focus</Text>
-            <Text style={styles.subtitle}>All caught up!</Text>
-          </View>
-        </View>
+      <AppCard variant="glass" style={styles.card}>
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>✨</Text>
+          <Text style={styles.emptyTitle}>All Caught Up!</Text>
           <Text style={styles.emptyText}>
-            You have no pending tasks or events for today
+            You have no pending items for today
           </Text>
         </View>
-      </View>
+      </AppCard>
     );
   }
 
+  const icon =
+    topItem.type === 'task'
+      ? 'checkbox-blank-outline'
+      : topItem.type === 'habit'
+      ? 'refresh'
+      : 'calendar';
+
+  const priorityColor = topItem.priority ? getPriorityColor(topItem.priority) : colors.primary.main;
+
   return (
-    <View style={styles.card}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Today's Focus</Text>
-          <Text style={styles.subtitle}>
-            {focus.summary.totalItems} item{focus.summary.totalItems !== 1 ? 's' : ''}
-            {focus.summary.highPriority > 0 && (
-              <Text style={styles.highPriority}>
-                {' '}
-                • {focus.summary.highPriority} high priority
-              </Text>
-            )}
-          </Text>
-        </View>
+    <AppCard variant="glass" style={styles.card}>
+      <View style={styles.focusHeader}>
+        <Text style={styles.focusLabel}>YOUR FOCUS TODAY</Text>
+        {allItems.length > 1 && (
+          <Text style={styles.itemCount}>+{allItems.length - 1} more</Text>
+        )}
       </View>
 
-      {/* Tasks Section */}
-      {focus.tasks.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Tasks</Text>
-            <TouchableOpacity onPress={() => onViewAll('tasks')}>
-              <Text style={styles.viewAllText}>View All</Text>
-            </TouchableOpacity>
-          </View>
-          {focus.tasks.map(renderItem)}
+      <TouchableOpacity
+        style={styles.topFocusItem}
+        onPress={() => topItem && onNavigate(topItem.type, topItem.id)}
+        activeOpacity={0.8}
+      >
+        <View style={[styles.topIconContainer, { backgroundColor: priorityColor + '20' }]}>
+          <IconButton
+            icon={icon}
+            size={32}
+            iconColor={priorityColor}
+            style={styles.topIcon}
+          />
         </View>
-      )}
 
-      {/* Habits Section */}
-      {focus.habits.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Habits</Text>
-            <TouchableOpacity onPress={() => onViewAll('habits')}>
-              <Text style={styles.viewAllText}>View All</Text>
-            </TouchableOpacity>
-          </View>
-          {focus.habits.map(renderItem)}
-        </View>
-      )}
+        <View style={styles.topContent}>
+          <Text style={styles.topTitle} numberOfLines={2}>
+            {topItem.title}
+          </Text>
 
-      {/* Events Section */}
-      {focus.events.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Events</Text>
-            <TouchableOpacity onPress={() => onViewAll('events')}>
-              <Text style={styles.viewAllText}>View All</Text>
-            </TouchableOpacity>
+          <View style={styles.topMeta}>
+            {topItem.time && (
+              <Text style={styles.topTime}>
+                {formatTime(topItem.time)}
+              </Text>
+            )}
+            {topItem.isOverdue && (
+              <View style={styles.topOverdueBadge}>
+                <Text style={styles.topOverdueText}>OVERDUE</Text>
+              </View>
+            )}
+            {topItem.project && (
+              <Text style={styles.topProject} numberOfLines={1}>
+                {topItem.project}
+              </Text>
+            )}
           </View>
-          {focus.events.map(renderItem)}
         </View>
-      )}
-    </View>
+
+        <IconButton
+          icon="chevron-right"
+          size={24}
+          iconColor={colors.text.secondary}
+          style={styles.chevron}
+        />
+      </TouchableOpacity>
+    </AppCard>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.background.secondary,
-    borderRadius: borderRadius.lg,
-    padding: spacing.base,
-    marginBottom: spacing.md,
-    ...shadows.sm,
-  },
-  header: {
     marginBottom: spacing.md,
   },
-  title: {
-    fontSize: typography.size.xl,
-    fontWeight: typography.weight.semibold,
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    fontSize: typography.size.sm,
-    color: colors.text.secondary,
-  },
-  highPriority: {
-    color: colors.error,
-    fontWeight: typography.weight.medium,
-  },
-  section: {
-    marginTop: spacing.md,
-  },
-  sectionHeader: {
+  // New single focus design
+  focusHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.base,
   },
-  sectionTitle: {
-    fontSize: typography.size.sm,
-    fontWeight: typography.weight.semibold,
+  focusLabel: {
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.bold,
     color: colors.text.tertiary,
+    letterSpacing: 1.5,
     textTransform: 'uppercase',
+  },
+  itemCount: {
+    fontSize: typography.size.sm,
+    color: colors.primary.main,
+    fontWeight: typography.weight.semibold,
+  },
+  topFocusItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.base,
+    backgroundColor: colors.background.primary + '40',
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  topIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: borderRadius.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.base,
+  },
+  topIcon: {
+    margin: 0,
+  },
+  topContent: {
+    flex: 1,
+  },
+  topTitle: {
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
+    lineHeight: typography.size.lg * 1.3,
+    marginBottom: spacing.xs,
+  },
+  topMeta: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    alignItems: 'center',
+  },
+  topTime: {
+    fontSize: typography.size.sm,
+    color: colors.text.secondary,
+    fontWeight: typography.weight.medium,
+  },
+  topOverdueBadge: {
+    backgroundColor: colors.error,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+  },
+  topOverdueText: {
+    fontSize: typography.size.xs,
+    color: colors.text.primary,
+    fontWeight: typography.weight.bold,
     letterSpacing: 0.5,
   },
-  viewAllText: {
+  topProject: {
     fontSize: typography.size.sm,
     color: colors.primary.main,
     fontWeight: typography.weight.medium,
@@ -322,11 +371,17 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: spacing['2xl'],
+    paddingVertical: spacing['3xl'],
   },
   emptyIcon: {
-    fontSize: 48,
-    marginBottom: spacing.md,
+    fontSize: 64,
+    marginBottom: spacing.lg,
+  },
+  emptyTitle: {
+    fontSize: typography.size['2xl'],
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
+    marginBottom: spacing.sm,
   },
   emptyText: {
     fontSize: typography.size.base,

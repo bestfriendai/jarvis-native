@@ -30,6 +30,8 @@ import { TaskLatencyWidget } from '../../components/dashboard/TaskLatencyWidget'
 import { AppCard, AppButton, EmptyState, LoadingState, LastUpdated } from '../../components/ui';
 import { DashboardCardSkeleton } from '../../components/dashboard/DashboardCardSkeleton';
 import { DetailedChartModal, ChartDataType } from '../../components/charts/DetailedChartModal';
+import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
+import { QuickCaptureSheet } from '../../components/dashboard/QuickCaptureSheet';
 import { navigateToItem, navigateToViewAll } from '../../utils/navigation';
 import { calculatePercentageChange } from '../../utils/chartUtils';
 import { useRefreshControl } from '../../hooks/useRefreshControl';
@@ -67,6 +69,7 @@ export default function DashboardScreen() {
   const [chartModalVisible, setChartModalVisible] = useState(false);
   const [selectedChartType, setSelectedChartType] = useState<ChartDataType>('tasks');
   const [selectedChartTitle, setSelectedChartTitle] = useState('');
+  const [quickCaptureVisible, setQuickCaptureVisible] = useState(false);
   const insets = useSafeAreaInsets();
 
   // Load dashboard data
@@ -128,63 +131,42 @@ export default function DashboardScreen() {
     });
   };
 
-  const handleIdeaSave = async (idea: string) => {
-    try {
-      const task = await tasksDB.createTask({
-        title: idea,
-        tags: ['idea', 'quick-capture'],
-        priority: 'low',
-      });
-      setLastSavedItem({ type: 'idea', id: task.id });
-      setSnackbarMessage('Idea saved to tasks!');
-      setSnackbarVisible(true);
-      await loadData();
-    } catch (error) {
-      console.error('[Dashboard] Error saving idea:', error);
-      Alert.alert('Error', 'Failed to save idea');
-    }
+  const handleQuickTask = async (title: string) => {
+    const task = await tasksDB.createTask({
+      title,
+      tags: ['quick-capture'],
+      priority: 'low',
+    });
+    setLastSavedItem({ type: 'idea', id: task.id });
+    setSnackbarMessage('Task created!');
+    setSnackbarVisible(true);
+    await loadData();
   };
 
-  const handleStudySave = async (studyNote: string) => {
-    try {
-      const task = await tasksDB.createTask({
-        title: studyNote,
-        tags: ['study', 'quick-capture'],
-        priority: 'medium',
-      });
-      setLastSavedItem({ type: 'study', id: task.id });
-      setSnackbarMessage('Study session logged!');
-      setSnackbarVisible(true);
-      await loadData();
-    } catch (error) {
-      console.error('[Dashboard] Error saving study:', error);
-      Alert.alert('Error', 'Failed to log study session');
+  const handleLogExpense = async (cashValue: string) => {
+    const amount = parseFloat(cashValue);
+    if (isNaN(amount)) {
+      Alert.alert('Invalid Amount', 'Please enter a valid number');
+      throw new Error('Invalid amount');
     }
+
+    const transaction = await financeDB.createTransaction({
+      type: amount >= 0 ? 'income' : 'expense',
+      amount: Math.abs(amount),
+      category: 'Cash Snapshot',
+      date: new Date().toISOString().split('T')[0],
+      description: 'Quick capture from dashboard',
+    });
+    setLastSavedItem({ type: 'cash', id: transaction.id });
+    setSnackbarMessage('Expense logged!');
+    setSnackbarVisible(true);
+    await loadData();
   };
 
-  const handleCashSave = async (cashValue: string) => {
-    try {
-      const amount = parseFloat(cashValue);
-      if (isNaN(amount)) {
-        Alert.alert('Invalid Amount', 'Please enter a valid number');
-        return;
-      }
-
-      const transaction = await financeDB.createTransaction({
-        type: amount >= 0 ? 'income' : 'expense',
-        amount: Math.abs(amount),
-        category: 'Cash Snapshot',
-        date: new Date().toISOString().split('T')[0],
-        description: 'Quick capture from dashboard',
-      });
-      setLastSavedItem({ type: 'cash', id: transaction.id });
-      setSnackbarMessage('Cash transaction recorded!');
-      setSnackbarVisible(true);
-      await loadData();
-    } catch (error) {
-      console.error('[Dashboard] Error saving cash:', error);
-      Alert.alert('Error', 'Failed to record cash transaction');
-    }
+  const handleStartFocus = async () => {
+    // Navigate to Focus screen
+    // @ts-expect-error - Navigation type compatibility
+    navigation.navigate('Focus');
   };
 
   const handleUndo = async () => {
@@ -310,51 +292,50 @@ export default function DashboardScreen() {
           />
         )}
 
-        {/* Metrics Grid */}
+        {/* Metrics Grid - 2 column layout */}
         {metrics && (
           <View style={styles.metricsSection}>
             <Text style={styles.sectionLabel}>YOUR PROGRESS</Text>
             <View style={styles.metricsGrid}>
-              <MetricCard
-                label="Tasks completed"
-                value={metrics.starts}
-                helper={
-                  metrics.starts >= 3
-                    ? 'Great momentum!'
-                    : 'Keep building momentum'
-                }
-                variant={metrics.starts >= 3 ? 'success' : 'default'}
-                trendData={trendData?.tasks}
-                percentageChange={
-                  trendData?.tasks ? calculateMetricPercentageChange(trendData.tasks) : undefined
-                }
-                onPress={() => handleOpenChart('tasks', 'Tasks Completed')}
-                accessible={true}
-                accessibilityLabel={`Tasks completed today: ${metrics.starts}. ${
-                  metrics.starts >= 3 ? 'Great momentum!' : 'Keep building momentum'
-                }`}
-                accessibilityHint="Double tap to view detailed chart"
-              />
-              <MetricCard
-                label="Habits completed"
-                value={metrics.studyMinutes}
-                helper="Daily habit tracking"
-                variant="info"
-                trendData={trendData?.habits}
-                percentageChange={
-                  trendData?.habits ? calculateMetricPercentageChange(trendData.habits) : undefined
-                }
-                onPress={() => handleOpenChart('habits', 'Habits Completed')}
-                accessible={true}
-                accessibilityLabel={`Habits completed today: ${metrics.studyMinutes}`}
-                accessibilityHint="Double tap to view detailed chart"
-              />
+              {/* Top row: 2 metrics side by side */}
+              <View style={styles.metricsRow}>
+                <MetricCard
+                  label="Tasks"
+                  value={metrics.starts}
+                  helper={metrics.starts >= 3 ? 'Great!' : 'Keep going'}
+                  variant={metrics.starts >= 3 ? 'success' : 'default'}
+                  percentageChange={
+                    trendData?.tasks ? calculateMetricPercentageChange(trendData.tasks) : undefined
+                  }
+                  onPress={() => handleOpenChart('tasks', 'Tasks Completed')}
+                  style={styles.metricHalf}
+                  compact
+                  accessible={true}
+                  accessibilityLabel={`Tasks completed today: ${metrics.starts}`}
+                  accessibilityHint="Double tap to view detailed chart"
+                />
+                <MetricCard
+                  label="Habits"
+                  value={metrics.studyMinutes}
+                  helper="Today"
+                  variant="info"
+                  percentageChange={
+                    trendData?.habits ? calculateMetricPercentageChange(trendData.habits) : undefined
+                  }
+                  onPress={() => handleOpenChart('habits', 'Habits Completed')}
+                  style={styles.metricHalf}
+                  compact
+                  accessible={true}
+                  accessibilityLabel={`Habits completed today: ${metrics.studyMinutes}`}
+                  accessibilityHint="Double tap to view detailed chart"
+                />
+              </View>
+              {/* Bottom row: 1 metric as banner */}
               <MetricCard
                 label="Cash on hand"
                 value={formatCash(metrics.cash, metrics.currency)}
                 helper="Latest snapshot"
                 variant="success"
-                trendData={trendData?.spending}
                 percentageChange={
                   trendData?.spending
                     ? calculateMetricPercentageChange(trendData.spending)
@@ -442,32 +423,25 @@ export default function DashboardScreen() {
             <StartControls macroGoals={macroGoals} defaultDuration={10} />
           </AppCard>
         </View>
-
-        {/* Quick Capture Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>QUICK CAPTURE</Text>
-          <View style={styles.quickCaptureGrid}>
-            <QuickCaptureCard
-              title="Idea"
-              placeholder="Capture an idea..."
-              emoji="💡"
-              onSave={handleIdeaSave}
-            />
-            <QuickCaptureCard
-              title="Study"
-              placeholder="Log study session..."
-              emoji="📚"
-              onSave={handleStudySave}
-            />
-            <QuickCaptureCard
-              title="Cash"
-              placeholder="Amount (e.g., 50 or -20)..."
-              emoji="💰"
-              onSave={handleCashSave}
-            />
-          </View>
-        </View>
       </View>
+
+      {/* Floating Action Button for Quick Capture */}
+      {!quickCaptureVisible && (
+        <FloatingActionButton
+          icon="plus"
+          onPress={() => setQuickCaptureVisible(true)}
+          position="bottom-right"
+        />
+      )}
+
+      {/* Quick Capture Bottom Sheet */}
+      <QuickCaptureSheet
+        visible={quickCaptureVisible}
+        onClose={() => setQuickCaptureVisible(false)}
+        onQuickTask={handleQuickTask}
+        onLogExpense={handleLogExpense}
+        onStartFocus={handleStartFocus}
+      />
 
       {/* Snackbar for feedback */}
       <Snackbar
@@ -497,124 +471,6 @@ export default function DashboardScreen() {
     </ScrollView>
   );
 }
-
-interface QuickCaptureCardProps {
-  title: string;
-  placeholder: string;
-  emoji: string;
-  onSave: (value: string) => Promise<void>;
-}
-
-const QuickCaptureCard: React.FC<QuickCaptureCardProps> = ({
-  title,
-  placeholder,
-  emoji,
-  onSave,
-}) => {
-  const [value, setValue] = useState('');
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-
-  const handleSubmit = async () => {
-    if (!value.trim() || isSaving) return;
-
-    setIsSaving(true);
-    try {
-      await onSave(value.trim());
-      announceForAccessibility(`${title} saved successfully`);
-      setValue('');
-      setIsExpanded(false);
-    } catch (error) {
-      console.error(`Error saving ${title}:`, error);
-      announceForAccessibility(`Failed to save ${title}`);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  return (
-    <View style={[styles.quickCaptureCard, isExpanded && styles.quickCaptureCardExpanded]}>
-      <View style={styles.quickCaptureHeader}>
-        <Text style={styles.quickCaptureEmoji}>{emoji}</Text>
-        <Text style={styles.quickCaptureTitle}>{title}</Text>
-      </View>
-
-      {isExpanded ? (
-        <View style={styles.quickCaptureForm}>
-          <TextInput
-            value={value}
-            onChangeText={setValue}
-            placeholder={placeholder}
-            placeholderTextColor={colors.text.placeholder}
-            style={[
-              styles.quickCaptureInput,
-              isFocused && styles.quickCaptureInputFocused,
-            ]}
-            multiline
-            numberOfLines={3}
-            autoFocus
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            {...makeTextInput(`Quick capture ${title}`, value, placeholder)}
-          />
-          <View style={styles.quickCaptureButtons}>
-            <TouchableOpacity
-              onPress={() => {
-                setValue('');
-                setIsExpanded(false);
-              }}
-              style={styles.cancelButton}
-              {...makeButton('Cancel', `Cancel ${title} capture`)}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleSubmit}
-              disabled={!value.trim() || isSaving}
-              style={[
-                styles.saveButton,
-                (!value.trim() || isSaving) && styles.saveButtonDisabled,
-              ]}
-              {...makeButton(
-                `Save ${title}`,
-                `Double tap to save ${title.toLowerCase()}`,
-                !value.trim() || isSaving
-              )}
-            >
-              {isSaving ? (
-                <ActivityIndicator
-                  size="small"
-                  color={colors.primary.contrast}
-                  accessible={true}
-                  accessibilityLabel="Saving"
-                />
-              ) : (
-                <Text
-                  style={[
-                    styles.saveButtonText,
-                    !value.trim() && styles.saveButtonTextDisabled,
-                  ]}
-                >
-                  Save
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      ) : (
-        <TouchableOpacity
-          onPress={() => setIsExpanded(true)}
-          style={styles.expandButton}
-          activeOpacity={0.7}
-          {...makeButton(`Add ${title}`, `Double tap to capture a new ${title.toLowerCase()}`)}
-        >
-          <Text style={styles.expandButtonText}>+ Add {title}</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
-};
 
 const colors = getColors();
 
@@ -681,98 +537,12 @@ const styles = StyleSheet.create({
   metricsGrid: {
     gap: spacing.md,
   },
-  // Quick capture styles
-  quickCaptureGrid: {
+  metricsRow: {
+    flexDirection: 'row',
     gap: spacing.md,
   },
-  quickCaptureCard: {
-    backgroundColor: colors.background.secondary,
-    borderRadius: borderRadius.lg,
-    padding: spacing.base,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-    ...shadows.sm,
-  },
-  quickCaptureCardExpanded: {
-    borderColor: colors.primary.main,
-  },
-  quickCaptureHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  quickCaptureEmoji: {
-    fontSize: 24,
-    marginRight: spacing.sm,
-  },
-  quickCaptureTitle: {
-    fontSize: typography.size.md,
-    fontWeight: typography.weight.semibold,
-    color: colors.text.primary,
-  },
-  quickCaptureForm: {
-    gap: spacing.md,
-  },
-  quickCaptureInput: {
-    backgroundColor: colors.background.primary,
-    borderRadius: borderRadius.md,
-    borderWidth: 1.5,
-    borderColor: colors.border.default,
-    padding: spacing.md,
-    color: colors.text.primary,
-    fontSize: typography.size.base,
-    textAlignVertical: 'top',
-    minHeight: 80,
-    lineHeight: typography.size.base * typography.lineHeight.relaxed,
-  },
-  quickCaptureInputFocused: {
-    borderColor: colors.primary.main,
-  },
-  quickCaptureButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: spacing.sm,
-  },
-  cancelButton: {
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.sm,
-  },
-  cancelButtonText: {
-    fontSize: typography.size.sm,
-    fontWeight: typography.weight.medium,
-    color: colors.text.tertiary,
-  },
-  saveButton: {
-    backgroundColor: colors.primary.main,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.sm,
-  },
-  saveButtonDisabled: {
-    backgroundColor: colors.background.tertiary,
-  },
-  saveButtonText: {
-    fontSize: typography.size.sm,
-    fontWeight: typography.weight.semibold,
-    color: colors.primary.contrast,
-  },
-  saveButtonTextDisabled: {
-    color: colors.text.disabled,
-  },
-  expandButton: {
-    backgroundColor: colors.background.primary,
-    borderRadius: borderRadius.md,
-    borderWidth: 1.5,
-    borderColor: colors.border.default,
-    borderStyle: 'dashed',
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  expandButtonText: {
-    fontSize: typography.size.sm,
-    fontWeight: typography.weight.medium,
-    color: colors.text.tertiary,
+  metricHalf: {
+    flex: 1,
   },
   // Budget alert styles
   budgetAlert: {
