@@ -9,6 +9,7 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { AppButton } from './ui/AppButton';
 import { colors, typography, spacing, borderRadius } from '../theme';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { errorReporting } from '../services/errorReporting';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -47,7 +48,10 @@ export class ErrorBoundary extends React.Component<
     console.error('[ErrorBoundary] Caught error:', error);
     console.error('[ErrorBoundary] Error info:', errorInfo);
 
-    // Log to error reporting service (e.g., Sentry)
+    // Log to error reporting service
+    errorReporting.logComponentError(error, errorInfo);
+
+    // Call optional error handler
     this.props.onError?.(error, errorInfo);
 
     this.setState({
