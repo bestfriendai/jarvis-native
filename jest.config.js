@@ -6,4 +6,7 @@ module.exports = {
   setupFiles: ['<rootDir>/jest.setup.js'],
   setupFilesAfterEnv: ['@testing-library/jest-native/extend-expect'],
   testMatch: ['**/__tests__/**/*.test.[jt]s?(x)'],
+  moduleNameMapper: {
+    '^expo$': '<rootDir>/__mocks__/expo.js',
+  },
 };

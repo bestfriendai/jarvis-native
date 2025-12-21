@@ -62,21 +62,21 @@ export interface ThemePreset {
 
     // Gradient definitions
     gradient: {
-      primary: readonly [string, string];
-      primaryGlow: readonly [string, string, string];
-      cyan: readonly [string, string];
-      cyanPurple: readonly [string, string];
-      purplePink: readonly [string, string];
-      pinkOrange: readonly [string, string];
-      rainbow: readonly [string, string, string, string];
-      hero: readonly [string, string, string];
-      heroReverse: readonly [string, string, string];
-      card: readonly [string, string];
-      cardElevated: readonly [string, string];
-      glass: readonly [string, string];
-      glassVibrant: readonly [string, string];
-      overlay: readonly [string, string];
-      shimmer: readonly [string, string, string];
+      primary: string[];
+      primaryGlow: string[];
+      cyan: string[];
+      cyanPurple: string[];
+      purplePink: string[];
+      pinkOrange: string[];
+      rainbow: string[];
+      hero: string[];
+      heroReverse: string[];
+      card: string[];
+      cardElevated: string[];
+      glass: string[];
+      glassVibrant: string[];
+      overlay: string[];
+      shimmer: string[];
     };
   };
 }

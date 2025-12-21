@@ -7,8 +7,67 @@
 // COLOR PALETTE
 // ============================================================================
 
+// Base color scheme type
+type BaseColorScheme = {
+  primary: {
+    main: string;
+    light: string;
+    dark: string;
+    contrast: string;
+  };
+  accent: {
+    cyan: string;
+    purple: string;
+    pink: string;
+    orange: string;
+    blue: string;
+    yellow: string;
+  };
+  background: {
+    primary: string;
+    secondary: string;
+    tertiary: string;
+    elevated: string;
+  };
+  text: {
+    primary: string;
+    secondary: string;
+    tertiary: string;
+    disabled: string;
+    placeholder: string;
+    inverse: string;
+  };
+  success: string;
+  warning: string;
+  error: string;
+  info: string;
+  border: {
+    default: string;
+    subtle: string;
+    focus: string;
+    error: string;
+  };
+  gradient: {
+    primary: string[];
+    primaryGlow: string[];
+    cyan: string[];
+    cyanPurple: string[];
+    purplePink: string[];
+    pinkOrange: string[];
+    rainbow: string[];
+    hero: string[];
+    heroReverse: string[];
+    card: string[];
+    cardElevated: string[];
+    glass: string[];
+    glassVibrant: string[];
+    overlay: string[];
+    shimmer: string[];
+  };
+};
+
 // Dark Theme Colors
-const darkColors = {
+const darkColors: BaseColorScheme = {
   // Primary Brand Color - VIBRANT Emerald Green (MORE SATURATED!)
   primary: {
     main: '#10E87F',      // Brighter, more vibrant green
@@ -62,36 +121,36 @@ const darkColors = {
   // Gradient definitions - DRAMATIC GRADIENTS EVERYWHERE!
   gradient: {
     // Primary gradients - VIBRANT!
-    primary: ['#10E87F', '#06C270'] as const,           // Vibrant emerald
-    primaryGlow: ['#10E87F', '#3CFFAA', '#10E87F'] as const, // Neon green with glow
+    primary: ['#10E87F', '#06C270'],           // Vibrant emerald
+    primaryGlow: ['#10E87F', '#3CFFAA', '#10E87F'], // Neon green with glow
 
     // Neon accent gradients
-    cyan: ['#00E5FF', '#00B8D4'] as const,              // Electric cyan
-    cyanPurple: ['#00E5FF', '#B388FF'] as const,        // Cyan to purple
-    purplePink: ['#B388FF', '#FF4081'] as const,        // Purple to pink
-    pinkOrange: ['#FF4081', '#FF9100'] as const,        // Pink to orange
-    rainbow: ['#10E87F', '#00E5FF', '#B388FF', '#FF4081'] as const, // Multi-color rainbow
+    cyan: ['#00E5FF', '#00B8D4'],              // Electric cyan
+    cyanPurple: ['#00E5FF', '#B388FF'],        // Cyan to purple
+    purplePink: ['#B388FF', '#FF4081'],        // Purple to pink
+    pinkOrange: ['#FF4081', '#FF9100'],        // Pink to orange
+    rainbow: ['#10E87F', '#00E5FF', '#B388FF', '#FF4081'], // Multi-color rainbow
 
     // Hero gradients - FOR BIG MOMENTS
-    hero: ['#10E87F', '#00E5FF', '#B388FF'] as const,   // Green > Cyan > Purple
-    heroReverse: ['#B388FF', '#00E5FF', '#10E87F'] as const, // Purple > Cyan > Green
+    hero: ['#10E87F', '#00E5FF', '#B388FF'],   // Green > Cyan > Purple
+    heroReverse: ['#B388FF', '#00E5FF', '#10E87F'], // Purple > Cyan > Green
 
     // Card gradients - STRONGER
-    card: ['#0D1117', '#161B22'] as const,              // Dark gradient
-    cardElevated: ['#161B22', '#1C2128'] as const,      // Elevated gradient
+    card: ['#0D1117', '#161B22'],              // Dark gradient
+    cardElevated: ['#161B22', '#1C2128'],      // Elevated gradient
 
     // Glass effects - MORE DRAMATIC
-    glass: ['rgba(13, 17, 23, 0.8)', 'rgba(22, 27, 34, 0.4)'] as const, // Stronger glass
-    glassVibrant: ['rgba(16, 232, 127, 0.15)', 'rgba(0, 229, 255, 0.1)'] as const, // Colored glass
+    glass: ['rgba(13, 17, 23, 0.8)', 'rgba(22, 27, 34, 0.4)'], // Stronger glass
+    glassVibrant: ['rgba(16, 232, 127, 0.15)', 'rgba(0, 229, 255, 0.1)'], // Colored glass
 
     // Overlays
-    overlay: ['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0.95)'] as const,
-    shimmer: ['transparent', 'rgba(255, 255, 255, 0.1)', 'transparent'] as const, // Shimmer effect
+    overlay: ['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0.95)'],
+    shimmer: ['transparent', 'rgba(255, 255, 255, 0.1)', 'transparent'], // Shimmer effect
   },
 };
 
 // Light Theme Colors
-const lightColors = {
+const lightColors: BaseColorScheme = {
   // Primary Brand Color - Emerald Green (same across themes)
   primary: {
     main: '#10B981',
@@ -134,21 +193,21 @@ const lightColors = {
 
   // Gradient definitions - Light theme (simplified version of dark theme)
   gradient: {
-    primary: ['#10E87F', '#06C270'] as const,
-    primaryGlow: ['#10E87F', '#3CFFAA', '#10E87F'] as const,
-    cyan: ['#00E5FF', '#00B8D4'] as const,
-    cyanPurple: ['#00E5FF', '#B388FF'] as const,
-    purplePink: ['#B388FF', '#FF4081'] as const,
-    pinkOrange: ['#FF4081', '#FF9100'] as const,
-    rainbow: ['#10E87F', '#00E5FF', '#B388FF', '#FF4081'] as const,
-    hero: ['#10E87F', '#00E5FF', '#B388FF'] as const,
-    heroReverse: ['#B388FF', '#00E5FF', '#10E87F'] as const,
-    card: ['#F8FAFC', '#F1F5F9'] as const,
-    cardElevated: ['#FFFFFF', '#F8FAFC'] as const,
-    glass: ['rgba(248, 250, 252, 0.8)', 'rgba(241, 245, 249, 0.4)'] as const,
-    glassVibrant: ['rgba(16, 232, 127, 0.1)', 'rgba(0, 229, 255, 0.05)'] as const,
-    overlay: ['rgba(255, 255, 255, 0)', 'rgba(255, 255, 255, 0.9)'] as const,
-    shimmer: ['transparent', 'rgba(0, 0, 0, 0.05)', 'transparent'] as const,
+    primary: ['#10E87F', '#06C270'],
+    primaryGlow: ['#10E87F', '#3CFFAA', '#10E87F'],
+    cyan: ['#00E5FF', '#00B8D4'],
+    cyanPurple: ['#00E5FF', '#B388FF'],
+    purplePink: ['#B388FF', '#FF4081'],
+    pinkOrange: ['#FF4081', '#FF9100'],
+    rainbow: ['#10E87F', '#00E5FF', '#B388FF', '#FF4081'],
+    hero: ['#10E87F', '#00E5FF', '#B388FF'],
+    heroReverse: ['#B388FF', '#00E5FF', '#10E87F'],
+    card: ['#F8FAFC', '#F1F5F9'],
+    cardElevated: ['#FFFFFF', '#F8FAFC'],
+    glass: ['rgba(248, 250, 252, 0.8)', 'rgba(241, 245, 249, 0.4)'],
+    glassVibrant: ['rgba(16, 232, 127, 0.1)', 'rgba(0, 229, 255, 0.05)'],
+    overlay: ['rgba(255, 255, 255, 0)', 'rgba(255, 255, 255, 0.9)'],
+    shimmer: ['transparent', 'rgba(0, 0, 0, 0.05)', 'transparent'],
   },
 
   // Accent colors (same as dark theme)
@@ -163,15 +222,15 @@ const lightColors = {
 };
 
 // Export color getter function
-export const getColors = (mode: 'dark' | 'light' = 'dark') => {
+export const getColors = (mode: 'dark' | 'light' = 'dark'): BaseColorScheme => {
   return mode === 'dark' ? darkColors : lightColors;
 };
 
 // Export default colors (dark mode for backwards compatibility)
 export const colors = darkColors;
 
-// Export type for colors
-export type ColorScheme = typeof darkColors;
+// Export type for colors - use the base type to ensure compatibility
+export type ColorScheme = BaseColorScheme;
 
 // ============================================================================
 // TYPOGRAPHY
