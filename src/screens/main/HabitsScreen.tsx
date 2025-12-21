@@ -390,6 +390,9 @@ export default function HabitsScreen() {
 
   const totalFilteredCount = filteredActiveHabits.length + filteredInactiveHabits.length;
 
+  // Create styles based on current theme colors
+  const styles = createStyles(colors);
+
   if (isLoading && habits.length === 0) {
     return (
       <View style={styles.container}>
@@ -412,9 +415,6 @@ export default function HabitsScreen() {
       </View>
     );
   }
-
-  // Create styles based on current theme colors
-  const styles = createStyles(colors);
 
   return (
     <View style={styles.container}>
@@ -703,6 +703,8 @@ const HabitCard: React.FC<HabitCardProps> = ({
   onToggleActive,
   getMilestoneBadges,
 }) => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const [scaleValue] = useState(new Animated.Value(1));
   const [isExpanded, setIsExpanded] = useState(false);
   const isCompletedToday = (habit.completionsToday || 0) > 0;
@@ -895,6 +897,8 @@ const HabitFormModal: React.FC<HabitFormModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const insets = useSafeAreaInsets();
   const [name, setName] = useState(habit?.name || '');
   const [description, setDescription] = useState(habit?.description || '');

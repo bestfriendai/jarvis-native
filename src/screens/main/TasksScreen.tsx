@@ -396,6 +396,9 @@ export default function TasksScreen() {
     return true;
   });
 
+  // Create styles based on current theme colors
+  const styles = createStyles(colors);
+
   if (isLoading && tasks.length === 0) {
     return (
       <View style={styles.container}>
@@ -419,9 +422,6 @@ export default function TasksScreen() {
       </View>
     );
   }
-
-  // Create styles based on current theme colors
-  const styles = createStyles(colors);
 
   return (
     <View style={styles.container}>
@@ -779,6 +779,8 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
   selected = false,
   onToggleSelect,
 }) => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const useHighlight = require('../../hooks/useHighlight').default;
   const { shouldHighlight, highlightOpacity, highlightScale } = useHighlight({
     highlightId,
@@ -1082,6 +1084,8 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState(task?.title || '');
   const [description, setDescription] = useState(task?.description || '');

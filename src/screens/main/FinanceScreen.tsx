@@ -195,6 +195,9 @@ export default function FinanceScreen() {
     }).format(normalized);
   };
 
+  // Create styles based on current theme colors
+  const styles = createStyles(colors);
+
   if (isLoading && !summary) {
     return (
       <View style={styles.container}>
@@ -220,9 +223,6 @@ export default function FinanceScreen() {
       </View>
     );
   }
-
-  // Create styles based on current theme colors
-  const styles = createStyles(colors);
 
   return (
     <View style={styles.container}>
@@ -741,6 +741,8 @@ const FinanceItemCard: React.FC<FinanceItemCardProps> = ({
   category,
   type,
 }) => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   return (
     <View style={styles.itemCard}>
       <View style={styles.itemContent}>
@@ -775,6 +777,8 @@ const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const insets = useSafeAreaInsets();
   const [type, setType] = useState<financeDB.TransactionType>(transaction?.type || 'expense');
   const [amount, setAmount] = useState(transaction ? (transaction.amount / 100).toString() : '');
@@ -972,6 +976,8 @@ const AssetFormModal: React.FC<AssetFormModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const insets = useSafeAreaInsets();
   const [name, setName] = useState(asset?.name || '');
   const [type, setType] = useState(asset?.type || '');
@@ -1091,6 +1097,8 @@ const LiabilityFormModal: React.FC<LiabilityFormModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const insets = useSafeAreaInsets();
   const [name, setName] = useState(liability?.name || '');
   const [type, setType] = useState(liability?.type || '');

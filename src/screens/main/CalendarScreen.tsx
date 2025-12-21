@@ -212,6 +212,9 @@ export default function CalendarScreen() {
     return matchesTitle || matchesDescription || matchesLocation;
   });
 
+  // Create styles based on current theme colors
+  const styles = createStyles(colors);
+
   if (isLoading && events.length === 0) {
     return (
       <View style={styles.container}>
@@ -236,9 +239,6 @@ export default function CalendarScreen() {
       </View>
     );
   }
-
-  // Create styles based on current theme colors
-  const styles = createStyles(colors);
 
   return (
     <View style={styles.container}>
@@ -461,6 +461,8 @@ const EventFormModal: React.FC<EventFormModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState(event?.title || '');
   const [description, setDescription] = useState(event?.description || '');
