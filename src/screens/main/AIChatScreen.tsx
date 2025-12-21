@@ -32,6 +32,7 @@ import { aiApi } from '../../services/ai.api';
 import { EmptyState } from '../../components/ui';
 import { typography, spacing, borderRadius, textStyles, shadows, getColors } from '../../theme';
 import { useTheme } from '../../theme/ThemeProvider';
+import { HIT_SLOP } from '../../constants/ui';
 
 const QUICK_PROMPTS = [
   { id: '1', icon: '✅', label: 'What should I focus on today?', prompt: 'Based on my tasks and schedule, what should I focus on today?' },
@@ -133,6 +134,7 @@ export default function AIChatScreen() {
                   size={18}
                   iconColor={colors.text.tertiary}
                   onPress={() => speakMessage(item.content)}
+                hitSlop={HIT_SLOP}
                   style={styles.actionButton}
                 />
               </View>
@@ -205,7 +207,8 @@ export default function AIChatScreen() {
               iconColor={colors.text.tertiary}
               size={22}
               style={styles.iconButton}
-            />
+            
+                hitSlop={HIT_SLOP}/>
             <RNTextInput
               placeholder="Ask Jarvis anything..."
               placeholderTextColor={colors.text.placeholder}
@@ -224,7 +227,8 @@ export default function AIChatScreen() {
               iconColor={inputText.trim() && !isLoading ? colors.primary.main : colors.text.disabled}
               size={22}
               style={styles.iconButton}
-            />
+            
+                hitSlop={HIT_SLOP}/>
           </View>
         </View>
 

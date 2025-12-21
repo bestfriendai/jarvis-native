@@ -9,6 +9,7 @@ import { IconButton } from 'react-native-paper';
 import { colors, typography, spacing, borderRadius, shadows } from '../theme';
 import { BudgetProgressBar } from './BudgetProgressBar';
 import type { BudgetWithSpending } from '../database/budgets';
+import { HIT_SLOP } from '../constants/ui';
 
 interface BudgetCardProps {
   budget: BudgetWithSpending;
@@ -103,6 +104,7 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
               size={20}
               iconColor={colors.text.tertiary}
               onPress={onEdit}
+              hitSlop={HIT_SLOP}
             />
           )}
           {onDelete && (
@@ -111,6 +113,7 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
               size={20}
               iconColor={colors.error}
               onPress={onDelete}
+              hitSlop={HIT_SLOP}
             />
           )}
         </View>

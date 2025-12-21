@@ -22,6 +22,7 @@ import { IconButton, ActivityIndicator } from 'react-native-paper';
 import * as Haptics from 'expo-haptics';
 import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
 import { makeButton, makeTextInput, announceForAccessibility } from '../../utils/accessibility';
+import { HIT_SLOP } from '../../constants/ui';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SHEET_HEIGHT = 380;
@@ -148,7 +149,8 @@ export const QuickCaptureSheet: React.FC<QuickCaptureSheetProps> = ({
       <View style={styles.header}>
         <Text style={styles.title}>Quick Capture</Text>
         <TouchableOpacity onPress={handleClose} {...makeButton('Close', 'Double tap to close quick capture')}>
-          <IconButton icon="close" size={24} iconColor={colors.text.secondary} style={styles.closeButton} />
+          <IconButton icon="close" size={24} iconColor={colors.text.secondary} style={styles.closeButton} 
+                hitSlop={HIT_SLOP}/>
         </TouchableOpacity>
       </View>
 
@@ -163,13 +165,15 @@ export const QuickCaptureSheet: React.FC<QuickCaptureSheetProps> = ({
           {...makeButton('Quick Task', 'Double tap to create a quick task')}
         >
           <View style={[styles.menuIcon, { backgroundColor: colors.primary.main + '20' }]}>
-            <IconButton icon="checkbox-marked-circle-outline" size={28} iconColor={colors.primary.main} style={styles.iconButton} />
+            <IconButton icon="checkbox-marked-circle-outline" size={28} iconColor={colors.primary.main} style={styles.iconButton} 
+                hitSlop={HIT_SLOP}/>
           </View>
           <View style={styles.menuContent}>
             <Text style={styles.menuTitle}>Quick Task</Text>
             <Text style={styles.menuDescription}>Add a task to your list</Text>
           </View>
-          <IconButton icon="chevron-right" size={20} iconColor={colors.text.tertiary} style={styles.chevron} />
+          <IconButton icon="chevron-right" size={20} iconColor={colors.text.tertiary} style={styles.chevron} 
+                hitSlop={HIT_SLOP}/>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -182,13 +186,15 @@ export const QuickCaptureSheet: React.FC<QuickCaptureSheetProps> = ({
           {...makeButton('Log Expense', 'Double tap to log an expense')}
         >
           <View style={[styles.menuIcon, { backgroundColor: colors.warning + '20' }]}>
-            <IconButton icon="cash-minus" size={28} iconColor={colors.warning} style={styles.iconButton} />
+            <IconButton icon="cash-minus" size={28} iconColor={colors.warning} style={styles.iconButton} 
+                hitSlop={HIT_SLOP}/>
           </View>
           <View style={styles.menuContent}>
             <Text style={styles.menuTitle}>Log Expense</Text>
             <Text style={styles.menuDescription}>Record a quick transaction</Text>
           </View>
-          <IconButton icon="chevron-right" size={20} iconColor={colors.text.tertiary} style={styles.chevron} />
+          <IconButton icon="chevron-right" size={20} iconColor={colors.text.tertiary} style={styles.chevron} 
+                hitSlop={HIT_SLOP}/>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -199,7 +205,8 @@ export const QuickCaptureSheet: React.FC<QuickCaptureSheetProps> = ({
           {...makeButton('Start Focus', 'Double tap to start a focus session')}
         >
           <View style={[styles.menuIcon, { backgroundColor: colors.info + '20' }]}>
-            <IconButton icon="timer-outline" size={28} iconColor={colors.info} style={styles.iconButton} />
+            <IconButton icon="timer-outline" size={28} iconColor={colors.info} style={styles.iconButton} 
+                hitSlop={HIT_SLOP}/>
           </View>
           <View style={styles.menuContent}>
             <Text style={styles.menuTitle}>Start Focus</Text>
@@ -208,7 +215,8 @@ export const QuickCaptureSheet: React.FC<QuickCaptureSheetProps> = ({
           {isSaving ? (
             <ActivityIndicator size="small" color={colors.primary.main} />
           ) : (
-            <IconButton icon="chevron-right" size={20} iconColor={colors.text.tertiary} style={styles.chevron} />
+            <IconButton icon="chevron-right" size={20} iconColor={colors.text.tertiary} style={styles.chevron} 
+                hitSlop={HIT_SLOP}/>
           )}
         </TouchableOpacity>
       </View>
@@ -225,7 +233,8 @@ export const QuickCaptureSheet: React.FC<QuickCaptureSheetProps> = ({
           }}
           {...makeButton('Back', 'Double tap to go back')}
         >
-          <IconButton icon="arrow-left" size={24} iconColor={colors.text.secondary} style={styles.closeButton} />
+          <IconButton icon="arrow-left" size={24} iconColor={colors.text.secondary} style={styles.closeButton} 
+                hitSlop={HIT_SLOP}/>
         </TouchableOpacity>
         <Text style={styles.title}>Quick Task</Text>
         <View style={{ width: 40 }} />
@@ -286,7 +295,8 @@ export const QuickCaptureSheet: React.FC<QuickCaptureSheetProps> = ({
           }}
           {...makeButton('Back', 'Double tap to go back')}
         >
-          <IconButton icon="arrow-left" size={24} iconColor={colors.text.secondary} style={styles.closeButton} />
+          <IconButton icon="arrow-left" size={24} iconColor={colors.text.secondary} style={styles.closeButton} 
+                hitSlop={HIT_SLOP}/>
         </TouchableOpacity>
         <Text style={styles.title}>Log Expense</Text>
         <View style={{ width: 40 }} />

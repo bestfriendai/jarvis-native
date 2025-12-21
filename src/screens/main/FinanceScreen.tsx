@@ -53,6 +53,7 @@ import {
   formatDateForA11y,
   announceForAccessibility,
 } from '../../utils/accessibility';
+import { HIT_SLOP } from '../../constants/ui';
 
 type ViewMode = 'overview' | 'transactions' | 'budgets';
 type TimeFilter = 'month' | 'lastMonth' | 'all';
@@ -897,7 +898,8 @@ const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
           <View style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, spacing.base) }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{transaction ? 'Edit Transaction' : 'New Transaction'}</Text>
-              <IconButton icon="close" onPress={onClose} iconColor={colors.text.tertiary} />
+              <IconButton icon="close" onPress={onClose} iconColor={colors.text.tertiary} 
+                hitSlop={HIT_SLOP}/>
             </View>
 
             <ScrollView style={styles.modalBody}>
@@ -1087,7 +1089,8 @@ const AssetFormModal: React.FC<AssetFormModalProps> = ({
           <View style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, spacing.base) }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{asset ? 'Edit Asset' : 'New Asset'}</Text>
-              <IconButton icon="close" onPress={onClose} iconColor={colors.text.tertiary} />
+              <IconButton icon="close" onPress={onClose} iconColor={colors.text.tertiary} 
+                hitSlop={HIT_SLOP}/>
             </View>
 
             <ScrollView style={styles.modalBody}>
@@ -1213,7 +1216,8 @@ const LiabilityFormModal: React.FC<LiabilityFormModalProps> = ({
           <View style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, spacing.base) }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{liability ? 'Edit Liability' : 'New Liability'}</Text>
-              <IconButton icon="close" onPress={onClose} iconColor={colors.text.tertiary} />
+              <IconButton icon="close" onPress={onClose} iconColor={colors.text.tertiary} 
+                hitSlop={HIT_SLOP}/>
             </View>
 
             <ScrollView style={styles.modalBody}>

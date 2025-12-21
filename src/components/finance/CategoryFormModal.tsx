@@ -21,6 +21,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as categoriesDB from '../../database/categories';
 import { AppButton } from '../ui';
+import { HIT_SLOP } from '../../constants/ui';
 import {
   colors,
   typography,
@@ -139,7 +140,8 @@ export const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
                 icon="close"
                 onPress={onClose}
                 iconColor={colors.text.tertiary}
-              />
+              
+                hitSlop={HIT_SLOP}/>
             </View>
 
             {/* Form */}

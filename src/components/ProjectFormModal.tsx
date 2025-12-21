@@ -22,6 +22,7 @@ import * as projectsDB from '../database/projects';
 import type { Project } from '../database/projects';
 import { AppButton } from './ui';
 import { colors, typography, spacing, borderRadius } from '../theme';
+import { HIT_SLOP } from '../constants/ui';
 
 interface ProjectFormModalProps {
   visible: boolean;
@@ -164,7 +165,8 @@ export function ProjectFormModal({ visible, project, onClose, onSuccess }: Proje
                 icon="close"
                 onPress={onClose}
                 iconColor={colors.text.tertiary}
-              />
+              
+                hitSlop={HIT_SLOP}/>
             </View>
 
             <ScrollView style={styles.modalBody} keyboardShouldPersistTaps="handled">
@@ -223,7 +225,8 @@ export function ProjectFormModal({ visible, project, onClose, onSuccess }: Proje
                           size={20}
                           iconColor="#FFFFFF"
                           style={styles.checkIcon}
-                        />
+                        
+                hitSlop={HIT_SLOP}/>
                       )}
                     </TouchableOpacity>
                   ))}

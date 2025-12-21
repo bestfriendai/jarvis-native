@@ -20,6 +20,7 @@ import * as budgetsDB from '../database/budgets';
 import * as financeDB from '../database/finance';
 import { AppButton } from './ui';
 import { colors, typography, spacing, borderRadius } from '../theme';
+import { HIT_SLOP } from '../constants/ui';
 
 interface CategoryBudgetPickerProps {
   visible: boolean;
@@ -143,7 +144,8 @@ export function CategoryBudgetPicker({
               icon="close"
               onPress={onClose}
               iconColor={colors.text.tertiary}
-            />
+            
+                hitSlop={HIT_SLOP}/>
           </View>
 
           {/* Custom Category Input */}
@@ -253,7 +255,8 @@ const CategoryItem: React.FC<CategoryItemProps> = ({
                 size={12}
                 iconColor={colors.primary.main}
                 style={styles.budgetBadgeIcon}
-              />
+              
+                hitSlop={HIT_SLOP}/>
             </View>
           )}
         </View>
@@ -287,7 +290,8 @@ const CategoryItem: React.FC<CategoryItemProps> = ({
           size={24}
           iconColor={colors.primary.main}
           style={styles.checkIcon}
-        />
+        
+                hitSlop={HIT_SLOP}/>
       )}
     </TouchableOpacity>
   );

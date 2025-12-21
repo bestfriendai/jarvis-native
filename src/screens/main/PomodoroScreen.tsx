@@ -34,6 +34,7 @@ import {
   makeRadio,
   announceForAccessibility,
 } from '../../utils/accessibility';
+import { HIT_SLOP } from '../../constants/ui';
 
 type ViewMode = 'timer' | 'stats' | 'history';
 
@@ -309,6 +310,7 @@ export default function PomodoroScreen() {
           iconColor={colors.text.secondary}
           size={24}
           onPress={() => setShowSettings(true)}
+                hitSlop={HIT_SLOP}
           {...makeButton('Settings', 'Double tap to open pomodoro settings')}
         />
       </View>

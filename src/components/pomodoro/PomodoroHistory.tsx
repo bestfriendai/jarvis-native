@@ -10,6 +10,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { PomodoroSession } from '../../database/pomodoro';
 import { formatDuration } from '../../utils/pomodoroHelpers';
 import { typography, spacing, borderRadius, shadows } from '../../theme';
+import { HIT_SLOP } from '../../constants/ui';
 
 interface PomodoroHistoryProps {
   sessions: PomodoroSession[];
@@ -69,7 +70,8 @@ export function PomodoroHistory({
                 iconColor={statusColor}
                 size={20}
                 style={styles.statusIcon}
-              />
+              
+                hitSlop={HIT_SLOP}/>
               <Text style={[styles.sessionTitle, { color: colors.text.primary }]}>
                 Pomodoro #{item.sessionNumber}
               </Text>
@@ -85,13 +87,15 @@ export function PomodoroHistory({
               iconColor={colors.text.disabled}
               size={20}
               onPress={() => onDeleteSession(item.id)}
+                hitSlop={HIT_SLOP}
             />
           )}
         </View>
 
         <View style={styles.sessionDetails}>
           <View style={styles.detailItem}>
-            <IconButton icon="timer" iconColor={colors.text.tertiary} size={18} />
+            <IconButton icon="timer" iconColor={colors.text.tertiary} size={18} 
+                hitSlop={HIT_SLOP}/>
             <Text style={[styles.detailText, { color: colors.text.secondary }]}>
               {formatDuration(item.durationMinutes)}
             </Text>
@@ -99,7 +103,8 @@ export function PomodoroHistory({
 
           {item.status === 'completed' && item.completedAt && (
             <View style={styles.detailItem}>
-              <IconButton icon="check" iconColor={colors.success} size={18} />
+              <IconButton icon="check" iconColor={colors.success} size={18} 
+                hitSlop={HIT_SLOP}/>
               <Text style={[styles.detailText, { color: colors.success }]}>
                 Completed
               </Text>
@@ -108,7 +113,8 @@ export function PomodoroHistory({
 
           {item.status === 'cancelled' && (
             <View style={styles.detailItem}>
-              <IconButton icon="close" iconColor={colors.text.disabled} size={18} />
+              <IconButton icon="close" iconColor={colors.text.disabled} size={18} 
+                hitSlop={HIT_SLOP}/>
               <Text style={[styles.detailText, { color: colors.text.disabled }]}>
                 Cancelled
               </Text>
@@ -128,7 +134,8 @@ export function PomodoroHistory({
   if (sessions.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <IconButton icon="history" iconColor={colors.text.disabled} size={64} />
+        <IconButton icon="history" iconColor={colors.text.disabled} size={64} 
+                hitSlop={HIT_SLOP}/>
         <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>
           No History Yet
         </Text>

@@ -18,6 +18,7 @@ import { IconButton } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as categoriesDB from '../../database/categories';
+import { HIT_SLOP } from '../../constants/ui';
 import {
   colors,
   typography,
@@ -109,7 +110,8 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
               icon="close"
               onPress={onClose}
               iconColor={colors.text.tertiary}
-            />
+            
+                hitSlop={HIT_SLOP}/>
           </View>
 
           {/* Search Bar */}

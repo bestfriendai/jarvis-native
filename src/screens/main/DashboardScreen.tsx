@@ -53,6 +53,7 @@ import {
   formatCurrencyForA11y,
   announceForAccessibility,
 } from '../../utils/accessibility';
+import { HIT_SLOP } from '../../constants/ui';
 
 export default function DashboardScreen() {
   const { colors } = useTheme();
@@ -304,6 +305,7 @@ export default function DashboardScreen() {
               iconColor={colors.text.secondary}
               size={28}
               onPress={() => navigation.navigate('Search' as never)}
+                hitSlop={HIT_SLOP}
               style={styles.searchButton}
               {...makeButton('Search', 'Double tap to search tasks, habits, and finances')}
             />
@@ -424,7 +426,8 @@ export default function DashboardScreen() {
                     size={20}
                     iconColor={budget.status === 'exceeded' ? colors.error : colors.warning}
                     style={{ margin: 0 }}
-                  />
+                  
+                hitSlop={HIT_SLOP}/>
                 </View>
                 <View
                   style={styles.budgetAlertContent}
@@ -443,7 +446,8 @@ export default function DashboardScreen() {
                   style={{ margin: 0 }}
                   accessible={false}
                   importantForAccessibility="no-hide-descendants"
-                />
+                
+                hitSlop={HIT_SLOP}/>
               </TouchableOpacity>
             ))}
           </View>

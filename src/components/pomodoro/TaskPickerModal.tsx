@@ -21,6 +21,7 @@ import { useTheme } from '../../hooks/useTheme';
 import * as tasksDB from '../../database/tasks';
 import type { Task } from '../../database/tasks';
 import { typography, spacing, borderRadius, shadows } from '../../theme';
+import { HIT_SLOP } from '../../constants/ui';
 
 interface TaskPickerModalProps {
   visible: boolean;
@@ -145,7 +146,8 @@ export function TaskPickerModal({ visible, onClose, onSelect, currentTaskId }: T
               size={24}
               iconColor={colors.text.primary}
               onPress={onClose}
-            />
+            
+                hitSlop={HIT_SLOP}/>
           </View>
 
           {/* Search Input */}

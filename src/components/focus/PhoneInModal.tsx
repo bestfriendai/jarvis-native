@@ -20,6 +20,7 @@ import { useFocusTimer } from '../../hooks/useFocusTimer';
 import { usePhoneInMode } from '../../hooks/usePhoneInMode';
 import { FocusBlock } from '../../database/focusBlocks';
 import { typography, spacing, borderRadius } from '../../theme';
+import { HIT_SLOP } from '../../constants/ui';
 
 interface PhoneInModalProps {
   visible: boolean;
@@ -122,7 +123,8 @@ export const PhoneInModal: React.FC<PhoneInModalProps> = ({
                 icon="close-circle"
                 iconColor={colors.error}
                 size={20}
-              />
+              
+                hitSlop={HIT_SLOP}/>
               <Text style={[styles.emergencyText, { color: colors.error }]}>
                 Emergency Exit
               </Text>
@@ -137,7 +139,8 @@ export const PhoneInModal: React.FC<PhoneInModalProps> = ({
                 icon="bullseye-arrow"
                 iconColor={colors.primary.contrast}
                 size={60}
-              />
+              
+                hitSlop={HIT_SLOP}/>
             </View>
 
             {/* Timer */}
@@ -201,7 +204,8 @@ export const PhoneInModal: React.FC<PhoneInModalProps> = ({
                 icon={isPaused ? 'play' : 'pause'}
                 iconColor={isPaused ? colors.primary.contrast : colors.text.primary}
                 size={32}
-              />
+              
+                hitSlop={HIT_SLOP}/>
               <Text
                 style={[
                   styles.controlText,
@@ -221,7 +225,8 @@ export const PhoneInModal: React.FC<PhoneInModalProps> = ({
               icon="cellphone-off"
               iconColor={colors.text.tertiary}
               size={20}
-            />
+            
+                hitSlop={HIT_SLOP}/>
             <Text style={[styles.footerText, { color: colors.text.tertiary }]}>
               Phone-in mode active - Stay focused
             </Text>

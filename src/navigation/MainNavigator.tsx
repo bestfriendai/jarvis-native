@@ -34,6 +34,7 @@ import PomodoroScreen from '../screens/main/PomodoroScreen';
 import CalendarScreen from '../screens/main/CalendarScreen';
 import FinanceScreen from '../screens/main/FinanceScreen';
 import SettingsNavigator from './SettingsNavigator';
+import { HIT_SLOP } from '../constants/ui';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -52,7 +53,8 @@ const TabIcon: React.FC<TabIconProps> = ({ icon, focused, colors, badgeCount }) 
       iconColor={focused ? colors.primary.main : colors.text.tertiary}
       size={22}
       style={styles.iconButton}
-    />
+    
+                hitSlop={HIT_SLOP}/>
     {badgeCount !== undefined && badgeCount > 0 && (
       <Badge
         size={18}
@@ -139,6 +141,7 @@ export default function MainNavigator() {
               iconColor={colors.text.secondary}
               size={24}
               onPress={() => navigation.navigate('Search' as never)}
+                hitSlop={HIT_SLOP}
             />
           ),
         })}

@@ -12,6 +12,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { useFocusTimer } from '../../hooks/useFocusTimer';
 import { FocusBlock } from '../../database/focusBlocks';
 import { typography, spacing, borderRadius, shadows } from '../../theme';
+import { HIT_SLOP } from '../../constants/ui';
 
 interface FocusTimerProps {
   focusBlock: FocusBlock;
@@ -115,7 +116,8 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
             iconColor={colors.primary.main}
             size={24}
             style={styles.compactIcon}
-          />
+          
+                hitSlop={HIT_SLOP}/>
           <View style={styles.compactText}>
             <Text
               style={[styles.compactTitle, { color: colors.text.primary }]}
@@ -155,7 +157,8 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
             iconColor={colors.primary.main}
             size={20}
             style={styles.headerIcon}
-          />
+          
+                hitSlop={HIT_SLOP}/>
           <Text style={[styles.title, { color: colors.text.primary }]} numberOfLines={1}>
             {focusBlock.title}
           </Text>
@@ -167,7 +170,8 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
               size={14}
               iconColor={colors.text.tertiary}
               style={styles.taskIcon}
-            />
+            
+                hitSlop={HIT_SLOP}/>
             <Text style={[styles.taskText, { color: colors.text.tertiary }]} numberOfLines={1}>
               {focusBlock.task.title}
             </Text>
@@ -249,7 +253,8 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
           ]}
           onPress={handleStop}
         >
-          <IconButton icon="stop" iconColor={colors.error} size={24} />
+          <IconButton icon="stop" iconColor={colors.error} size={24} 
+                hitSlop={HIT_SLOP}/>
           <Text style={[styles.controlButtonText, { color: colors.error }]}>
             Stop
           </Text>
@@ -269,7 +274,8 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
             icon={isPaused ? 'play' : 'pause'}
             iconColor={colors.primary.contrast}
             size={24}
-          />
+          
+                hitSlop={HIT_SLOP}/>
           <Text style={[styles.controlButtonText, { color: colors.primary.contrast }]}>
             {isPaused ? 'Resume' : 'Pause'}
           </Text>
@@ -284,7 +290,8 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
             size={16}
             iconColor={colors.text.inverse}
             style={styles.phoneInIcon}
-          />
+          
+                hitSlop={HIT_SLOP}/>
           <Text style={[styles.phoneInText, { color: colors.text.inverse }]}>
             Phone-in mode active
           </Text>

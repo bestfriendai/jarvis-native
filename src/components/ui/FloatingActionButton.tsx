@@ -15,6 +15,7 @@ import { IconButton } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { colors, spacing, shadows, animation } from '../../theme';
+import { HIT_SLOP } from '../../constants/ui';
 
 interface FloatingActionButtonProps {
   icon: string;
@@ -123,7 +124,8 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
             size={iconSize}
             iconColor={colors.text.primary}
             style={styles.iconButton}
-          />
+          
+                hitSlop={HIT_SLOP}/>
         </LinearGradient>
       </TouchableOpacity>
     </Animated.View>

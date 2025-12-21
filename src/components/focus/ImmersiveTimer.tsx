@@ -21,6 +21,7 @@ import { useFocusTimer } from '../../hooks/useFocusTimer';
 import { FocusBlock } from '../../database/focusBlocks';
 import { typography, spacing } from '../../theme';
 import { haptic } from '../../utils/haptics';
+import { HIT_SLOP } from '../../constants/ui';
 
 interface ImmersiveTimerProps {
   focusBlock: FocusBlock;
@@ -188,7 +189,8 @@ export const ImmersiveTimer: React.FC<ImmersiveTimerProps> = ({
             iconColor={textColor}
             size={24}
             onPress={handleExit}
-          />
+          
+                hitSlop={HIT_SLOP}/>
         </TouchableOpacity>
 
         {/* Streak indicator */}
@@ -319,7 +321,8 @@ export const ImmersiveTimer: React.FC<ImmersiveTimerProps> = ({
             icon="stop"
             iconColor={isDark ? '#ff4444' : '#ff0000'}
             size={28}
-          />
+          
+                hitSlop={HIT_SLOP}/>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -336,7 +339,8 @@ export const ImmersiveTimer: React.FC<ImmersiveTimerProps> = ({
             icon={isPaused ? 'play' : 'pause'}
             iconColor={colors.primary.contrast}
             size={32}
-          />
+          
+                hitSlop={HIT_SLOP}/>
         </TouchableOpacity>
       </Animated.View>
 

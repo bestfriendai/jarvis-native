@@ -7,6 +7,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, TextInput, Modal, Animated, Alert } from 'react-native';
 import { Button, Text, Card, IconButton } from 'react-native-paper';
 import { MacroGoal } from '../database/dashboard';
+import { HIT_SLOP } from '../constants/ui';
 
 interface StartControlsProps {
   macroGoals: MacroGoal[];

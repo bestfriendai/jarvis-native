@@ -10,6 +10,7 @@ import { useTheme } from '../../hooks/useTheme';
 import type { PomodoroStats as PomodoroStatsType, DayStats } from '../../database/pomodoro';
 import { formatDuration } from '../../utils/pomodoroHelpers';
 import { typography, spacing, borderRadius, shadows } from '../../theme';
+import { HIT_SLOP } from '../../constants/ui';
 
 interface PomodoroStatsProps {
   todayStats: PomodoroStatsType;
@@ -128,7 +129,8 @@ export function PomodoroStats({
         ]}
       >
         <View style={styles.streakHeader}>
-          <IconButton icon="fire" iconColor={colors.warning} size={32} />
+          <IconButton icon="fire" iconColor={colors.warning} size={32} 
+                hitSlop={HIT_SLOP}/>
           <View>
             <Text style={[styles.streakValue, { color: colors.text.primary }]}>
               {streak} {streak === 1 ? 'Day' : 'Days'}

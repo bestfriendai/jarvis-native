@@ -7,6 +7,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 import { IconButton } from 'react-native-paper';
 import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
+import { HIT_SLOP } from '../../constants/ui';
 
 interface ChartCardProps {
   title: string;
@@ -44,7 +45,8 @@ export const ChartCard: React.FC<ChartCardProps> = ({
               size={20}
               iconColor={colors.primary.main}
               style={styles.actionIcon}
-            />
+            
+                hitSlop={HIT_SLOP}/>
           </TouchableOpacity>
         )}
       </View>

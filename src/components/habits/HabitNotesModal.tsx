@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { IconButton } from 'react-native-paper';
 import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
+import { HIT_SLOP } from '../../constants/ui';
 
 interface HabitNotesModalProps {
   visible: boolean;
@@ -82,7 +83,8 @@ export const HabitNotesModal: React.FC<HabitNotesModalProps> = ({
               onPress={onClose}
               iconColor={colors.text.tertiary}
               size={20}
-            />
+            
+                hitSlop={HIT_SLOP}/>
           </View>
 
           <View style={styles.body}>

@@ -17,6 +17,7 @@ import { IconButton } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import type { TaskStatus, TaskPriority } from '../../database/tasks';
 import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
+import { HIT_SLOP } from '../../constants/ui';
 
 interface BulkActionBarProps {
   selectedCount: number;

@@ -13,8 +13,8 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors, typography, spacing, borderRadius } from '../../theme';
-import { HIT_SLOP } from '../../constants/ui';
 import { haptic } from '../../utils/haptics';
+import { HIT_SLOP } from '../../constants/ui';
 
 interface SearchBarProps {
   value: string;

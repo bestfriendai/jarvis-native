@@ -33,6 +33,7 @@ import { FocusAnalytics } from '../../components/focus/FocusAnalytics';
 import { EmptyState, LoadingState } from '../../components/ui';
 import { typography, spacing, borderRadius, shadows } from '../../theme';
 import { haptic } from '../../utils/haptics';
+import { HIT_SLOP } from '../../constants/ui';
 
 type ViewMode = 'current' | 'list' | 'analytics';
 
@@ -522,12 +523,14 @@ export default function FocusScreen() {
                   haptic.buttonPress();
                   setShowImmersiveTimer(true);
                 }}
+                hitSlop={HIT_SLOP}
               />
               <IconButton
                 icon="cellphone-off"
                 iconColor={colors.primary.main}
                 size={24}
                 onPress={() => setShowPhoneInModal(true)}
+                hitSlop={HIT_SLOP}
               />
             </>
           )}

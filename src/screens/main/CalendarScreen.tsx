@@ -50,6 +50,7 @@ import {
   formatDateForA11y,
   announceForAccessibility,
 } from '../../utils/accessibility';
+import { HIT_SLOP } from '../../constants/ui';
 
 interface CalendarEvent extends calendarDB.CalendarEvent {
   isRecurring?: boolean;
@@ -421,7 +422,8 @@ export default function CalendarScreen() {
                                 size={16}
                                 iconColor={colors.error}
                                 style={styles.conflictIcon}
-                              />
+                              
+                hitSlop={HIT_SLOP}/>
                               <Text style={styles.conflictCount}>{conflictCount}</Text>
                             </View>
                           )}
@@ -658,7 +660,8 @@ const EventFormModal: React.FC<EventFormModalProps> = ({
                 onPress={onClose}
                 iconColor={colors.text.tertiary}
                 {...makeButton('Close', 'Double tap to close this form')}
-              />
+              
+                hitSlop={HIT_SLOP}/>
             </View>
 
             <ScrollView style={styles.modalBody} keyboardShouldPersistTaps="handled">
@@ -790,7 +793,8 @@ const EventFormModal: React.FC<EventFormModalProps> = ({
                     iconColor={colors.text.tertiary}
                     accessible={false}
                     importantForAccessibility="no-hide-descendants"
-                  />
+                  
+                hitSlop={HIT_SLOP}/>
                 </TouchableOpacity>
               </View>
 

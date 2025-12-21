@@ -18,6 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../hooks/useTheme';
 import { typography, spacing, borderRadius, shadows } from '../../theme';
 import { haptic } from '../../utils/haptics';
+import { HIT_SLOP } from '../../constants/ui';
 
 interface ConfettiParticle {
   id: number;
@@ -249,7 +250,8 @@ export const SessionCompleteOverlay: React.FC<SessionCompleteOverlayProps> = ({
       >
         {/* Close button */}
         <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-          <IconButton icon="close" iconColor={colors.text.tertiary} size={20} />
+          <IconButton icon="close" iconColor={colors.text.tertiary} size={20} 
+                hitSlop={HIT_SLOP}/>
         </TouchableOpacity>
 
         {/* Animated checkmark */}
@@ -332,7 +334,8 @@ export const SessionCompleteOverlay: React.FC<SessionCompleteOverlayProps> = ({
                 icon="coffee"
                 iconColor={colors.text.secondary}
                 size={20}
-              />
+              
+                hitSlop={HIT_SLOP}/>
               <Text style={[styles.actionButtonText, { color: colors.text.secondary }]}>
                 Take a Break
               </Text>
@@ -354,7 +357,8 @@ export const SessionCompleteOverlay: React.FC<SessionCompleteOverlayProps> = ({
                 icon="refresh"
                 iconColor={colors.primary.contrast}
                 size={20}
-              />
+              
+                hitSlop={HIT_SLOP}/>
               <Text
                 style={[styles.actionButtonText, { color: colors.primary.contrast }]}
               >

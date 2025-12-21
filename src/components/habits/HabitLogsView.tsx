@@ -18,6 +18,7 @@ import * as habitsDB from '../../database/habits';
 import { HabitNotesModal } from './HabitNotesModal';
 import { EmptyState, LoadingState } from '../ui';
 import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
+import { HIT_SLOP } from '../../constants/ui';
 
 interface HabitLogsViewProps {
   habitId: string;
@@ -141,7 +142,8 @@ export const HabitLogsView: React.FC<HabitLogsViewProps> = ({
           icon="close"
           onPress={onClose}
           iconColor={colors.text.tertiary}
-        />
+        
+                hitSlop={HIT_SLOP}/>
       </View>
 
       <ScrollView
@@ -230,7 +232,8 @@ const LogEntry: React.FC<LogEntryProps> = ({ log, onEdit, onDelete }) => {
             size={20}
             iconColor={colors.error}
             onPress={onDelete}
-          />
+          
+                hitSlop={HIT_SLOP}/>
         </View>
       </View>
 

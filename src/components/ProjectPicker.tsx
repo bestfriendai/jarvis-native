@@ -21,6 +21,7 @@ import * as projectsDB from '../database/projects';
 import type { Project } from '../database/projects';
 import { AppButton } from './ui';
 import { colors, typography, spacing, borderRadius } from '../theme';
+import { HIT_SLOP } from '../constants/ui';
 
 interface ProjectPickerProps {
   value?: Project | null;
@@ -102,10 +103,12 @@ export function ProjectPicker({ value, onChange, placeholder = 'Select Project' 
         <View style={styles.pickerActions}>
           {value && (
             <TouchableOpacity onPress={handleClear} style={styles.clearButton}>
-              <IconButton icon="close-circle" size={20} iconColor={colors.text.tertiary} />
+              <IconButton icon="close-circle" size={20} iconColor={colors.text.tertiary} 
+                hitSlop={HIT_SLOP}/>
             </TouchableOpacity>
           )}
-          <IconButton icon="chevron-down" size={20} iconColor={colors.text.tertiary} />
+          <IconButton icon="chevron-down" size={20} iconColor={colors.text.tertiary} 
+                hitSlop={HIT_SLOP}/>
         </View>
       </TouchableOpacity>
 
@@ -133,13 +136,15 @@ export function ProjectPicker({ value, onChange, placeholder = 'Select Project' 
                 <IconButton
                   icon="close"
                   onPress={() => setShowModal(false)}
+                hitSlop={HIT_SLOP}
                   iconColor={colors.text.tertiary}
                 />
               </View>
 
               {/* Search */}
               <View style={styles.searchContainer}>
-                <IconButton icon="magnify" size={20} iconColor={colors.text.tertiary} />
+                <IconButton icon="magnify" size={20} iconColor={colors.text.tertiary} 
+                hitSlop={HIT_SLOP}/>
                 <TextInput
                   value={searchQuery}
                   onChangeText={setSearchQuery}
@@ -150,7 +155,8 @@ export function ProjectPicker({ value, onChange, placeholder = 'Select Project' 
                 />
                 {searchQuery.length > 0 && (
                   <TouchableOpacity onPress={() => setSearchQuery('')}>
-                    <IconButton icon="close-circle" size={20} iconColor={colors.text.tertiary} />
+                    <IconButton icon="close-circle" size={20} iconColor={colors.text.tertiary} 
+                hitSlop={HIT_SLOP}/>
                   </TouchableOpacity>
                 )}
               </View>
@@ -172,7 +178,8 @@ export function ProjectPicker({ value, onChange, placeholder = 'Select Project' 
                     <Text style={styles.projectItemDesc}>Task is not assigned to a project</Text>
                   </View>
                   {!value && (
-                    <IconButton icon="check" size={20} iconColor={colors.primary.main} />
+                    <IconButton icon="check" size={20} iconColor={colors.primary.main} 
+                hitSlop={HIT_SLOP}/>
                   )}
                 </TouchableOpacity>
 
@@ -203,7 +210,8 @@ export function ProjectPicker({ value, onChange, placeholder = 'Select Project' 
                     </View>
 
                     {value?.id === project.id && (
-                      <IconButton icon="check" size={20} iconColor={colors.primary.main} />
+                      <IconButton icon="check" size={20} iconColor={colors.primary.main} 
+                hitSlop={HIT_SLOP}/>
                     )}
                   </TouchableOpacity>
                 ))}

@@ -22,6 +22,7 @@ import * as budgetsDB from '../database/budgets';
 import type { Budget, BudgetPeriod } from '../database/budgets';
 import { AppButton } from './ui';
 import { colors, typography, spacing, borderRadius } from '../theme';
+import { HIT_SLOP } from '../constants/ui';
 
 interface BudgetFormModalProps {
   visible: boolean;
@@ -178,6 +179,7 @@ export function BudgetFormModal({
                 icon="close"
                 onPress={onClose}
                 iconColor={colors.text.tertiary}
+                hitSlop={HIT_SLOP}
               />
             </View>
 

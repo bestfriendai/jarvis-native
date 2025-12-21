@@ -19,6 +19,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { PomodoroSettings } from '../../database/pomodoro';
 import { validatePomodoroSettings } from '../../utils/pomodoroHelpers';
 import { typography, spacing, borderRadius, shadows } from '../../theme';
+import { HIT_SLOP } from '../../constants/ui';
 
 interface PomodoroSettingsProps {
   visible: boolean;
@@ -133,7 +134,8 @@ export function PomodoroSettingsModal({
               iconColor={colors.text.secondary}
               size={24}
               onPress={onClose}
-            />
+            
+                hitSlop={HIT_SLOP}/>
           </View>
 
           {/* Content */}
@@ -152,7 +154,8 @@ export function PomodoroSettingsModal({
                   style={[styles.controlButton, { backgroundColor: colors.background.tertiary }]}
                   onPress={() => setWorkDuration(Math.max(5, workDuration - 5))}
                 >
-                  <IconButton icon="minus" iconColor={colors.text.primary} size={20} />
+                  <IconButton icon="minus" iconColor={colors.text.primary} size={20} 
+                hitSlop={HIT_SLOP}/>
                 </TouchableOpacity>
                 <Text style={[styles.valueText, { color: colors.primary.main }]}>
                   {workDuration} min
@@ -161,7 +164,8 @@ export function PomodoroSettingsModal({
                   style={[styles.controlButton, { backgroundColor: colors.background.tertiary }]}
                   onPress={() => setWorkDuration(Math.min(60, workDuration + 5))}
                 >
-                  <IconButton icon="plus" iconColor={colors.text.primary} size={20} />
+                  <IconButton icon="plus" iconColor={colors.text.primary} size={20} 
+                hitSlop={HIT_SLOP}/>
                 </TouchableOpacity>
               </View>
             </View>
@@ -176,7 +180,8 @@ export function PomodoroSettingsModal({
                   style={[styles.controlButton, { backgroundColor: colors.background.tertiary }]}
                   onPress={() => setShortBreak(Math.max(1, shortBreak - 1))}
                 >
-                  <IconButton icon="minus" iconColor={colors.text.primary} size={20} />
+                  <IconButton icon="minus" iconColor={colors.text.primary} size={20} 
+                hitSlop={HIT_SLOP}/>
                 </TouchableOpacity>
                 <Text style={[styles.valueText, { color: colors.info }]}>
                   {shortBreak} min
@@ -185,7 +190,8 @@ export function PomodoroSettingsModal({
                   style={[styles.controlButton, { backgroundColor: colors.background.tertiary }]}
                   onPress={() => setShortBreak(Math.min(15, shortBreak + 1))}
                 >
-                  <IconButton icon="plus" iconColor={colors.text.primary} size={20} />
+                  <IconButton icon="plus" iconColor={colors.text.primary} size={20} 
+                hitSlop={HIT_SLOP}/>
                 </TouchableOpacity>
               </View>
             </View>
@@ -200,7 +206,8 @@ export function PomodoroSettingsModal({
                   style={[styles.controlButton, { backgroundColor: colors.background.tertiary }]}
                   onPress={() => setLongBreak(Math.max(5, longBreak - 5))}
                 >
-                  <IconButton icon="minus" iconColor={colors.text.primary} size={20} />
+                  <IconButton icon="minus" iconColor={colors.text.primary} size={20} 
+                hitSlop={HIT_SLOP}/>
                 </TouchableOpacity>
                 <Text style={[styles.valueText, { color: colors.warning }]}>
                   {longBreak} min
@@ -209,7 +216,8 @@ export function PomodoroSettingsModal({
                   style={[styles.controlButton, { backgroundColor: colors.background.tertiary }]}
                   onPress={() => setLongBreak(Math.min(30, longBreak + 5))}
                 >
-                  <IconButton icon="plus" iconColor={colors.text.primary} size={20} />
+                  <IconButton icon="plus" iconColor={colors.text.primary} size={20} 
+                hitSlop={HIT_SLOP}/>
                 </TouchableOpacity>
               </View>
             </View>
@@ -224,7 +232,8 @@ export function PomodoroSettingsModal({
                   style={[styles.controlButton, { backgroundColor: colors.background.tertiary }]}
                   onPress={() => setSessionsUntilLongBreak(Math.max(2, sessionsUntilLongBreak - 1))}
                 >
-                  <IconButton icon="minus" iconColor={colors.text.primary} size={20} />
+                  <IconButton icon="minus" iconColor={colors.text.primary} size={20} 
+                hitSlop={HIT_SLOP}/>
                 </TouchableOpacity>
                 <Text style={[styles.valueText, { color: colors.primary.main }]}>
                   {sessionsUntilLongBreak}
@@ -233,7 +242,8 @@ export function PomodoroSettingsModal({
                   style={[styles.controlButton, { backgroundColor: colors.background.tertiary }]}
                   onPress={() => setSessionsUntilLongBreak(Math.min(8, sessionsUntilLongBreak + 1))}
                 >
-                  <IconButton icon="plus" iconColor={colors.text.primary} size={20} />
+                  <IconButton icon="plus" iconColor={colors.text.primary} size={20} 
+                hitSlop={HIT_SLOP}/>
                 </TouchableOpacity>
               </View>
             </View>
@@ -308,7 +318,8 @@ export function PomodoroSettingsModal({
               ]}
               onPress={handleReset}
             >
-              <IconButton icon="restore" iconColor={colors.text.secondary} size={20} />
+              <IconButton icon="restore" iconColor={colors.text.secondary} size={20} 
+                hitSlop={HIT_SLOP}/>
               <Text style={[styles.resetButtonText, { color: colors.text.secondary }]}>
                 Reset to Defaults
               </Text>

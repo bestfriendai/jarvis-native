@@ -26,6 +26,7 @@ import {
   borderRadius,
   shadows,
 } from '../theme';
+import { HIT_SLOP } from '../constants/ui';
 
 export default function CategoryManagementScreen() {
   const insets = useSafeAreaInsets();
@@ -263,12 +264,14 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
               size={20}
               iconColor={colors.text.secondary}
               onPress={() => onEdit(category)}
+                hitSlop={HIT_SLOP}
             />
             <IconButton
               icon="delete"
               size={20}
               iconColor={colors.error}
               onPress={() => onDelete(category)}
+                hitSlop={HIT_SLOP}
             />
           </>
         ) : (
@@ -277,7 +280,8 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
             size={20}
             iconColor={colors.text.tertiary}
             disabled
-          />
+          
+                hitSlop={HIT_SLOP}/>
         )}
       </View>
     </View>

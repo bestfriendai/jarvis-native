@@ -9,6 +9,7 @@ import { IconButton } from 'react-native-paper';
 import { useTheme } from '../../hooks/useTheme';
 import { PomodoroTimerState } from '../../hooks/usePomodoroTimer';
 import { typography, spacing, borderRadius, shadows } from '../../theme';
+import { HIT_SLOP } from '../../constants/ui';
 
 interface PomodoroControlsProps {
   state: PomodoroTimerState;
@@ -39,7 +40,8 @@ export function PomodoroControls({
       <View style={styles.container}>
         {linkedTaskTitle && (
           <View style={[styles.linkedTaskBadge, { backgroundColor: colors.background.tertiary, borderColor: colors.primary.main }]}>
-            <IconButton icon="link-variant" iconColor={colors.primary.main} size={16} />
+            <IconButton icon="link-variant" iconColor={colors.primary.main} size={16} 
+                hitSlop={HIT_SLOP}/>
             <Text style={[styles.linkedTaskText, { color: colors.text.primary }]} numberOfLines={1}>
               {linkedTaskTitle}
             </Text>
@@ -55,7 +57,8 @@ export function PomodoroControls({
           ]}
           onPress={onStart}
         >
-          <IconButton icon="play" iconColor={colors.primary.contrast} size={32} />
+          <IconButton icon="play" iconColor={colors.primary.contrast} size={32} 
+                hitSlop={HIT_SLOP}/>
           <Text style={[styles.primaryButtonText, { color: colors.primary.contrast }]}>
             Start Pomodoro
           </Text>
@@ -72,7 +75,8 @@ export function PomodoroControls({
             ]}
             onPress={onSelectTask}
           >
-            <IconButton icon="link-variant" iconColor={colors.text.secondary} size={24} />
+            <IconButton icon="link-variant" iconColor={colors.text.secondary} size={24} 
+                hitSlop={HIT_SLOP}/>
             <Text style={[styles.secondaryButtonText, { color: colors.text.secondary }]}>
               Link to Task
             </Text>
@@ -100,7 +104,8 @@ export function PomodoroControls({
             icon={state.isPaused ? 'play' : 'pause'}
             iconColor={state.isPaused ? colors.primary.contrast : colors.text.primary}
             size={28}
-          />
+          
+                hitSlop={HIT_SLOP}/>
           <Text
             style={[
               styles.actionButtonText,
@@ -123,7 +128,8 @@ export function PomodoroControls({
           ]}
           onPress={onStop}
         >
-          <IconButton icon="stop" iconColor={colors.error} size={28} />
+          <IconButton icon="stop" iconColor={colors.error} size={28} 
+                hitSlop={HIT_SLOP}/>
           <Text style={[styles.actionButtonText, { color: colors.error }]}>
             Stop
           </Text>
@@ -142,7 +148,8 @@ export function PomodoroControls({
           ]}
           onPress={onSkip}
         >
-          <IconButton icon="skip-next" iconColor={colors.text.secondary} size={24} />
+          <IconButton icon="skip-next" iconColor={colors.text.secondary} size={24} 
+                hitSlop={HIT_SLOP}/>
           <Text style={[styles.skipButtonText, { color: colors.text.secondary }]}>
             Skip Break
           </Text>

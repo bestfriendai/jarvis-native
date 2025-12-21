@@ -26,6 +26,7 @@ import {
 } from '../../services/export';
 import { AppButton } from '../ui';
 import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
+import { HIT_SLOP } from '../../constants/ui';
 
 interface ExportButtonProps {
   transactions: Transaction[];
@@ -121,6 +122,7 @@ export function ExportButton({ transactions, onExportComplete }: ExportButtonPro
         iconColor={colors.primary.main}
         size={24}
         onPress={() => setShowModal(true)}
+                hitSlop={HIT_SLOP}
       />
 
       <Modal
@@ -142,6 +144,7 @@ export function ExportButton({ transactions, onExportComplete }: ExportButtonPro
               <IconButton
                 icon="close"
                 onPress={() => setShowModal(false)}
+                hitSlop={HIT_SLOP}
                 iconColor={colors.text.tertiary}
               />
             </View>

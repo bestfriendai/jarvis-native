@@ -17,6 +17,7 @@ import { IconButton, Chip } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import * as filterStore from '../store/taskFilterStore';
 import { colors, typography, spacing, borderRadius, shadows } from '../theme';
+import { HIT_SLOP } from '../constants/ui';
 
 // Debounce delay for search input (milliseconds)
 const SEARCH_DEBOUNCE_DELAY = 300;
@@ -151,7 +152,8 @@ export const TaskFilterBar: React.FC<TaskFilterBarProps> = ({
                 size={24}
                 onPress={onClose}
                 iconColor={colors.text.secondary}
-              />
+              
+                hitSlop={HIT_SLOP}/>
             </View>
           </View>
 

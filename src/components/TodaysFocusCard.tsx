@@ -10,6 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { TodaysFocus, TodaysFocusItem } from '../database/dashboard';
 import { colors, typography, spacing, borderRadius, shadows } from '../theme';
 import { AppCard } from './ui/AppCard';
+import { HIT_SLOP } from '../constants/ui';
 
 interface TodaysFocusCardProps {
   focus: TodaysFocus;
@@ -77,7 +78,8 @@ export const TodaysFocusCard: React.FC<TodaysFocusCardProps> = ({
                 : priorityColor || colors.primary.main
             }
             style={styles.iconButton}
-          />
+          
+                hitSlop={HIT_SLOP}/>
         </View>
 
         <View style={styles.itemContent}>
@@ -118,7 +120,8 @@ export const TodaysFocusCard: React.FC<TodaysFocusCardProps> = ({
           size={20}
           iconColor={colors.text.tertiary}
           style={styles.chevron}
-        />
+        
+                hitSlop={HIT_SLOP}/>
       </TouchableOpacity>
     );
   };
@@ -176,7 +179,8 @@ export const TodaysFocusCard: React.FC<TodaysFocusCardProps> = ({
             size={40}              // BIGGER icon! (was 32)
             iconColor={priorityColor}
             style={styles.topIcon}
-          />
+          
+                hitSlop={HIT_SLOP}/>
         </View>
 
         <View style={styles.topContent}>
@@ -208,7 +212,8 @@ export const TodaysFocusCard: React.FC<TodaysFocusCardProps> = ({
           size={24}
           iconColor={colors.text.secondary}
           style={styles.chevron}
-        />
+        
+                hitSlop={HIT_SLOP}/>
       </TouchableOpacity>
     </AppCard>
   );

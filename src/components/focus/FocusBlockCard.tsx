@@ -10,6 +10,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { FocusBlock } from '../../database/focusBlocks';
 import { formatDuration, calculateEfficiency } from '../../utils/focusAnalytics';
 import { typography, spacing, borderRadius, shadows } from '../../theme';
+import { HIT_SLOP } from '../../constants/ui';
 
 interface FocusBlockCardProps {
   block: FocusBlock;
@@ -95,7 +96,8 @@ export const FocusBlockCard: React.FC<FocusBlockCardProps> = ({
             iconColor={getStatusColor()}
             size={20}
             style={styles.statusIcon}
-          />
+          
+                hitSlop={HIT_SLOP}/>
           <View style={styles.titleContainer}>
             <Text
               style={[styles.title, { color: colors.text.primary }]}
@@ -117,7 +119,8 @@ export const FocusBlockCard: React.FC<FocusBlockCardProps> = ({
               iconColor={colors.primary.main}
               size={20}
               onPress={onStart}
-            />
+            
+                hitSlop={HIT_SLOP}/>
           )}
           {block.status === 'scheduled' && onEdit && (
             <IconButton
@@ -125,7 +128,8 @@ export const FocusBlockCard: React.FC<FocusBlockCardProps> = ({
               iconColor={colors.text.tertiary}
               size={20}
               onPress={onEdit}
-            />
+            
+                hitSlop={HIT_SLOP}/>
           )}
           {onDelete && (
             <IconButton
@@ -133,7 +137,8 @@ export const FocusBlockCard: React.FC<FocusBlockCardProps> = ({
               iconColor={colors.error}
               size={20}
               onPress={onDelete}
-            />
+            
+                hitSlop={HIT_SLOP}/>
           )}
         </View>
       </View>
@@ -151,7 +156,8 @@ export const FocusBlockCard: React.FC<FocusBlockCardProps> = ({
       {/* Details */}
       <View style={styles.details}>
         <View style={styles.detailRow}>
-          <IconButton icon="timer" size={16} iconColor={colors.text.tertiary} style={styles.detailIcon} />
+          <IconButton icon="timer" size={16} iconColor={colors.text.tertiary} style={styles.detailIcon} 
+                hitSlop={HIT_SLOP}/>
           <Text style={[styles.detailText, { color: colors.text.secondary }]}>
             {formatDuration(block.durationMinutes)}
             {block.actualMinutes && block.status === 'completed' && (
@@ -165,7 +171,8 @@ export const FocusBlockCard: React.FC<FocusBlockCardProps> = ({
 
         {block.startTime && (
           <View style={styles.detailRow}>
-            <IconButton icon="clock-outline" size={16} iconColor={colors.text.tertiary} style={styles.detailIcon} />
+            <IconButton icon="clock-outline" size={16} iconColor={colors.text.tertiary} style={styles.detailIcon} 
+                hitSlop={HIT_SLOP}/>
             <Text style={[styles.detailText, { color: colors.text.secondary }]}>
               {formatTime(block.startTime)}
               {block.endTime && ` - ${formatTime(block.endTime)}`}
@@ -175,7 +182,8 @@ export const FocusBlockCard: React.FC<FocusBlockCardProps> = ({
 
         {block.task && (
           <View style={styles.detailRow}>
-            <IconButton icon="checkbox-marked-circle-outline" size={16} iconColor={colors.text.tertiary} style={styles.detailIcon} />
+            <IconButton icon="checkbox-marked-circle-outline" size={16} iconColor={colors.text.tertiary} style={styles.detailIcon} 
+                hitSlop={HIT_SLOP}/>
             <Text style={[styles.detailText, { color: colors.text.secondary }]} numberOfLines={1}>
               {block.task.title}
             </Text>
@@ -184,7 +192,8 @@ export const FocusBlockCard: React.FC<FocusBlockCardProps> = ({
 
         {block.phoneInMode && (
           <View style={styles.detailRow}>
-            <IconButton icon="cellphone-off" size={16} iconColor={colors.warning} style={styles.detailIcon} />
+            <IconButton icon="cellphone-off" size={16} iconColor={colors.warning} style={styles.detailIcon} 
+                hitSlop={HIT_SLOP}/>
             <Text style={[styles.detailText, { color: colors.warning }]}>
               Phone-in mode
             </Text>

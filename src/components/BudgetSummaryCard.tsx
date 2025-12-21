@@ -8,6 +8,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { IconButton } from 'react-native-paper';
 import { colors, typography, spacing, borderRadius, shadows } from '../theme';
 import type { BudgetSummary } from '../database/budgets';
+import { HIT_SLOP } from '../constants/ui';
 
 interface BudgetSummaryCardProps {
   summary: BudgetSummary;
@@ -138,7 +139,8 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
                 size={16}
                 iconColor={colors.error}
                 style={styles.alertIcon}
-              />
+              
+                hitSlop={HIT_SLOP}/>
               <Text style={[styles.alertText, { color: colors.error }]}>
                 {summary.exceededCount} over budget
               </Text>
@@ -152,7 +154,8 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
                 size={16}
                 iconColor={colors.warning}
                 style={styles.alertIcon}
-              />
+              
+                hitSlop={HIT_SLOP}/>
               <Text style={[styles.alertText, { color: colors.warning }]}>
                 {summary.warningCount} approaching limit
               </Text>

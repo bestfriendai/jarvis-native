@@ -24,6 +24,7 @@ import type { Project } from '../../database/projects';
 import type { Task, TaskStatus } from '../../database/tasks';
 import { ProjectFormModal } from '../../components/ProjectFormModal';
 import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
+import { HIT_SLOP } from '../../constants/ui';
 
 type RootStackParamList = {
   ProjectDetail: { projectId: string };
@@ -147,13 +148,15 @@ export default function ProjectDetailScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <IconButton icon="arrow-left" size={24} iconColor={colors.text.primary} />
+          <IconButton icon="arrow-left" size={24} iconColor={colors.text.primary} 
+                hitSlop={HIT_SLOP}/>
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
           {project.name}
         </Text>
         <TouchableOpacity onPress={handleEditProject}>
-          <IconButton icon="pencil" size={24} iconColor={colors.text.primary} />
+          <IconButton icon="pencil" size={24} iconColor={colors.text.primary} 
+                hitSlop={HIT_SLOP}/>
         </TouchableOpacity>
       </View>
 
@@ -315,7 +318,8 @@ export default function ProjectDetailScreen() {
                       size={14}
                       iconColor={colors.text.tertiary}
                       style={styles.taskMetaIcon}
-                    />
+                    
+                hitSlop={HIT_SLOP}/>
                     <Text style={styles.taskMetaText}>
                       {new Date(task.dueDate).toLocaleDateString()}
                     </Text>

@@ -19,6 +19,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { FocusBlock, CreateFocusBlockData } from '../../database/focusBlocks';
 import { Task } from '../../database/tasks';
 import { typography, spacing, borderRadius, shadows, inputStyle, inputFocusStyle } from '../../theme';
+import { HIT_SLOP } from '../../constants/ui';
 
 interface FocusBlockFormProps {
   visible: boolean;
@@ -124,7 +125,8 @@ export const FocusBlockForm: React.FC<FocusBlockFormProps> = ({
             iconColor={colors.text.secondary}
             size={24}
             onPress={onClose}
-          />
+          
+                hitSlop={HIT_SLOP}/>
           <Text style={[styles.headerTitle, { color: colors.text.primary }]}>
             {focusBlock ? 'Edit Focus Block' : 'New Focus Block'}
           </Text>
@@ -238,7 +240,8 @@ export const FocusBlockForm: React.FC<FocusBlockFormProps> = ({
                         : colors.text.secondary
                     }
                     style={styles.durationIcon}
-                  />
+                  
+                hitSlop={HIT_SLOP}/>
                   <Text
                     style={[
                       styles.durationText,
@@ -366,7 +369,8 @@ export const FocusBlockForm: React.FC<FocusBlockFormProps> = ({
                   size={24}
                   iconColor={phoneInMode ? colors.primary.main : colors.text.tertiary}
                   style={styles.toggleIcon}
-                />
+                
+                hitSlop={HIT_SLOP}/>
                 <View style={styles.toggleText}>
                   <Text style={[styles.toggleTitle, { color: colors.text.primary }]}>
                     Phone-in Mode

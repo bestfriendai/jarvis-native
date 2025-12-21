@@ -21,6 +21,7 @@ import * as projectsDB from '../../database/projects';
 import type { Project } from '../../database/projects';
 import { ProjectCard } from '../../components/ProjectCard';
 import { ProjectFormModal } from '../../components/ProjectFormModal';
+import { LastUpdated, EmptyState } from '../../components/ui';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { haptic } from '../../utils/haptics';
 import { confirmations, alertSuccess, alertError } from '../../utils/dialogs';
@@ -48,6 +49,7 @@ export default function ProjectsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showFormModal, setShowFormModal] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
   useEffect(() => {
     loadProjects();
@@ -61,6 +63,7 @@ export default function ProjectsScreen() {
     try {
       const loadedProjects = await projectsDB.getProjectsWithStats(showArchived);
       setProjects(loadedProjects);
+      setLastUpdated(new Date());
     } catch (error) {
       console.error('Error loading projects:', error);
       alertError('Error', 'Failed to load projects');
@@ -151,6 +154,7 @@ export default function ProjectsScreen() {
       </View>
 
       {/* Search Bar */}
+      <LastUpdated date={lastUpdated} />
       <View style={styles.searchContainer}>
         <IconButton
           icon="magnify"

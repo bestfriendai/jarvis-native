@@ -18,6 +18,7 @@ import {
   get7DayTrend,
 } from '../../utils/focusAnalytics';
 import { typography, spacing, borderRadius, shadows } from '../../theme';
+import { HIT_SLOP } from '../../constants/ui';
 
 interface FocusAnalyticsProps {
   blocks: FocusBlock[];
@@ -66,7 +67,8 @@ export const FocusAnalytics: React.FC<FocusAnalyticsProps> = ({
               },
             ]}
           >
-            <IconButton icon="calendar-today" size={24} iconColor={colors.primary.main} />
+            <IconButton icon="calendar-today" size={24} iconColor={colors.primary.main} 
+                hitSlop={HIT_SLOP}/>
             <Text style={[styles.statValue, { color: colors.text.primary }]}>
               {formatDuration(todayMinutes)}
             </Text>
@@ -84,7 +86,8 @@ export const FocusAnalytics: React.FC<FocusAnalyticsProps> = ({
               },
             ]}
           >
-            <IconButton icon="calendar-week" size={24} iconColor={colors.info} />
+            <IconButton icon="calendar-week" size={24} iconColor={colors.info} 
+                hitSlop={HIT_SLOP}/>
             <Text style={[styles.statValue, { color: colors.text.primary }]}>
               {formatDuration(weekMinutes)}
             </Text>
@@ -102,7 +105,8 @@ export const FocusAnalytics: React.FC<FocusAnalyticsProps> = ({
               },
             ]}
           >
-            <IconButton icon="calendar-month" size={24} iconColor={colors.success} />
+            <IconButton icon="calendar-month" size={24} iconColor={colors.success} 
+                hitSlop={HIT_SLOP}/>
             <Text style={[styles.statValue, { color: colors.text.primary }]}>
               {formatDuration(monthMinutes)}
             </Text>
@@ -128,7 +132,8 @@ export const FocusAnalytics: React.FC<FocusAnalyticsProps> = ({
               },
             ]}
           >
-            <IconButton icon="fire" size={24} iconColor={colors.warning} />
+            <IconButton icon="fire" size={24} iconColor={colors.warning} 
+                hitSlop={HIT_SLOP}/>
             <Text style={[styles.statValue, { color: colors.text.primary }]}>
               {stats.currentStreak}
             </Text>
@@ -146,7 +151,8 @@ export const FocusAnalytics: React.FC<FocusAnalyticsProps> = ({
               },
             ]}
           >
-            <IconButton icon="check-circle" size={24} iconColor={colors.success} />
+            <IconButton icon="check-circle" size={24} iconColor={colors.success} 
+                hitSlop={HIT_SLOP}/>
             <Text style={[styles.statValue, { color: colors.text.primary }]}>
               {stats.completionRate.toFixed(0)}%
             </Text>
@@ -164,7 +170,8 @@ export const FocusAnalytics: React.FC<FocusAnalyticsProps> = ({
               },
             ]}
           >
-            <IconButton icon="timer" size={24} iconColor={colors.info} />
+            <IconButton icon="timer" size={24} iconColor={colors.info} 
+                hitSlop={HIT_SLOP}/>
             <Text style={[styles.statValue, { color: colors.text.primary }]}>
               {stats.avgSessionMinutes}m
             </Text>
@@ -303,7 +310,8 @@ export const FocusAnalytics: React.FC<FocusAnalyticsProps> = ({
                       : colors.info
                   }
                   style={styles.insightIcon}
-                />
+                
+                hitSlop={HIT_SLOP}/>
                 <View style={styles.insightText}>
                   <Text style={[styles.insightTitle, { color: colors.text.primary }]}>
                     {insight.title}
@@ -330,7 +338,8 @@ export const FocusAnalytics: React.FC<FocusAnalyticsProps> = ({
           ]}
         >
           <View style={styles.streakHeader}>
-            <IconButton icon="trophy" size={32} iconColor={colors.warning} />
+            <IconButton icon="trophy" size={32} iconColor={colors.warning} 
+                hitSlop={HIT_SLOP}/>
             <View style={styles.streakInfo}>
               <Text style={[styles.streakTitle, { color: colors.text.primary }]}>
                 Focus Streak
