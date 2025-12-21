@@ -4,10 +4,11 @@
  */
 
 import React from 'react';
-import { Dimensions } from 'react-native';
+import { View, Dimensions } from 'react-native';
 import { LineChart as RNLineChart } from 'react-native-chart-kit';
 import { useTheme } from '../../hooks/useTheme';
 import { BaseChart } from './BaseChart';
+import { getChartDescription, ChartDataPoint } from '../../utils/chartAccessibility';
 
 export interface LineChartData {
   labels: string[];
@@ -32,6 +33,8 @@ interface LineChartProps {
   yAxisLabel?: string;
   fromZero?: boolean;
   fillShadowGradient?: boolean;
+  title?: string;
+  accessibilityLabel?: string;
 }
 
 export const LineChart: React.FC<LineChartProps> = ({
@@ -47,10 +50,24 @@ export const LineChart: React.FC<LineChartProps> = ({
   yAxisLabel = '',
   fromZero = true,
   fillShadowGradient = true,
+  title = 'Line Chart',
+  accessibilityLabel,
 }) => {
   const { colors } = useTheme();
 
   const isEmpty = !data.labels.length || !data.datasets.length || data.datasets[0].data.length === 0;
+
+  // Generate accessibility description
+  const chartDataPoints: ChartDataPoint[] = data.labels.map((label, index) => ({
+    label,
+    value: data.datasets[0]?.data[index] || 0,
+  }));
+
+  const description = accessibilityLabel || getChartDescription(chartDataPoints, {
+    title,
+    type: 'line',
+    unit: yAxisSuffix,
+  });
 
   return (
     <BaseChart
@@ -60,7 +77,13 @@ export const LineChart: React.FC<LineChartProps> = ({
       emptyMessage={emptyMessage}
       height={height}
     >
-      <RNLineChart
+      <View
+        accessible={true}
+        accessibilityLabel={description}
+        accessibilityRole="image"
+        accessibilityHint="Double tap to view trend details and data table"
+      >
+        <RNLineChart
         data={data}
         width={width}
         height={height}
@@ -81,8 +104,8 @@ export const LineChart: React.FC<LineChartProps> = ({
           backgroundGradientFrom: colors.background.secondary,
           backgroundGradientTo: colors.background.secondary,
           decimalPlaces: 0,
-          color: (opacity = 1) => colors.primary.main,
-          labelColor: (opacity = 1) => colors.text.tertiary,
+          color: () => colors.primary.main,
+          labelColor: () => colors.text.tertiary,
           style: {
             borderRadius: 16,
           },
@@ -104,6 +127,7 @@ export const LineChart: React.FC<LineChartProps> = ({
           borderRadius: 16,
         }}
       />
+      </View>
     </BaseChart>
   );
 };

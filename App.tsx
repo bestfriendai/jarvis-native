@@ -37,7 +37,7 @@ export default function App() {
   const [isReady, setIsReady] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
   const loadTheme = useThemeStore((state) => state.loadTheme);
-  const themeMode = useThemeStore((state) => state.mode);
+  const getResolvedMode = useThemeStore((state) => state.getResolvedMode);
   const navigationRef = useRef<NavigationContainerRef<any> | null>(null);
 
   useEffect(() => {
@@ -101,7 +101,7 @@ export default function App() {
   }, []);
 
   if (!isReady) {
-    const colors = getColors(themeMode);
+    const colors = getColors(getResolvedMode());
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background.primary }]}>
         <ActivityIndicator size="large" color={colors.primary.main} />
@@ -111,7 +111,7 @@ export default function App() {
   }
 
   if (initError) {
-    const colors = getColors(themeMode);
+    const colors = getColors(getResolvedMode());
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background.primary }]}>
         <Text style={[styles.errorText, { color: colors.error }]}>Initialization Error</Text>
@@ -120,13 +120,15 @@ export default function App() {
     );
   }
 
+  const resolvedMode = getResolvedMode();
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
             <PaperProvider>
-              <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
+              <StatusBar style={resolvedMode === 'dark' ? 'light' : 'dark'} />
               <RootNavigator navigationRef={navigationRef} />
               <Toast config={toastConfig} />
           </PaperProvider>

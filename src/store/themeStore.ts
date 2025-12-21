@@ -5,8 +5,10 @@
 
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Appearance } from 'react-native';
 
-type ThemeMode = 'dark' | 'light';
+type ThemeMode = 'dark' | 'light' | 'system';
+type ResolvedThemeMode = 'dark' | 'light';
 
 interface ThemeStore {
   mode: ThemeMode;
@@ -14,14 +16,24 @@ interface ThemeStore {
   setMode: (mode: ThemeMode) => Promise<void>;
   setPreset: (presetId: string) => Promise<void>;
   loadTheme: () => Promise<void>;
+  getResolvedMode: () => ResolvedThemeMode;
 }
 
 const THEME_MODE_STORAGE_KEY = '@jarvis_theme_mode';
 const THEME_PRESET_STORAGE_KEY = '@jarvis_theme_preset';
 
-export const useThemeStore = create<ThemeStore>((set) => ({
-  mode: 'dark', // Default to dark
+export const useThemeStore = create<ThemeStore>((set, get) => ({
+  mode: 'system', // Default to system preference
   presetId: 'neon-dark', // Default preset
+
+  getResolvedMode: () => {
+    const state = get();
+    if (state.mode === 'system') {
+      const systemColorScheme = Appearance.getColorScheme();
+      return systemColorScheme === 'dark' ? 'dark' : 'light';
+    }
+    return state.mode;
+  },
 
   setMode: async (mode: ThemeMode) => {
     try {
@@ -56,7 +68,7 @@ export const useThemeStore = create<ThemeStore>((set) => ({
 
       const updates: Partial<ThemeStore> = {};
 
-      if (savedMode === 'dark' || savedMode === 'light') {
+      if (savedMode === 'dark' || savedMode === 'light' || savedMode === 'system') {
         updates.mode = savedMode;
       }
 

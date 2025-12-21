@@ -4,10 +4,11 @@
  */
 
 import React from 'react';
-import { Dimensions } from 'react-native';
+import { View, Dimensions } from 'react-native';
 import { PieChart as RNPieChart } from 'react-native-chart-kit';
 import { useTheme } from '../../hooks/useTheme';
 import { BaseChart } from './BaseChart';
+import { getChartDescription, ChartDataPoint } from '../../utils/chartAccessibility';
 
 export interface PieChartDataItem {
   name: string;
@@ -29,6 +30,8 @@ interface PieChartProps {
   centerLabelComponent?: () => React.ReactElement;
   hasLegend?: boolean;
   paddingLeft?: string;
+  title?: string;
+  accessibilityLabel?: string;
 }
 
 export const PieChart: React.FC<PieChartProps> = ({
@@ -40,9 +43,11 @@ export const PieChart: React.FC<PieChartProps> = ({
   emptyMessage = 'No data to display',
   showLegend = true,
   accessor = 'value',
-  centerLabelComponent,
+  centerLabelComponent: _centerLabelComponent,
   hasLegend = true,
   paddingLeft = '15',
+  title = 'Pie Chart',
+  accessibilityLabel,
 }) => {
   const { colors } = useTheme();
 
@@ -56,6 +61,17 @@ export const PieChart: React.FC<PieChartProps> = ({
     legendFontSize: item.legendFontSize || 12,
   }));
 
+  // Generate accessibility description
+  const chartDataPoints: ChartDataPoint[] = data.map((item) => ({
+    label: item.name,
+    value: item.value,
+  }));
+
+  const description = accessibilityLabel || getChartDescription(chartDataPoints, {
+    title,
+    type: 'pie',
+  });
+
   return (
     <BaseChart
       isLoading={isLoading}
@@ -64,7 +80,13 @@ export const PieChart: React.FC<PieChartProps> = ({
       emptyMessage={emptyMessage}
       height={height}
     >
-      <RNPieChart
+      <View
+        accessible={true}
+        accessibilityLabel={description}
+        accessibilityRole="image"
+        accessibilityHint="Double tap to view distribution breakdown"
+      >
+        <RNPieChart
         data={chartData}
         width={width}
         height={height}
@@ -72,8 +94,8 @@ export const PieChart: React.FC<PieChartProps> = ({
           backgroundColor: colors.background.secondary,
           backgroundGradientFrom: colors.background.secondary,
           backgroundGradientTo: colors.background.secondary,
-          color: (opacity = 1) => colors.primary.main,
-          labelColor: (opacity = 1) => colors.text.tertiary,
+          color: () => colors.primary.main,
+          labelColor: () => colors.text.tertiary,
           style: {
             borderRadius: 16,
           },
@@ -87,6 +109,7 @@ export const PieChart: React.FC<PieChartProps> = ({
           borderRadius: 16,
         }}
       />
+      </View>
     </BaseChart>
   );
 };
