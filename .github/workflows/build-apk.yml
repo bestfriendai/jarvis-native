@@ -44,9 +44,9 @@ jobs:
         run: npm ci
 
       - name: Prebuild Android
-        run: npx expo prebuild --platform android --clean
-        env:
-          CI: 1
+        run: |
+          npx expo prebuild --platform android --clean --no-install
+          npm install
 
       - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
