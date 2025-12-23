@@ -18,6 +18,7 @@ import {
   TouchableOpacity,
   Animated,
   FlatList,
+  Dimensions,
 } from 'react-native';
 import { IconButton, Checkbox, Badge } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -106,6 +107,16 @@ export default function TasksScreen() {
   const viewMode: ViewMode = 'list'; // Only list view is implemented
   const layoutConfig = getLayoutConfig();
   const gridColumns = getGridColumns();
+
+  // Calculate item width for multi-column layout
+  const screenWidth = Dimensions.get('window').width;
+  const horizontalPadding = layoutConfig.padding * 2;
+  const gap = responsiveSpacing(12, 16, 20);
+  const totalGaps = (gridColumns - 1) * gap;
+  const itemWidth = gridColumns > 1
+    ? (screenWidth - horizontalPadding - totalGaps) / gridColumns
+    : undefined;
+
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all' | 'overdue'>('all');
@@ -661,31 +672,33 @@ export default function TasksScreen() {
         <FlatList
           data={filteredTasks}
           renderItem={({ item: task, index }) => (
-            <AnimatedListItem index={index} delay={30} duration={400}>
-              <SwipeableTaskItem
-                key={task.id}
-                taskId={task.id}
-                taskTitle={task.title}
-                isCompleted={task.status === 'completed'}
-                onComplete={() => handleStatusChange(task.id, 'completed')}
-                onUncomplete={() => handleStatusChange(task.id, 'todo')}
-                onDelete={() => handleDelete(task.id)}
-                disabled={bulkSelectMode}
-              >
-                <TaskCard
-                  task={task}
-                  onStatusChange={handleStatusChange}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  highlightId={params?.highlightId}
-                  // @ts-expect-error - Navigation type compatibility
-                  onHighlightComplete={() => clearHighlight(navigation)}
-                  bulkSelectMode={bulkSelectMode}
-                  selected={selectedTaskIds.has(task.id)}
-                  onToggleSelect={() => toggleTaskSelection(task.id)}
-                />
-              </SwipeableTaskItem>
-            </AnimatedListItem>
+            <View style={itemWidth ? { width: itemWidth } : { flex: 1 }}>
+              <AnimatedListItem index={index} delay={30} duration={400}>
+                <SwipeableTaskItem
+                  key={task.id}
+                  taskId={task.id}
+                  taskTitle={task.title}
+                  isCompleted={task.status === 'completed'}
+                  onComplete={() => handleStatusChange(task.id, 'completed')}
+                  onUncomplete={() => handleStatusChange(task.id, 'todo')}
+                  onDelete={() => handleDelete(task.id)}
+                  disabled={bulkSelectMode}
+                >
+                  <TaskCard
+                    task={task}
+                    onStatusChange={handleStatusChange}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    highlightId={params?.highlightId}
+                    // @ts-expect-error - Navigation type compatibility
+                    onHighlightComplete={() => clearHighlight(navigation)}
+                    bulkSelectMode={bulkSelectMode}
+                    selected={selectedTaskIds.has(task.id)}
+                    onToggleSelect={() => toggleTaskSelection(task.id)}
+                  />
+                </SwipeableTaskItem>
+              </AnimatedListItem>
+            </View>
           )}
           keyExtractor={(item) => item.id}
           key={`task-list-${gridColumns}`}

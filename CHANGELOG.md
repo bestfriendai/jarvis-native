@@ -8,6 +8,7 @@
 - chore: Reorganize docs to `.archive/` and new `docs/` structure
 - fix: Jest 30→29.7 for Expo 54 compatibility
 - fix: Install react-native-worklets for Reanimated
+- fix: TaskCard layout in multi-column grid (calculate explicit widths)
 
 ## 2025-12-21
 
