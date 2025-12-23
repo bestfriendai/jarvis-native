@@ -66,6 +66,8 @@ export default function SettingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [notificationsPermissionStatus, setNotificationsPermissionStatus] = useState<string>('undetermined');
+  const [habitNotificationsEnabled, setHabitNotificationsEnabled] = useState(true);
+  const [calendarNotificationsEnabled, setCalendarNotificationsEnabled] = useState(true);
   const [habitNotesPrompt, setHabitNotesPrompt] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -91,6 +93,13 @@ export default function SettingsScreen() {
       // Load habit notes prompt preference
       const notesPromptPref = await storage.getItem('habit_notes_prompt_enabled');
       setHabitNotesPrompt(notesPromptPref === 'true');
+
+      // Load per-feature notification preferences (default to true)
+      const habitNotifPref = await storage.getItem('notifications_habits_enabled');
+      setHabitNotificationsEnabled(habitNotifPref !== 'false');
+
+      const calendarNotifPref = await storage.getItem('notifications_calendar_enabled');
+      setCalendarNotificationsEnabled(calendarNotifPref !== 'false');
     } catch (error) {
       console.error('Error checking notification permissions:', error);
       setNotificationsEnabled(false);
@@ -263,6 +272,18 @@ export default function SettingsScreen() {
     await storage.setItem('habit_notes_prompt_enabled', value ? 'true' : 'false');
   };
 
+  const handleHabitNotificationsToggle = async (value: boolean) => {
+    setHabitNotificationsEnabled(value);
+    await storage.setItem('notifications_habits_enabled', value ? 'true' : 'false');
+    haptic.light();
+  };
+
+  const handleCalendarNotificationsToggle = async (value: boolean) => {
+    setCalendarNotificationsEnabled(value);
+    await storage.setItem('notifications_calendar_enabled', value ? 'true' : 'false');
+    haptic.light();
+  };
+
   const handleLogout = () => {
     confirmations.logout(async () => {
       await logout();
@@ -420,6 +441,44 @@ export default function SettingsScreen() {
               />
             }
           />
+          {notificationsEnabled && (
+            <>
+              <View style={styles.divider} />
+              <SettingItem styles={styles}
+                icon="🎯"
+                title="Habit Reminders"
+                subtitle="Daily reminders for your habits"
+                rightElement={
+                  <Switch
+                    value={habitNotificationsEnabled}
+                    onValueChange={handleHabitNotificationsToggle}
+                    trackColor={{
+                      false: colors.background.tertiary,
+                      true: `${colors.primary.main}80`,
+                    }}
+                    thumbColor={habitNotificationsEnabled ? colors.primary.main : colors.text.disabled}
+                  />
+                }
+              />
+              <View style={styles.divider} />
+              <SettingItem styles={styles}
+                icon="📅"
+                title="Calendar Events"
+                subtitle="Reminders for upcoming events"
+                rightElement={
+                  <Switch
+                    value={calendarNotificationsEnabled}
+                    onValueChange={handleCalendarNotificationsToggle}
+                    trackColor={{
+                      false: colors.background.tertiary,
+                      true: `${colors.primary.main}80`,
+                    }}
+                    thumbColor={calendarNotificationsEnabled ? colors.primary.main : colors.text.disabled}
+                  />
+                }
+              />
+            </>
+          )}
         </View>
       </View>
 

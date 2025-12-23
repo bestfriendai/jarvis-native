@@ -13,6 +13,7 @@ import notifee, {
 } from './notifee-wrapper';
 // For EventType, we'll use the numeric value directly (0 = DISMISSED, 1 = PRESS, etc.)
 import { Platform } from 'react-native';
+import * as storage from './storage';
 
 /**
  * Track whether channels have been created
@@ -24,6 +25,30 @@ export interface ScheduleNotificationParams {
   body: string;
   data?: Record<string, any>;
   triggerDate: Date;
+}
+
+/**
+ * Check if habit notifications are enabled
+ */
+export async function isHabitNotificationsEnabled(): Promise<boolean> {
+  try {
+    const pref = await storage.getItem('notifications_habits_enabled');
+    return pref !== 'false'; // Default to true
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Check if calendar notifications are enabled
+ */
+export async function isCalendarNotificationsEnabled(): Promise<boolean> {
+  try {
+    const pref = await storage.getItem('notifications_calendar_enabled');
+    return pref !== 'false'; // Default to true
+  } catch {
+    return true;
+  }
 }
 
 /**
@@ -97,6 +122,13 @@ export async function scheduleEventNotification(
   params: ScheduleNotificationParams
 ): Promise<string> {
   try {
+    // Check if calendar notifications are enabled
+    const calendarEnabled = await isCalendarNotificationsEnabled();
+    if (!calendarEnabled) {
+      console.log('[Notifications] Calendar notifications disabled by user');
+      return '';
+    }
+
     const hasPermission = await requestPermissions();
 
     if (!hasPermission) {
@@ -220,6 +252,13 @@ export async function scheduleHabitReminder(
   reminderTime: string
 ): Promise<string> {
   try {
+    // Check if habit notifications are enabled
+    const habitsEnabled = await isHabitNotificationsEnabled();
+    if (!habitsEnabled) {
+      console.log('[Notifications] Habit notifications disabled by user');
+      return '';
+    }
+
     const hasPermission = await requestPermissions();
 
     if (!hasPermission) {
@@ -308,4 +347,6 @@ export default {
   getAllScheduledNotifications,
   addNotificationResponseListener,
   formatReminderTime,
+  isHabitNotificationsEnabled,
+  isCalendarNotificationsEnabled,
 };
