@@ -9,6 +9,7 @@
 - fix: Jest 30→29.7 for Expo 54 compatibility
 - fix: Install react-native-worklets for Reanimated
 - fix: TaskCard layout in multi-column grid (calculate explicit widths)
+- fix: Pin react-test-renderer to 19.1.0 for CI compatibility
 
 ## 2025-12-21
 
