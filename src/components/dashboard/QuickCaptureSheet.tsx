@@ -17,25 +17,28 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { IconButton, ActivityIndicator } from 'react-native-paper';
 import * as Haptics from 'expo-haptics';
 import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
 import { makeButton, makeTextInput, announceForAccessibility } from '../../utils/accessibility';
 import { HIT_SLOP } from '../../constants/ui';
+import { Task } from '../../database/tasks';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const SHEET_HEIGHT = 380;
+const SHEET_HEIGHT = 480;
 
 interface QuickCaptureSheetProps {
   visible: boolean;
   onClose: () => void;
   onQuickTask: (title: string) => Promise<void>;
   onLogExpense: (amount: string) => Promise<void>;
-  onStartFocus: () => Promise<void>;
+  onStartFocus: (taskId?: string) => Promise<void>;
+  tasks?: Task[];
 }
 
-type CaptureMode = 'menu' | 'task' | 'expense';
+type CaptureMode = 'menu' | 'task' | 'expense' | 'focus';
 
 export const QuickCaptureSheet: React.FC<QuickCaptureSheetProps> = ({
   visible,
@@ -43,12 +46,14 @@ export const QuickCaptureSheet: React.FC<QuickCaptureSheetProps> = ({
   onQuickTask,
   onLogExpense,
   onStartFocus,
+  tasks = [],
 }) => {
   const [slideAnim] = useState(new Animated.Value(SCREEN_HEIGHT));
   const [overlayOpacity] = useState(new Animated.Value(0));
   const [mode, setMode] = useState<CaptureMode>('menu');
   const [taskTitle, setTaskTitle] = useState('');
   const [expenseAmount, setExpenseAmount] = useState('');
+  const [selectedTaskId, setSelectedTaskId] = useState<string | undefined>();
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -56,6 +61,7 @@ export const QuickCaptureSheet: React.FC<QuickCaptureSheetProps> = ({
       setMode('menu');
       setTaskTitle('');
       setExpenseAmount('');
+      setSelectedTaskId(undefined);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
       Animated.parallel([
@@ -131,7 +137,7 @@ export const QuickCaptureSheet: React.FC<QuickCaptureSheetProps> = ({
   const handleStartFocus = async () => {
     setIsSaving(true);
     try {
-      await onStartFocus();
+      await onStartFocus(selectedTaskId);
       announceForAccessibility('Focus session started');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       handleClose();
@@ -199,25 +205,23 @@ export const QuickCaptureSheet: React.FC<QuickCaptureSheetProps> = ({
 
         <TouchableOpacity
           style={styles.menuItem}
-          onPress={handleStartFocus}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setMode('focus');
+          }}
           activeOpacity={0.7}
-          disabled={isSaving}
           {...makeButton('Start Focus', 'Double tap to start a focus session')}
         >
           <View style={[styles.menuIcon, { backgroundColor: colors.info + '20' }]}>
-            <IconButton icon="timer-outline" size={28} iconColor={colors.info} style={styles.iconButton} 
+            <IconButton icon="timer-outline" size={28} iconColor={colors.info} style={styles.iconButton}
                 hitSlop={HIT_SLOP}/>
           </View>
           <View style={styles.menuContent}>
             <Text style={styles.menuTitle}>Start Focus</Text>
             <Text style={styles.menuDescription}>Begin a focus session</Text>
           </View>
-          {isSaving ? (
-            <ActivityIndicator size="small" color={colors.primary.main} />
-          ) : (
-            <IconButton icon="chevron-right" size={20} iconColor={colors.text.tertiary} style={styles.chevron} 
+          <IconButton icon="chevron-right" size={20} iconColor={colors.text.tertiary} style={styles.chevron}
                 hitSlop={HIT_SLOP}/>
-          )}
         </TouchableOpacity>
       </View>
     </>
@@ -350,6 +354,189 @@ export const QuickCaptureSheet: React.FC<QuickCaptureSheetProps> = ({
     </>
   );
 
+  const renderFocusForm = () => {
+    const activeTasks = tasks.filter((t) => t.status === 'todo' || t.status === 'in_progress');
+
+    return (
+      <>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setMode('menu');
+            }}
+            {...makeButton('Back', 'Double tap to go back')}
+          >
+            <IconButton icon="arrow-left" size={24} iconColor={colors.text.secondary} style={styles.closeButton}
+                hitSlop={HIT_SLOP}/>
+          </TouchableOpacity>
+          <Text style={styles.title}>Start Focus</Text>
+          <View style={{ width: 40 }} />
+        </View>
+
+        <View style={styles.form}>
+          <Text style={styles.label}>Link to Task (Optional)</Text>
+          <Text style={styles.helperText}>
+            Select a task to track focus time, or start without a task
+          </Text>
+
+          <ScrollView style={styles.taskList} showsVerticalScrollIndicator={false}>
+            {/* No Task Option */}
+            <TouchableOpacity
+              style={[
+                styles.taskOption,
+                !selectedTaskId && styles.taskOptionSelected,
+                {
+                  backgroundColor: !selectedTaskId
+                    ? colors.primary.main + '20'
+                    : colors.background.primary,
+                  borderColor: !selectedTaskId ? colors.primary.main : colors.border.default,
+                },
+              ]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setSelectedTaskId(undefined);
+              }}
+              {...makeButton('No task', 'Double tap to start focus without a task')}
+            >
+              <View style={styles.taskOptionIcon}>
+                <IconButton
+                  icon="timer-outline"
+                  size={24}
+                  iconColor={!selectedTaskId ? colors.primary.main : colors.text.tertiary}
+                  style={styles.iconButton}
+                  hitSlop={HIT_SLOP}/>
+              </View>
+              <View style={styles.taskOptionContent}>
+                <Text
+                  style={[
+                    styles.taskOptionTitle,
+                    { color: !selectedTaskId ? colors.primary.main : colors.text.primary },
+                  ]}
+                >
+                  No Task
+                </Text>
+                <Text style={[styles.taskOptionDescription, { color: colors.text.tertiary }]}>
+                  General focus session
+                </Text>
+              </View>
+              {!selectedTaskId && (
+                <IconButton
+                  icon="check-circle"
+                  size={24}
+                  iconColor={colors.primary.main}
+                  style={styles.iconButton}
+                  hitSlop={HIT_SLOP}/>
+              )}
+            </TouchableOpacity>
+
+            {/* Active Tasks */}
+            {activeTasks.length > 0 ? (
+              activeTasks.map((task) => (
+                <TouchableOpacity
+                  key={task.id}
+                  style={[
+                    styles.taskOption,
+                    selectedTaskId === task.id && styles.taskOptionSelected,
+                    {
+                      backgroundColor:
+                        selectedTaskId === task.id
+                          ? colors.primary.main + '20'
+                          : colors.background.primary,
+                      borderColor:
+                        selectedTaskId === task.id ? colors.primary.main : colors.border.default,
+                    },
+                  ]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setSelectedTaskId(task.id);
+                  }}
+                  {...makeButton(
+                    `Task: ${task.title}`,
+                    'Double tap to link this task to your focus session'
+                  )}
+                >
+                  <View style={styles.taskOptionIcon}>
+                    <IconButton
+                      icon={task.status === 'in_progress' ? 'play-circle' : 'checkbox-marked-circle-outline'}
+                      size={24}
+                      iconColor={
+                        selectedTaskId === task.id ? colors.primary.main : colors.text.tertiary
+                      }
+                      style={styles.iconButton}
+                      hitSlop={HIT_SLOP}/>
+                  </View>
+                  <View style={styles.taskOptionContent}>
+                    <Text
+                      style={[
+                        styles.taskOptionTitle,
+                        {
+                          color:
+                            selectedTaskId === task.id ? colors.primary.main : colors.text.primary,
+                        },
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {task.title}
+                    </Text>
+                    {task.tags && task.tags.length > 0 && (
+                      <Text
+                        style={[styles.taskOptionDescription, { color: colors.text.tertiary }]}
+                        numberOfLines={1}
+                      >
+                        {task.tags.join(', ')}
+                      </Text>
+                    )}
+                  </View>
+                  {selectedTaskId === task.id && (
+                    <IconButton
+                      icon="check-circle"
+                      size={24}
+                      iconColor={colors.primary.main}
+                      style={styles.iconButton}
+                      hitSlop={HIT_SLOP}/>
+                  )}
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View style={styles.emptyTasks}>
+                <Text style={[styles.emptyTasksText, { color: colors.text.tertiary }]}>
+                  No active tasks. Focus session will start without a task.
+                </Text>
+              </View>
+            )}
+          </ScrollView>
+
+          <View style={styles.formActions}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setMode('menu');
+              }}
+              {...makeButton('Cancel', 'Double tap to cancel')}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.submitButton, isSaving && styles.submitButtonDisabled]}
+              onPress={handleStartFocus}
+              disabled={isSaving}
+              {...makeButton('Start Focus', 'Double tap to start focus session', isSaving)}
+            >
+              {isSaving ? (
+                <ActivityIndicator size="small" color={colors.text.primary} />
+              ) : (
+                <Text style={styles.submitButtonText}>Start</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </>
+    );
+  };
+
   return (
     <Modal
       visible={visible}
@@ -386,6 +573,7 @@ export const QuickCaptureSheet: React.FC<QuickCaptureSheetProps> = ({
           {mode === 'menu' && renderMenu()}
           {mode === 'task' && renderTaskForm()}
           {mode === 'expense' && renderExpenseForm()}
+          {mode === 'focus' && renderFocusForm()}
         </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
@@ -533,6 +721,44 @@ const styles = StyleSheet.create({
     fontSize: typography.size.base,
     fontWeight: typography.weight.semibold,
     color: colors.text.primary,
+  },
+  taskList: {
+    maxHeight: 280,
+    marginTop: spacing.md,
+    marginBottom: spacing.md,
+  },
+  taskOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.base,
+    borderRadius: borderRadius.md,
+    borderWidth: 1.5,
+    marginBottom: spacing.sm,
+  },
+  taskOptionSelected: {
+    borderWidth: 2,
+  },
+  taskOptionIcon: {
+    marginRight: spacing.sm,
+  },
+  taskOptionContent: {
+    flex: 1,
+  },
+  taskOptionTitle: {
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    marginBottom: spacing.xs,
+  },
+  taskOptionDescription: {
+    fontSize: typography.size.sm,
+  },
+  emptyTasks: {
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  emptyTasksText: {
+    fontSize: typography.size.sm,
+    textAlign: 'center',
   },
 });
 

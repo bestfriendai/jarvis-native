@@ -25,6 +25,7 @@ import * as tasksDB from '../../database/tasks';
 import * as financeDB from '../../database/finance';
 import * as budgetsDB from '../../database/budgets';
 import * as analyticsDB from '../../database/analytics';
+import * as focusBlocksDB from '../../database/focusBlocks';
 import { MetricCard } from '../../components/MetricCard';
 import { StartControls } from '../../components/StartControls';
 import { TodaysFocusCard } from '../../components/TodaysFocusCard';
@@ -76,23 +77,26 @@ export default function DashboardScreen() {
   const [selectedChartType, setSelectedChartType] = useState<ChartDataType>('tasks');
   const [selectedChartTitle, setSelectedChartTitle] = useState('');
   const [quickCaptureVisible, setQuickCaptureVisible] = useState(false);
+  const [activeTasks, setActiveTasks] = useState<tasksDB.Task[]>([]);
   const insets = useSafeAreaInsets();
 
   // Load dashboard data
   const loadData = useCallback(async () => {
     try {
-      const [metricsData, goalsData, alertsData, focusData, trendsData] = await Promise.all([
+      const [metricsData, goalsData, alertsData, focusData, trendsData, tasksData] = await Promise.all([
         dashboardDB.getTodayMetrics(),
         dashboardDB.getMacroGoals(),
         budgetsDB.getAlertBudgets(),
         dashboardDB.getTodaysFocus(),
         analyticsDB.getDashboardTrendData(7),
+        tasksDB.getTasks({ statuses: ['todo', 'in_progress'], sortField: 'dueDate', sortDirection: 'asc' }),
       ]);
       setMetrics(metricsData);
       setMacroGoals(goalsData);
       setBudgetAlerts(alertsData);
       setTodaysFocus(focusData);
       setTrendData(trendsData);
+      setActiveTasks(tasksData);
     } catch (error) {
       console.error('[Dashboard] Error loading data:', error);
       Alert.alert('Error', 'Failed to load dashboard data');
@@ -169,10 +173,27 @@ export default function DashboardScreen() {
     await loadData();
   };
 
-  const handleStartFocus = async () => {
-    // Navigate to Focus screen
-    // @ts-expect-error - Navigation type compatibility
-    navigation.navigate('Focus');
+  const handleStartFocus = async (taskId?: string) => {
+    try {
+      // Create a default focus block with optional task link
+      const focusBlock = await focusBlocksDB.createFocusBlock({
+        title: taskId ? 'Task Focus Session' : 'Focus Session',
+        durationMinutes: 25,
+        taskId,
+        phoneInMode: false,
+      });
+
+      // Start the focus block immediately
+      await focusBlocksDB.startFocusBlock(focusBlock.id);
+
+      // Navigate to Focus screen to show the active timer
+      // @ts-expect-error - Navigation type compatibility
+      navigation.navigate('Focus');
+    } catch (error) {
+      console.error('[Dashboard] Error starting focus:', error);
+      Alert.alert('Error', 'Failed to start focus session');
+      throw error;
+    }
   };
 
   const handleUndo = async () => {
@@ -485,6 +506,7 @@ export default function DashboardScreen() {
         onQuickTask={handleQuickTask}
         onLogExpense={handleLogExpense}
         onStartFocus={handleStartFocus}
+        tasks={activeTasks}
       />
 
       {/* Snackbar for feedback */}
