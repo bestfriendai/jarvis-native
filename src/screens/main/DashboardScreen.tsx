@@ -15,7 +15,7 @@ import {
   Animated,
   Alert,
 } from 'react-native';
-import { ActivityIndicator, Snackbar, IconButton } from 'react-native-paper';
+import { ActivityIndicator, IconButton } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -35,6 +35,7 @@ import { DashboardCardSkeleton } from '../../components/dashboard/DashboardCardS
 import { DetailedChartModal, ChartDataType } from '../../components/charts/DetailedChartModal';
 import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
 import { QuickCaptureSheet } from '../../components/dashboard/QuickCaptureSheet';
+import * as undoService from '../../services/undo';
 import { navigateToItem, navigateToViewAll } from '../../utils/navigation';
 import { calculatePercentageChange } from '../../utils/chartUtils';
 import { useRefreshControl } from '../../hooks/useRefreshControl';
@@ -66,12 +67,6 @@ export default function DashboardScreen() {
   const [budgetAlerts, setBudgetAlerts] = useState<budgetsDB.BudgetWithSpending[]>([]);
   const [todaysFocus, setTodaysFocus] = useState<dashboardDB.TodaysFocus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [snackbarVisible, setSnackbarVisible] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [lastSavedItem, setLastSavedItem] = useState<{
-    type: 'idea' | 'study' | 'cash';
-    id: string;
-  } | null>(null);
   const [trendData, setTrendData] = useState<analyticsDB.DashboardTrendData | null>(null);
   const [chartModalVisible, setChartModalVisible] = useState(false);
   const [selectedChartType, setSelectedChartType] = useState<ChartDataType>('tasks');
@@ -142,15 +137,21 @@ export default function DashboardScreen() {
   };
 
   const handleQuickTask = async (title: string) => {
-    const task = await tasksDB.createTask({
-      title,
-      tags: ['quick-capture'],
-      priority: 'low',
-    });
-    setLastSavedItem({ type: 'idea', id: task.id });
-    setSnackbarMessage('Task created!');
-    setSnackbarVisible(true);
-    await loadData();
+    await undoService.createTask(
+      {
+        title,
+        tags: ['quick-capture'],
+        priority: 'low',
+      },
+      async (task) => {
+        // On successful creation, refresh dashboard data
+        await loadData();
+      },
+      async () => {
+        // On undo, refresh dashboard data
+        await loadData();
+      }
+    );
   };
 
   const handleLogExpense = async (cashValue: string) => {
@@ -160,17 +161,23 @@ export default function DashboardScreen() {
       throw new Error('Invalid amount');
     }
 
-    const transaction = await financeDB.createTransaction({
-      type: amount >= 0 ? 'income' : 'expense',
-      amount: Math.abs(amount),
-      category: 'Cash Snapshot',
-      date: new Date().toISOString().split('T')[0],
-      description: 'Quick capture from dashboard',
-    });
-    setLastSavedItem({ type: 'cash', id: transaction.id });
-    setSnackbarMessage('Expense logged!');
-    setSnackbarVisible(true);
-    await loadData();
+    await undoService.createTransaction(
+      {
+        type: amount >= 0 ? 'income' : 'expense',
+        amount: Math.abs(amount),
+        category: 'Cash Snapshot',
+        date: new Date().toISOString().split('T')[0],
+        description: 'Quick capture from dashboard',
+      },
+      async (transaction) => {
+        // On successful creation, refresh dashboard data
+        await loadData();
+      },
+      async () => {
+        // On undo, refresh dashboard data
+        await loadData();
+      }
+    );
   };
 
   const handleStartFocus = async (taskId?: string) => {
@@ -196,24 +203,7 @@ export default function DashboardScreen() {
     }
   };
 
-  const handleUndo = async () => {
-    if (!lastSavedItem) return;
-
-    try {
-      if (lastSavedItem.type === 'idea' || lastSavedItem.type === 'study') {
-        await tasksDB.deleteTask(lastSavedItem.id);
-        setSnackbarMessage('Undone!');
-      } else if (lastSavedItem.type === 'cash') {
-        await financeDB.deleteTransaction(lastSavedItem.id);
-        setSnackbarMessage('Undone!');
-      }
-      setLastSavedItem(null);
-      await loadData();
-    } catch (error) {
-      console.error('[Dashboard] Error undoing:', error);
-      Alert.alert('Error', 'Failed to undo');
-    }
-  };
+  // Removed handleUndo - now using undo service with Toast
 
   const handleFocusNavigate = (type: 'task' | 'habit' | 'event', id: string) => {
     // @ts-expect-error - Navigation type compatibility
@@ -509,24 +499,6 @@ export default function DashboardScreen() {
         tasks={activeTasks}
       />
 
-      {/* Snackbar for feedback */}
-      <Snackbar
-        visible={snackbarVisible}
-        onDismiss={() => setSnackbarVisible(false)}
-        duration={4000}
-        action={
-          lastSavedItem
-            ? {
-                label: 'Undo',
-                onPress: handleUndo,
-              }
-            : undefined
-        }
-        style={styles.snackbar}
-      >
-        {snackbarMessage}
-      </Snackbar>
-
       {/* Detailed Chart Modal */}
       <DetailedChartModal
         visible={chartModalVisible}
@@ -650,9 +622,5 @@ const createStyles = (colors: ReturnType<typeof getColors>) => StyleSheet.create
   budgetAlertText: {
     fontSize: typography.size.sm,
     color: colors.text.secondary,
-  },
-  snackbar: {
-    backgroundColor: colors.background.secondary,
-    borderRadius: borderRadius.md,
   },
 });

@@ -433,6 +433,134 @@ export async function deleteTransaction(
 }
 
 // ========================================
+// TASK CREATE OPERATIONS
+// ========================================
+
+/**
+ * Create a task with undo capability
+ * @param taskData - The task data to create
+ * @param onCreated - Callback after successful creation with created task
+ * @param onUndone - Callback after successful undo
+ */
+export async function createTask(
+  taskData: Omit<Parameters<typeof tasksDB.createTask>[0], 'id'>,
+  onCreated?: (task: Task) => void,
+  onUndone?: () => void
+): Promise<Task> {
+  try {
+    // Create task in database
+    const createdTask = await tasksDB.createTask(taskData);
+    console.log(`[UndoService] Task ${createdTask.id} created`);
+
+    // Add to undo queue
+    undoQueue.add<Task>(
+      {
+        id: createdTask.id,
+        type: 'task',
+        data: createdTask,
+        timestamp: Date.now(),
+      },
+      () => {
+        // On timeout expiration (creation becomes permanent)
+        console.log(`[UndoService] Task ${createdTask.id} creation permanent (timeout expired)`);
+      },
+      UNDO_TIMEOUT_MS
+    );
+
+    // Show toast with undo button
+    showUndoToast('Task created', async () => {
+      const taskToUndo = undoQueue.undo<Task>(createdTask.id);
+      if (taskToUndo) {
+        // Delete the created task
+        await tasksDB.deleteTask(taskToUndo.id);
+
+        await performHapticFeedback();
+        console.log(`[UndoService] Task ${createdTask.id} creation undone`);
+
+        onUndone?.();
+
+        Toast.show({
+          type: 'success',
+          text1: 'Task creation undone',
+          visibilityTime: 2000,
+        });
+      }
+    });
+
+    // Notify caller
+    onCreated?.(createdTask);
+    return createdTask;
+  } catch (error) {
+    console.error('[UndoService] Error creating task:', error);
+    throw error;
+  }
+}
+
+// ========================================
+// FINANCE CREATE OPERATIONS
+// ========================================
+
+/**
+ * Create a transaction with undo capability
+ * @param transactionData - The transaction data to create
+ * @param onCreated - Callback after successful creation with created transaction
+ * @param onUndone - Callback after successful undo
+ */
+export async function createTransaction(
+  transactionData: Omit<Parameters<typeof financeDB.createTransaction>[0], 'id'>,
+  onCreated?: (transaction: Transaction) => void,
+  onUndone?: () => void
+): Promise<Transaction> {
+  try {
+    // Create transaction in database
+    const createdTransaction = await financeDB.createTransaction(transactionData);
+    console.log(`[UndoService] Transaction ${createdTransaction.id} created`);
+
+    // Add to undo queue
+    undoQueue.add<Transaction>(
+      {
+        id: createdTransaction.id,
+        type: 'transaction',
+        data: createdTransaction,
+        timestamp: Date.now(),
+      },
+      () => {
+        // On timeout expiration (creation becomes permanent)
+        console.log(`[UndoService] Transaction ${createdTransaction.id} creation permanent (timeout expired)`);
+      },
+      UNDO_TIMEOUT_MS
+    );
+
+    // Show toast with undo button
+    showUndoToast('Transaction logged', async () => {
+      const transactionToUndo = undoQueue.undo<Transaction>(createdTransaction.id);
+      if (transactionToUndo) {
+        // Delete the created transaction
+        await financeDB.deleteTransaction(transactionToUndo.id);
+
+        await performHapticFeedback();
+        console.log(`[UndoService] Transaction ${createdTransaction.id} creation undone`);
+
+        onUndone?.();
+
+        Toast.show({
+          type: 'success',
+          text1: 'Transaction creation undone',
+          visibilityTime: 2000,
+        });
+      }
+    });
+
+    // Notify caller
+    onCreated?.(createdTransaction);
+    return createdTransaction;
+  } catch (error) {
+    console.error('[UndoService] Error creating transaction:', error);
+    throw error;
+  }
+}
+
+// ========================================
 // UTILITY
 // ========================================
 
