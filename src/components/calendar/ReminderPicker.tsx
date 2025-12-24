@@ -6,7 +6,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { colors, typography, spacing, borderRadius } from '../../theme';
+import { typography, spacing, borderRadius, getColors } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
 
 interface ReminderPickerProps {
   value: number | null;
@@ -30,6 +31,9 @@ const REMINDER_OPTIONS: ReminderOption[] = [
 ];
 
 export function ReminderPicker({ value, onChange }: ReminderPickerProps) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+
   return (
     <View style={styles.container}>
       <Text style={styles.label}>Reminder</Text>
@@ -74,7 +78,7 @@ export function ReminderPicker({ value, onChange }: ReminderPickerProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof getColors>) => StyleSheet.create({
   container: {
     marginBottom: spacing.md,
   },
