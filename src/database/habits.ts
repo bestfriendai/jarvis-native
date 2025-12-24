@@ -405,6 +405,24 @@ export async function isHabitCompletedToday(habitId: string): Promise<boolean> {
 }
 
 /**
+ * Get habits that have not been logged today (for streak risk detection)
+ */
+export async function getHabitsNotLoggedToday(): Promise<Habit[]> {
+  const today = new Date().toISOString().split('T')[0];
+
+  const sql = `
+    SELECT h.*
+    FROM habits h
+    LEFT JOIN habit_logs hl ON h.id = hl.habit_id AND hl.date = ?
+    WHERE hl.id IS NULL OR hl.completed = 0
+    ORDER BY h.current_streak DESC
+  `;
+
+  const rows = await executeQuery<HabitRow>(sql, [today]);
+  return rows.map(rowToHabit);
+}
+
+/**
  * Update notes for an existing habit log
  */
 export async function updateHabitLogNotes(

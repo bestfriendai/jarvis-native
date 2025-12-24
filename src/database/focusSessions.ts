@@ -112,6 +112,7 @@ export interface FocusSessionFilters {
   isPomodoro?: boolean;
   dateFrom?: string;
   dateTo?: string;
+  limit?: number;
 }
 
 // ============================================================================
@@ -197,6 +198,12 @@ export async function getFocusSessions(filters?: FocusSessionFilters): Promise<F
   }
 
   sql += ' ORDER BY fs.start_time DESC, fs.created_at DESC';
+
+  // Limit results
+  if (filters?.limit) {
+    sql += ' LIMIT ?';
+    params.push(filters.limit);
+  }
 
   const rows = await executeQuery<FocusSessionRow>(sql, params);
   return rows.map(rowToFocusSession);

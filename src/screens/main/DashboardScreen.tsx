@@ -32,6 +32,7 @@ import { MetricCard } from '../../components/MetricCard';
 import { StartControls } from '../../components/StartControls';
 import { TodaysFocusCard } from '../../components/TodaysFocusCard';
 import { TaskLatencyWidget } from '../../components/dashboard/TaskLatencyWidget';
+import { SmartRecommendations } from '../../components/dashboard/SmartRecommendations';
 import { AppCard, AppButton, EmptyState, LoadingState, LastUpdated } from '../../components/ui';
 import { DashboardCardSkeleton } from '../../components/dashboard/DashboardCardSkeleton';
 import { DetailedChartModal, ChartDataType } from '../../components/charts/DetailedChartModal';
@@ -76,19 +77,21 @@ export default function DashboardScreen() {
   const [quickCaptureVisible, setQuickCaptureVisible] = useState(false);
   const [activeTasks, setActiveTasks] = useState<tasksDB.Task[]>([]);
   const [activeHabits, setActiveHabits] = useState<habitsDB.Habit[]>([]);
+  const [recentFocusSessions, setRecentFocusSessions] = useState<focusSessionsDB.FocusSession[]>([]);
   const insets = useSafeAreaInsets();
 
   // Load dashboard data
   const loadData = useCallback(async () => {
     try {
-      const [metricsData, goalsData, alertsData, focusData, trendsData, tasksData, habitsData] = await Promise.all([
+      const [metricsData, goalsData, alertsData, focusData, trendsData, tasksData, habitsData, focusSessionsData] = await Promise.all([
         dashboardDB.getTodayMetrics(),
         dashboardDB.getMacroGoals(),
         budgetsDB.getAlertBudgets(),
         dashboardDB.getTodaysFocus(),
         analyticsDB.getDashboardTrendData(7),
         tasksDB.getTasks({ statuses: ['todo', 'in_progress'], sortField: 'dueDate', sortDirection: 'asc' }),
-        habitsDB.getHabits(),
+        habitsDB.getHabitsNotLoggedToday(),
+        focusSessionsDB.getFocusSessions({ status: ['completed'], limit: 30 }),
       ]);
       setMetrics(metricsData);
       setMacroGoals(goalsData);
@@ -97,6 +100,7 @@ export default function DashboardScreen() {
       setTrendData(trendsData);
       setActiveTasks(tasksData);
       setActiveHabits(habitsData);
+      setRecentFocusSessions(focusSessionsData);
     } catch (error) {
       console.error('[Dashboard] Error loading data:', error);
       Alert.alert('Error', 'Failed to load dashboard data');
@@ -252,6 +256,16 @@ export default function DashboardScreen() {
     setChartModalVisible(true);
   };
 
+  const handleNavigateToTasks = () => {
+    // @ts-expect-error - Navigation type compatibility
+    navigation.navigate('Tasks');
+  };
+
+  const handleNavigateToBudgets = () => {
+    // @ts-expect-error - Navigation type compatibility
+    navigation.navigate('Finance');
+  };
+
   const calculateMetricPercentageChange = (currentData: number[]): number => {
     if (!currentData || currentData.length < 2) return 0;
     const current = currentData[currentData.length - 1];
@@ -355,6 +369,19 @@ export default function DashboardScreen() {
             />
           </View>
         </View>
+
+        {/* Smart Recommendations */}
+        <SmartRecommendations
+          tasks={activeTasks}
+          habits={activeHabits}
+          budgets={budgetAlerts}
+          focusSessions={recentFocusSessions}
+          completedTasksToday={metrics?.starts || 0}
+          onStartFocus={() => handleStartFocus()}
+          onNavigateToTasks={handleNavigateToTasks}
+          onNavigateToBudgets={handleNavigateToBudgets}
+          onLogHabit={handleLogHabit}
+        />
 
         {/* Today's Focus */}
         {todaysFocus && (
