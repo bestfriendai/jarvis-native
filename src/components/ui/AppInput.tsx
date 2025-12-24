@@ -14,7 +14,8 @@ import {
   ViewStyle,
   TextInputProps,
 } from 'react-native';
-import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
+import { typography, spacing, borderRadius, shadows, getColors } from '../../theme';
 
 interface AppInputProps extends Omit<TextInputProps, 'style'> {
   label?: string;
@@ -42,6 +43,7 @@ export const AppInput: React.FC<AppInputProps> = ({
   onBlur,
   ...textInputProps
 }) => {
+  const { colors } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
   const focusAnim = useRef(new Animated.Value(0)).current;
 
@@ -77,6 +79,8 @@ export const AppInput: React.FC<AppInputProps> = ({
     inputRange: [0, 1],
     outputRange: [0, 0.3],
   });
+
+  const styles = createStyles(colors);
 
   return (
     <View style={[styles.container, containerStyle]}>
@@ -132,7 +136,7 @@ export const AppInput: React.FC<AppInputProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof getColors>) => StyleSheet.create({
   container: {
     marginBottom: spacing.base,
   },

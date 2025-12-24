@@ -11,7 +11,8 @@ import {
   Animated,
   ViewStyle,
 } from 'react-native';
-import { colors, typography, spacing, borderRadius, animation } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
+import { typography, spacing, borderRadius, animation, getColors } from '../../theme';
 
 type ChipVariant = 'default' | 'success' | 'warning' | 'error' | 'info';
 
@@ -32,6 +33,7 @@ export const AppChip: React.FC<AppChipProps> = ({
   compact = false,
   style,
 }) => {
+  const { colors } = useTheme();
   const [scaleValue] = useState(new Animated.Value(1));
 
   const handlePressIn = useCallback(() => {
@@ -92,6 +94,8 @@ export const AppChip: React.FC<AppChipProps> = ({
     }
   };
 
+  const styles = createStyles(colors);
+
   const content = (
     <Animated.View
       style={[
@@ -131,7 +135,7 @@ export const AppChip: React.FC<AppChipProps> = ({
   return content;
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof getColors>) => StyleSheet.create({
   chip: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,

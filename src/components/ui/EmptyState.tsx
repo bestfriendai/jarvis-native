@@ -5,7 +5,8 @@
 
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ViewStyle, Animated } from 'react-native';
-import { colors, typography, spacing } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
+import { typography, spacing, getColors } from '../../theme';
 import { AppButton } from './AppButton';
 
 interface EmptyStateProps {
@@ -27,6 +28,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   style,
   compact = false,
 }) => {
+  const { colors } = useTheme();
   const bounceAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -52,6 +54,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     inputRange: [0, 1],
     outputRange: [0.5, 1],
   });
+
+  const styles = createStyles(colors);
 
   return (
     <Animated.View style={[styles.container, compact && styles.compact, style, { opacity: fadeAnim }]}>
@@ -85,7 +89,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof getColors>) => StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',

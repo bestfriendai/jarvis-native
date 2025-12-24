@@ -12,7 +12,8 @@ import {
   ViewStyle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, spacing, borderRadius, shadows, animation } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
+import { spacing, borderRadius, shadows, animation, getColors } from '../../theme';
 
 type CardVariant = 'default' | 'elevated' | 'outlined' | 'filled' | 'glass';
 
@@ -37,6 +38,7 @@ export const AppCard: React.FC<AppCardProps> = ({
   footer,
   noPadding = false,
 }) => {
+  const { colors } = useTheme();
   const [scaleValue] = useState(new Animated.Value(1));
 
   const handlePressIn = useCallback(() => {
@@ -60,6 +62,8 @@ export const AppCard: React.FC<AppCardProps> = ({
       }).start();
     }
   }, [scaleValue, onPress]);
+
+  const styles = createStyles(colors);
 
   const getCardStyles = (): ViewStyle[] => {
     const baseStyles: ViewStyle[] = [styles.card];
@@ -143,7 +147,7 @@ export const AppCard: React.FC<AppCardProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof getColors>) => StyleSheet.create({
   card: {
     borderRadius: borderRadius.lg,
     overflow: 'hidden',

@@ -14,7 +14,8 @@ import {
 import { IconButton } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { colors, spacing, shadows, animation } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
+import { spacing, shadows, animation, getColors } from '../../theme';
 import { HIT_SLOP } from '../../constants/ui';
 
 interface FloatingActionButtonProps {
@@ -40,6 +41,7 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   accessibilityLabel,
   accessibilityHint,
 }) => {
+  const { colors } = useTheme();
   const [scaleValue] = useState(new Animated.Value(1));
 
   const handlePressIn = useCallback(() => {
@@ -80,6 +82,8 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   const gradientColors = (variant === 'primary'
       ? colors.gradient.primary
       : colors.gradient.cyan) as any;
+
+  const styles = createStyles(colors);
 
   return (
     <Animated.View
@@ -122,9 +126,9 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
           <IconButton
             icon={icon}
             size={iconSize}
-            iconColor={colors.text.primary}
+            iconColor={colors.primary.contrast}
             style={styles.iconButton}
-          
+
                 hitSlop={HIT_SLOP}/>
         </LinearGradient>
       </TouchableOpacity>
@@ -132,7 +136,7 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof getColors>) => StyleSheet.create({
   container: {
     position: 'absolute',
     zIndex: 1000,

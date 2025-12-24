@@ -12,7 +12,8 @@ import {
   Text,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { colors, typography, spacing, borderRadius } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
+import { typography, spacing, borderRadius, getColors } from '../../theme';
 import { haptic } from '../../utils/haptics';
 import { HIT_SLOP } from '../../constants/ui';
 
@@ -33,12 +34,15 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   showResultCount = true,
   autoFocus = false,
 }) => {
+  const { colors } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
 
   const handleClear = () => {
     haptic.light();
     onChangeText('');
   };
+
+  const styles = createStyles(colors);
 
   return (
     <View style={styles.container}>
@@ -89,7 +93,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof getColors>) => StyleSheet.create({
   container: {
     marginBottom: spacing.md,
   },

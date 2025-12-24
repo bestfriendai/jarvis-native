@@ -5,7 +5,8 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, ViewStyle, DimensionValue } from 'react-native';
-import { colors, typography, spacing } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
+import { typography, spacing, getColors } from '../../theme';
 
 interface LoadingStateProps {
   message?: string;
@@ -20,6 +21,9 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
   style,
   fullScreen = false,
 }) => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+
   return (
     <View style={[styles.container, fullScreen && styles.fullScreen, style]}>
       <ActivityIndicator size={size} color={colors.primary.main} />
@@ -42,6 +46,9 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   borderRadius = 8,
   style,
 }) => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+
   return (
     <View
       style={[
@@ -59,6 +66,9 @@ interface CardSkeletonProps {
 }
 
 export const CardSkeleton: React.FC<CardSkeletonProps> = ({ style }) => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+
   return (
     <View style={[styles.cardSkeleton, style]}>
       <View style={styles.cardSkeletonHeader}>
@@ -74,7 +84,7 @@ export const CardSkeleton: React.FC<CardSkeletonProps> = ({ style }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof getColors>) => StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
