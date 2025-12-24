@@ -4,7 +4,7 @@
  * PRODUCTION-READY with proper safe areas and typography
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -15,6 +15,7 @@ import {
   TextInput as RNTextInput,
   TouchableOpacity,
   ScrollView,
+  Modal,
 } from 'react-native';
 import {
   TextInput,
@@ -26,6 +27,7 @@ import {
   Chip,
 } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import * as Speech from 'expo-speech';
 import { ChatMessage } from '../../types';
 import { aiApi } from '../../services/ai.api';
@@ -33,6 +35,8 @@ import { EmptyState } from '../../components/ui';
 import { typography, spacing, borderRadius, textStyles, shadows, getColors } from '../../theme';
 import { useTheme } from '../../theme/ThemeProvider';
 import { HIT_SLOP } from '../../constants/ui';
+import * as aiChatDB from '../../database/aiChat';
+import * as storage from '../../services/storage';
 
 const QUICK_PROMPTS = [
   { id: '1', icon: '✅', label: 'What should I focus on today?', prompt: 'Based on my tasks and schedule, what should I focus on today?' },
@@ -49,31 +53,138 @@ export default function AIChatScreen() {
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | undefined>();
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<aiChatDB.AIConversation[]>([]);
+  const [showConversationList, setShowConversationList] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const insets = useSafeAreaInsets();
+
+  // Load current conversation from storage on mount
+  useEffect(() => {
+    loadCurrentConversation();
+  }, []);
+
+  // Reload conversations when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadConversations();
+    }, [])
+  );
+
+  const loadCurrentConversation = async () => {
+    try {
+      const savedConvId = await storage.getItem('current_conversation_id');
+      if (savedConvId) {
+        await loadConversation(savedConvId);
+      }
+    } catch (error) {
+      console.error('Error loading current conversation:', error);
+    }
+  };
+
+  const loadConversations = async () => {
+    try {
+      const convs = await aiChatDB.getConversations();
+      setConversations(convs);
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+    }
+  };
+
+  const loadConversation = async (conversationId: string) => {
+    try {
+      const msgs = await aiChatDB.getConversationMessages(conversationId);
+      const chatMessages: ChatMessage[] = msgs.map(m => ({
+        id: m.id,
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+        timestamp: m.timestamp,
+      }));
+      setMessages(chatMessages);
+      setCurrentConversationId(conversationId);
+      await storage.setItem('current_conversation_id', conversationId);
+    } catch (error) {
+      console.error('Error loading conversation:', error);
+      Alert.alert('Error', 'Failed to load conversation');
+    }
+  };
+
+  const startNewConversation = async () => {
+    try {
+      const newConv = await aiChatDB.createConversation();
+      setMessages([]);
+      setCurrentConversationId(newConv.id);
+      setSessionId(undefined);
+      await storage.setItem('current_conversation_id', newConv.id);
+      await loadConversations();
+    } catch (error) {
+      console.error('Error creating new conversation:', error);
+      Alert.alert('Error', 'Failed to create new conversation');
+    }
+  };
 
   const handleSend = async () => {
     if (!inputText.trim() || isLoading) return;
 
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: inputText.trim(),
-      timestamp: new Date().toISOString(),
-    };
+    // Ensure we have a conversation
+    let convId = currentConversationId;
+    if (!convId) {
+      try {
+        const newConv = await aiChatDB.createConversation();
+        convId = newConv.id;
+        setCurrentConversationId(convId);
+        await storage.setItem('current_conversation_id', convId);
+        await loadConversations();
+      } catch (error) {
+        console.error('Error creating conversation:', error);
+        Alert.alert('Error', 'Failed to create conversation');
+        return;
+      }
+    }
 
-    setMessages((prev) => [...prev, userMessage]);
+    const userMessageContent = inputText.trim();
     setInputText('');
     setIsLoading(true);
 
     try {
+      // Save user message to database
+      const userMsg = await aiChatDB.addMessage(convId, 'user', userMessageContent);
+
+      const userMessage: ChatMessage = {
+        id: userMsg.id,
+        role: 'user',
+        content: userMsg.content,
+        timestamp: userMsg.timestamp,
+      };
+
+      setMessages((prev) => [...prev, userMessage]);
+
+      // Get AI response
       const response = await aiApi.chat({
-        message: userMessage.content,
+        message: userMessageContent,
         sessionId,
       });
 
       setSessionId(response.sessionId);
-      setMessages((prev) => [...prev, response.message]);
+
+      // Save assistant message to database
+      const assistantMsg = await aiChatDB.addMessage(
+        convId,
+        'assistant',
+        response.message.content
+      );
+
+      const assistantMessage: ChatMessage = {
+        id: assistantMsg.id,
+        role: 'assistant',
+        content: assistantMsg.content,
+        timestamp: assistantMsg.timestamp,
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
+
+      // Reload conversations to update titles/timestamps
+      await loadConversations();
 
       // Scroll to bottom
       setTimeout(() => {
@@ -145,6 +256,51 @@ export default function AIChatScreen() {
     );
   };
 
+  const handleDeleteConversation = async (convId: string) => {
+    Alert.alert(
+      'Delete Conversation',
+      'Are you sure you want to delete this conversation? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await aiChatDB.deleteConversation(convId);
+              if (currentConversationId === convId) {
+                setMessages([]);
+                setCurrentConversationId(null);
+                setSessionId(undefined);
+                await storage.removeItem('current_conversation_id');
+              }
+              await loadConversations();
+            } catch (error) {
+              console.error('Error deleting conversation:', error);
+              Alert.alert('Error', 'Failed to delete conversation');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+
+    if (diffInHours < 24) {
+      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    } else if (diffInHours < 48) {
+      return 'Yesterday';
+    } else if (diffInHours < 168) {
+      return date.toLocaleDateString('en-US', { weekday: 'short' });
+    } else {
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+  };
+
   // Create styles based on current theme colors
   const styles = createStyles(colors);
 
@@ -155,6 +311,24 @@ export default function AIChatScreen() {
       keyboardVerticalOffset={100}
     >
       <View style={styles.container}>
+        {/* Header with conversation controls */}
+        <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+          <IconButton
+            icon="history"
+            size={24}
+            iconColor={colors.text.primary}
+            onPress={() => setShowConversationList(true)}
+            hitSlop={HIT_SLOP}
+          />
+          <Text style={styles.headerTitle}>Jarvis AI</Text>
+          <IconButton
+            icon="plus"
+            size={24}
+            iconColor={colors.text.primary}
+            onPress={startNewConversation}
+            hitSlop={HIT_SLOP}
+          />
+        </View>
         {messages.length === 0 ? (
           <ScrollView
             style={styles.emptyScrollView}
@@ -240,6 +414,79 @@ export default function AIChatScreen() {
             </Text>
           </View>
         )}
+
+        {/* Conversation History Modal */}
+        <Modal
+          visible={showConversationList}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowConversationList(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, spacing.base) }]}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Conversations</Text>
+                <IconButton
+                  icon="close"
+                  onPress={() => setShowConversationList(false)}
+                  iconColor={colors.text.tertiary}
+                  hitSlop={HIT_SLOP}
+                />
+              </View>
+
+              <ScrollView style={styles.conversationList}>
+                {conversations.length === 0 ? (
+                  <EmptyState
+                    icon="💬"
+                    title="No conversations yet"
+                    description="Start a new conversation to chat with Jarvis"
+                  />
+                ) : (
+                  conversations.map((conv) => {
+                    const isActive = conv.id === currentConversationId;
+                    return (
+                      <TouchableOpacity
+                        key={conv.id}
+                        style={[
+                          styles.conversationItem,
+                          isActive && styles.conversationItemActive,
+                        ]}
+                        onPress={() => {
+                          loadConversation(conv.id);
+                          setShowConversationList(false);
+                        }}
+                        onLongPress={() => handleDeleteConversation(conv.id)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.conversationInfo}>
+                          <Text
+                            style={[
+                              styles.conversationTitle,
+                              isActive && styles.conversationTitleActive,
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {conv.title}
+                          </Text>
+                          <Text style={styles.conversationTime}>
+                            {formatTimestamp(conv.updatedAt)}
+                          </Text>
+                        </View>
+                        <IconButton
+                          icon="delete"
+                          size={20}
+                          iconColor={colors.text.tertiary}
+                          onPress={() => handleDeleteConversation(conv.id)}
+                          hitSlop={HIT_SLOP}
+                        />
+                      </TouchableOpacity>
+                    );
+                  })
+                )}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       </View>
     </KeyboardAvoidingView>
   );
@@ -386,5 +633,79 @@ const createStyles = (colors: ReturnType<typeof getColors>) => StyleSheet.create
   loadingText: {
     ...textStyles.caption,
     marginLeft: spacing.md,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.sm,
+    paddingBottom: spacing.sm,
+    backgroundColor: colors.background.primary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.default,
+  },
+  headerTitle: {
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.primary,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: colors.background.primary,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    maxHeight: '80%',
+    ...shadows.lg,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.default,
+  },
+  modalTitle: {
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.primary,
+  },
+  conversationList: {
+    flex: 1,
+  },
+  conversationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.base,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.subtle,
+  },
+  conversationItemActive: {
+    backgroundColor: colors.primary.light,
+  },
+  conversationInfo: {
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  conversationTitle: {
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.medium,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
+  },
+  conversationTitleActive: {
+    color: colors.primary.main,
+    fontWeight: typography.weight.semibold,
+  },
+  conversationTime: {
+    fontSize: typography.size.sm,
+    color: colors.text.tertiary,
   },
 });

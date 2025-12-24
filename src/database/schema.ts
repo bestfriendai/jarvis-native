@@ -215,6 +215,28 @@ export const CREATE_TABLES = {
       updated_at TEXT NOT NULL
     );
   `,
+
+  ai_conversations: `
+    CREATE TABLE IF NOT EXISTS ai_conversations (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      synced INTEGER DEFAULT 0
+    );
+  `,
+
+  ai_messages: `
+    CREATE TABLE IF NOT EXISTS ai_messages (
+      id TEXT PRIMARY KEY,
+      conversation_id TEXT NOT NULL,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      timestamp TEXT NOT NULL,
+      synced INTEGER DEFAULT 0,
+      FOREIGN KEY (conversation_id) REFERENCES ai_conversations(id) ON DELETE CASCADE
+    );
+  `,
 };
 
 /**
@@ -251,12 +273,18 @@ export const CREATE_INDEXES = {
   pomodoro_sessions_task: 'CREATE INDEX IF NOT EXISTS idx_pomodoro_sessions_task ON pomodoro_sessions(task_id);',
   pomodoro_sessions_status: 'CREATE INDEX IF NOT EXISTS idx_pomodoro_sessions_status ON pomodoro_sessions(status);',
   pomodoro_sessions_started_at: 'CREATE INDEX IF NOT EXISTS idx_pomodoro_sessions_started_at ON pomodoro_sessions(started_at);',
+
+  ai_messages_conversation: 'CREATE INDEX IF NOT EXISTS idx_ai_messages_conversation ON ai_messages(conversation_id);',
+  ai_messages_timestamp: 'CREATE INDEX IF NOT EXISTS idx_ai_messages_timestamp ON ai_messages(timestamp);',
+  ai_conversations_updated_at: 'CREATE INDEX IF NOT EXISTS idx_ai_conversations_updated_at ON ai_conversations(updated_at);',
 };
 
 /**
  * Drop all tables (for reset/testing)
  */
 export const DROP_TABLES = [
+  'DROP TABLE IF EXISTS ai_messages',
+  'DROP TABLE IF EXISTS ai_conversations',
   'DROP TABLE IF EXISTS pomodoro_sessions',
   'DROP TABLE IF EXISTS pomodoro_settings',
   'DROP TABLE IF EXISTS focus_blocks',
