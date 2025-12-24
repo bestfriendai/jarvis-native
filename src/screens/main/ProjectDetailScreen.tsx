@@ -23,7 +23,8 @@ import * as tasksDB from '../../database/tasks';
 import type { Project } from '../../database/projects';
 import type { Task, TaskStatus } from '../../database/tasks';
 import { ProjectFormModal } from '../../components/ProjectFormModal';
-import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
+import { typography, spacing, borderRadius, shadows, getColors } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
 import { HIT_SLOP } from '../../constants/ui';
 
 type RootStackParamList = {
@@ -35,6 +36,7 @@ type ProjectDetailRouteProp = RouteProp<RootStackParamList, 'ProjectDetail'>;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function ProjectDetailScreen() {
+  const { colors } = useTheme();
   const route = useRoute<ProjectDetailRouteProp>();
   const navigation = useNavigation<NavigationProp>();
   const { projectId } = route.params;
@@ -126,6 +128,9 @@ export default function ProjectDetailScreen() {
         return 'To Do';
     }
   };
+
+  // Create styles based on current theme colors
+  const styles = createStyles(colors);
 
   if (!project) {
     return (
@@ -355,7 +360,7 @@ export default function ProjectDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof getColors>) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.primary,

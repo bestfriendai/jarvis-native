@@ -22,7 +22,8 @@ import type { Project } from '../../database/projects';
 import { ProjectCard } from '../../components/ProjectCard';
 import { ProjectFormModal } from '../../components/ProjectFormModal';
 import { LastUpdated, EmptyState } from '../../components/ui';
-import { colors, typography, spacing, borderRadius } from '../../theme';
+import { typography, spacing, borderRadius, getColors } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
 import { haptic } from '../../utils/haptics';
 import { confirmations, alertSuccess, alertError } from '../../utils/dialogs';
 import { HIT_SLOP, HIT_SLOP_LARGE } from '../../constants/ui';
@@ -41,6 +42,7 @@ type RootStackParamList = {
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function ProjectsScreen() {
+  const { colors } = useTheme();
   const navigation = useNavigation<NavigationProp>();
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
@@ -124,6 +126,9 @@ export default function ProjectsScreen() {
 
   const activeProjects = filteredProjects.filter((p) => p.status === 'active');
   const archivedProjects = filteredProjects.filter((p) => p.status === 'archived');
+
+  // Create styles based on current theme colors
+  const styles = createStyles(colors);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -279,7 +284,7 @@ export default function ProjectsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof getColors>) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.primary,

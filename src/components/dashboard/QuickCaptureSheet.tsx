@@ -21,7 +21,8 @@ import {
 } from 'react-native';
 import { IconButton, ActivityIndicator } from 'react-native-paper';
 import * as Haptics from 'expo-haptics';
-import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
+import { typography, spacing, borderRadius, shadows, getColors } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
 import { makeButton, makeTextInput, announceForAccessibility } from '../../utils/accessibility';
 import { HIT_SLOP } from '../../constants/ui';
 import { Task } from '../../database/tasks';
@@ -56,6 +57,7 @@ export const QuickCaptureSheet: React.FC<QuickCaptureSheetProps> = ({
   tasks = [],
   habits = [],
 }) => {
+  const { colors } = useTheme();
   const [slideAnim] = useState(new Animated.Value(SCREEN_HEIGHT));
   const [overlayOpacity] = useState(new Animated.Value(0));
   const [mode, setMode] = useState<CaptureMode>('menu');
@@ -921,6 +923,9 @@ export const QuickCaptureSheet: React.FC<QuickCaptureSheetProps> = ({
     );
   };
 
+  // Create styles based on current theme colors
+  const styles = createStyles(colors);
+
   return (
     <Modal
       visible={visible}
@@ -966,7 +971,7 @@ export const QuickCaptureSheet: React.FC<QuickCaptureSheetProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof getColors>) => StyleSheet.create({
   container: {
     flex: 1,
   },
