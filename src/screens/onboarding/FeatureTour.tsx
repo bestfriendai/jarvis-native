@@ -29,44 +29,36 @@ interface Feature {
 
 const FEATURES: Feature[] = [
   {
-    id: 'tasks',
-    icon: '✓',
-    title: 'Task Management',
+    id: 'welcome',
+    icon: '👋',
+    title: 'Welcome to Jarvis!',
     description:
-      'Create, organize, and track your tasks. Set priorities, due dates, and group them into projects for better organization.',
-    color: '#007AFF',
+      'Your personal command center for productivity, habits, and life tracking. Everything you need in one streamlined app.',
+    color: '#10E87F',
   },
   {
-    id: 'habits',
-    icon: '🎯',
-    title: 'Habit Tracking',
+    id: 'navigation',
+    icon: '🧭',
+    title: 'Simplified Navigation',
     description:
-      'Build better habits with daily, weekly, or monthly tracking. Visualize your streaks and stay motivated with progress charts.',
-    color: '#34C759',
+      'Five intuitive tabs: Home for your dashboard, Tasks for to-dos, Focus for deep work, Track for habits & calendar, and More for settings.',
+    color: '#00E5FF',
   },
   {
-    id: 'calendar',
-    icon: '📅',
-    title: 'Calendar & Events',
+    id: 'quick-actions',
+    icon: '⚡',
+    title: 'Quick Capture',
     description:
-      'Schedule events, set reminders, and manage your time effectively. View your schedule at a glance with month and day views.',
-    color: '#FF9500',
+      'Tap the + button anytime to quickly add tasks, log expenses, create events, start focus sessions, or track habits.',
+    color: '#B388FF',
   },
   {
-    id: 'finance',
-    icon: '💰',
-    title: 'Finance Tracking',
+    id: 'ready',
+    icon: '🚀',
+    title: "You're All Set!",
     description:
-      'Track income, expenses, and budgets. Monitor your assets, liabilities, and get insights into your spending patterns.',
-    color: '#32ADE6',
-  },
-  {
-    id: 'dashboard',
-    icon: '📊',
-    title: 'Personal Dashboard',
-    description:
-      "See all your important metrics in one place. Track today's focus, habits, upcoming events, and financial overview.",
-    color: '#5856D6',
+      'Start exploring Jarvis and make it your own. Track what matters, build better habits, and stay focused on your goals.',
+    color: '#FF4081',
   },
 ];
 

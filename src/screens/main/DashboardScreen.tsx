@@ -27,6 +27,7 @@ import * as financeDB from '../../database/finance';
 import * as budgetsDB from '../../database/budgets';
 import * as analyticsDB from '../../database/analytics';
 import * as focusSessionsDB from '../../database/focusSessions';
+import * as calendarDB from '../../database/calendar';
 import { haptic } from '../../utils/haptics';
 import { MetricCard } from '../../components/MetricCard';
 import { StartControls } from '../../components/StartControls';
@@ -247,6 +248,24 @@ export default function DashboardScreen() {
     } catch (error) {
       console.error('[Dashboard] Error logging habit:', error);
       Alert.alert('Error', 'Failed to log habit');
+    }
+  };
+
+  // Quick event creation from dashboard
+  const handleCreateEvent = async (title: string, startTime: Date, endTime: Date) => {
+    try {
+      haptic.success();
+      await calendarDB.createEvent({
+        title,
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        isAllDay: false,
+      });
+      announceForAccessibility('Event created');
+      await loadData();
+    } catch (error) {
+      console.error('[Dashboard] Error creating event:', error);
+      Alert.alert('Error', 'Failed to create event');
     }
   };
 
@@ -556,6 +575,7 @@ export default function DashboardScreen() {
         onLogExpense={handleLogExpense}
         onStartFocus={handleStartFocus}
         onLogHabit={handleLogHabit}
+        onCreateEvent={handleCreateEvent}
         tasks={activeTasks}
         habits={activeHabits}
       />

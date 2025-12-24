@@ -26,6 +26,7 @@ import { makeButton, makeTextInput, announceForAccessibility } from '../../utils
 import { HIT_SLOP } from '../../constants/ui';
 import { Task } from '../../database/tasks';
 import { Habit } from '../../database/habits';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SHEET_HEIGHT = 520;
@@ -37,11 +38,12 @@ interface QuickCaptureSheetProps {
   onLogExpense: (amount: string) => Promise<void>;
   onStartFocus: (taskId?: string) => Promise<void>;
   onLogHabit?: (habitId: string) => Promise<void>;
+  onCreateEvent?: (title: string, startTime: Date, endTime: Date) => Promise<void>;
   tasks?: Task[];
   habits?: Habit[];
 }
 
-type CaptureMode = 'menu' | 'task' | 'expense' | 'focus' | 'habit';
+type CaptureMode = 'menu' | 'task' | 'expense' | 'focus' | 'habit' | 'event';
 
 export const QuickCaptureSheet: React.FC<QuickCaptureSheetProps> = ({
   visible,
@@ -50,6 +52,7 @@ export const QuickCaptureSheet: React.FC<QuickCaptureSheetProps> = ({
   onLogExpense,
   onStartFocus,
   onLogHabit,
+  onCreateEvent,
   tasks = [],
   habits = [],
 }) => {
@@ -62,6 +65,13 @@ export const QuickCaptureSheet: React.FC<QuickCaptureSheetProps> = ({
   const [selectedHabitId, setSelectedHabitId] = useState<string | undefined>();
   const [isSaving, setIsSaving] = useState(false);
 
+  // Event form state
+  const [eventTitle, setEventTitle] = useState('');
+  const [eventStartTime, setEventStartTime] = useState(new Date());
+  const [eventEndTime, setEventEndTime] = useState(new Date(Date.now() + 60 * 60 * 1000)); // 1 hour later
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
+
   useEffect(() => {
     if (visible) {
       setMode('menu');
@@ -69,6 +79,9 @@ export const QuickCaptureSheet: React.FC<QuickCaptureSheetProps> = ({
       setExpenseAmount('');
       setSelectedTaskId(undefined);
       setSelectedHabitId(undefined);
+      setEventTitle('');
+      setEventStartTime(new Date());
+      setEventEndTime(new Date(Date.now() + 60 * 60 * 1000));
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
       Animated.parallel([
@@ -175,6 +188,24 @@ export const QuickCaptureSheet: React.FC<QuickCaptureSheetProps> = ({
     }
   };
 
+  const handleEventSubmit = async () => {
+    if (!eventTitle.trim() || !onCreateEvent || isSaving) return;
+
+    setIsSaving(true);
+    try {
+      await onCreateEvent(eventTitle.trim(), eventStartTime, eventEndTime);
+      announceForAccessibility('Event created successfully');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      handleClose();
+    } catch (error) {
+      console.error('Error creating event:', error);
+      announceForAccessibility('Failed to create event');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const renderMenu = () => (
     <>
       <View style={styles.header}>
@@ -266,6 +297,29 @@ export const QuickCaptureSheet: React.FC<QuickCaptureSheetProps> = ({
             <View style={styles.menuContent}>
               <Text style={styles.menuTitle}>Log Habit</Text>
               <Text style={styles.menuDescription}>Record a habit completion</Text>
+            </View>
+            <IconButton icon="chevron-right" size={20} iconColor={colors.text.tertiary} style={styles.chevron}
+                hitSlop={HIT_SLOP}/>
+          </TouchableOpacity>
+        )}
+
+        {onCreateEvent && (
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setMode('event');
+            }}
+            activeOpacity={0.7}
+            {...makeButton('Quick Event', 'Double tap to create a quick event')}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: colors.accent.orange + '20' }]}>
+              <IconButton icon="calendar-plus" size={28} iconColor={colors.accent.orange} style={styles.iconButton}
+                  hitSlop={HIT_SLOP}/>
+            </View>
+            <View style={styles.menuContent}>
+              <Text style={styles.menuTitle}>Quick Event</Text>
+              <Text style={styles.menuDescription}>Schedule a calendar event</Text>
             </View>
             <IconButton icon="chevron-right" size={20} iconColor={colors.text.tertiary} style={styles.chevron}
                 hitSlop={HIT_SLOP}/>
@@ -721,6 +775,152 @@ export const QuickCaptureSheet: React.FC<QuickCaptureSheetProps> = ({
     );
   };
 
+  const renderEventForm = () => {
+    const formatTime = (date: Date) => {
+      return date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+    };
+
+    const formatDate = (date: Date) => {
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    };
+
+    return (
+      <>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setMode('menu');
+            }}
+            {...makeButton('Back', 'Double tap to go back')}
+          >
+            <IconButton icon="arrow-left" size={24} iconColor={colors.text.secondary} style={styles.closeButton}
+                hitSlop={HIT_SLOP}/>
+          </TouchableOpacity>
+          <Text style={styles.title}>Quick Event</Text>
+          <View style={{ width: 40 }} />
+        </View>
+
+        <View style={styles.form}>
+          <Text style={styles.label}>Event Title</Text>
+          <TextInput
+            value={eventTitle}
+            onChangeText={setEventTitle}
+            placeholder="What's the event?"
+            placeholderTextColor={colors.text.placeholder}
+            style={styles.input}
+            autoFocus
+            returnKeyType="done"
+            {...makeTextInput('Event title', eventTitle, "What's the event?")}
+          />
+
+          <Text style={[styles.label, { marginTop: spacing.base }]}>Start Time</Text>
+          <TouchableOpacity
+            style={styles.dateTimeButton}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setShowStartPicker(true);
+            }}
+            {...makeButton('Start time', 'Double tap to select start time')}
+          >
+            <IconButton icon="clock-outline" size={20} iconColor={colors.text.tertiary} style={styles.iconButton}
+                hitSlop={HIT_SLOP}/>
+            <Text style={styles.dateTimeText}>
+              {formatDate(eventStartTime)} at {formatTime(eventStartTime)}
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={[styles.label, { marginTop: spacing.base }]}>End Time</Text>
+          <TouchableOpacity
+            style={styles.dateTimeButton}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setShowEndPicker(true);
+            }}
+            {...makeButton('End time', 'Double tap to select end time')}
+          >
+            <IconButton icon="clock-outline" size={20} iconColor={colors.text.tertiary} style={styles.iconButton}
+                hitSlop={HIT_SLOP}/>
+            <Text style={styles.dateTimeText}>
+              {formatDate(eventEndTime)} at {formatTime(eventEndTime)}
+            </Text>
+          </TouchableOpacity>
+
+          {showStartPicker && (
+            <DateTimePicker
+              value={eventStartTime}
+              mode="datetime"
+              display="default"
+              onChange={(event, selectedDate) => {
+                setShowStartPicker(Platform.OS === 'ios');
+                if (selectedDate) {
+                  setEventStartTime(selectedDate);
+                  // Auto-adjust end time if it's before start time
+                  if (selectedDate >= eventEndTime) {
+                    setEventEndTime(new Date(selectedDate.getTime() + 60 * 60 * 1000));
+                  }
+                }
+              }}
+            />
+          )}
+
+          {showEndPicker && (
+            <DateTimePicker
+              value={eventEndTime}
+              mode="datetime"
+              display="default"
+              minimumDate={eventStartTime}
+              onChange={(event, selectedDate) => {
+                setShowEndPicker(Platform.OS === 'ios');
+                if (selectedDate) {
+                  setEventEndTime(selectedDate);
+                }
+              }}
+            />
+          )}
+
+          <View style={styles.formActions}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setMode('menu');
+              }}
+              {...makeButton('Cancel', 'Double tap to cancel')}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.submitButton,
+                { backgroundColor: colors.accent.orange },
+                (!eventTitle.trim() || isSaving) && styles.submitButtonDisabled
+              ]}
+              onPress={handleEventSubmit}
+              disabled={!eventTitle.trim() || isSaving}
+              {...makeButton('Create Event', 'Double tap to create event', !eventTitle.trim() || isSaving)}
+            >
+              {isSaving ? (
+                <ActivityIndicator size="small" color={colors.text.primary} />
+              ) : (
+                <Text style={styles.submitButtonText}>Create</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </>
+    );
+  };
+
   return (
     <Modal
       visible={visible}
@@ -759,6 +959,7 @@ export const QuickCaptureSheet: React.FC<QuickCaptureSheetProps> = ({
           {mode === 'expense' && renderExpenseForm()}
           {mode === 'focus' && renderFocusForm()}
           {mode === 'habit' && renderHabitForm()}
+          {mode === 'event' && renderEventForm()}
         </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
@@ -944,6 +1145,21 @@ const styles = StyleSheet.create({
   emptyTasksText: {
     fontSize: typography.size.sm,
     textAlign: 'center',
+  },
+  dateTimeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background.primary,
+    borderRadius: borderRadius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border.default,
+    padding: spacing.base,
+    gap: spacing.sm,
+  },
+  dateTimeText: {
+    fontSize: typography.size.base,
+    color: colors.text.primary,
+    flex: 1,
   },
 });
 
