@@ -14,7 +14,7 @@ import {
   Text,
   SectionList,
 } from 'react-native';
-import { IconButton, SegmentedButtons, FAB } from 'react-native-paper';
+import { IconButton, SegmentedButtons } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../hooks/useTheme';
 import { usePhoneInMode } from '../../hooks/usePhoneInMode';
@@ -31,7 +31,7 @@ import { PhoneInModal } from '../../components/focus/PhoneInModal';
 import { FocusBlockForm } from '../../components/focus/FocusBlockForm';
 import { FocusAnalytics } from '../../components/focus/FocusAnalytics';
 import { QuickStartPanel } from '../../components/focus/QuickStartPanel';
-import { EmptyState, LoadingState } from '../../components/ui';
+import { EmptyState, LoadingState, FloatingActionButton } from '../../components/ui';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { typography, spacing, borderRadius, shadows } from '../../theme';
 import { haptic } from '../../utils/haptics';
@@ -618,20 +618,15 @@ export default function FocusScreen() {
       {renderContent()}
 
       {/* FAB */}
-      <FAB
+      <FloatingActionButton
         icon="plus"
-        style={[
-          styles.fab,
-          {
-            backgroundColor: colors.primary.main,
-            bottom: insets.bottom + 16,
-          },
-        ]}
-        color={colors.primary.contrast}
         onPress={() => {
           setEditingBlock(null);
           setShowCreateModal(true);
         }}
+        position="bottom-right"
+        accessibilityLabel="Create focus session"
+        accessibilityHint="Double tap to schedule a new focus block"
       />
 
       {/* Modals */}
@@ -751,11 +746,6 @@ const styles = StyleSheet.create({
     fontSize: typography.size.lg,
     fontWeight: typography.weight.semibold,
     marginBottom: spacing.md,
-  },
-  fab: {
-    position: 'absolute',
-    right: 16,
-    ...shadows.lg,
   },
   immersiveContainer: {
     ...StyleSheet.absoluteFillObject,

@@ -1,6 +1,6 @@
 /**
  * More Screen
- * Secondary features menu: Finance, AI Chat, Settings
+ * Organized menu for secondary features and app settings
  */
 
 import React from 'react';
@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../../hooks/useTheme';
-import { typography, spacing, borderRadius } from '../../theme';
+import { typography, spacing, borderRadius, shadows } from '../../theme';
 import type { MoreStackParamList } from '../../navigation/MoreNavigator';
 
 interface MenuItem {
@@ -21,27 +21,45 @@ interface MenuItem {
   screen: keyof MoreStackParamList;
 }
 
-const menuItems: MenuItem[] = [
+interface MenuSection {
+  id: string;
+  title?: string;
+  items: MenuItem[];
+}
+
+const menuSections: MenuSection[] = [
   {
-    id: 'finance',
-    icon: 'wallet',
-    label: 'Finance',
-    subtitle: 'Budgets & expenses',
-    screen: 'Finance',
-  },
-  {
-    id: 'ai',
-    icon: 'robot',
-    label: 'AI Assistant',
-    subtitle: 'Smart productivity help',
-    screen: 'AIChat',
+    id: 'features',
+    title: 'Features',
+    items: [
+      {
+        id: 'finance',
+        icon: 'wallet',
+        label: 'Finance',
+        subtitle: 'Budgets & expenses',
+        screen: 'Finance',
+      },
+      {
+        id: 'ai',
+        icon: 'robot',
+        label: 'AI Assistant',
+        subtitle: 'Smart productivity help',
+        screen: 'AIChat',
+      },
+    ],
   },
   {
     id: 'settings',
-    icon: 'cog',
-    label: 'Settings',
-    subtitle: 'Preferences & data',
-    screen: 'Settings',
+    title: 'Settings',
+    items: [
+      {
+        id: 'settings',
+        icon: 'cog',
+        label: 'Preferences',
+        subtitle: 'Account, theme & notifications',
+        screen: 'Settings',
+      },
+    ],
   },
 ];
 
@@ -80,48 +98,57 @@ export default function MoreScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {menuItems.map((item) => (
-          <Pressable
-            key={item.id}
-            onPress={() => handleMenuPress(item.screen)}
-            style={({ pressed }) => [
-              styles.menuItem,
-              {
-                backgroundColor: pressed
-                  ? colors.background.tertiary
-                  : colors.background.secondary,
-                borderColor: colors.border.subtle,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.iconContainer,
-                { backgroundColor: colors.primary.main + '20' },
-              ]}
-            >
-              <IconButton
-                icon={item.icon}
-                iconColor={colors.primary.main}
-                size={24}
-                style={styles.icon}
-              />
-            </View>
-            <View style={styles.menuTextContainer}>
-              <Text style={[styles.menuLabel, { color: colors.text.primary }]}>
-                {item.label}
+        {menuSections.map((section) => (
+          <View key={section.id} style={styles.section}>
+            {section.title && (
+              <Text style={[styles.sectionTitle, { color: colors.text.tertiary }]}>
+                {section.title.toUpperCase()}
               </Text>
-              <Text style={[styles.menuSubtitle, { color: colors.text.secondary }]}>
-                {item.subtitle}
-              </Text>
-            </View>
-            <IconButton
-              icon="chevron-right"
-              iconColor={colors.text.tertiary}
-              size={24}
-              style={styles.chevron}
-            />
-          </Pressable>
+            )}
+            {section.items.map((item) => (
+              <Pressable
+                key={item.id}
+                onPress={() => handleMenuPress(item.screen)}
+                style={({ pressed }) => [
+                  styles.menuItem,
+                  {
+                    backgroundColor: pressed
+                      ? colors.background.tertiary
+                      : colors.background.secondary,
+                    borderColor: colors.border.subtle,
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.iconContainer,
+                    { backgroundColor: colors.primary.main + '20' },
+                  ]}
+                >
+                  <IconButton
+                    icon={item.icon}
+                    iconColor={colors.primary.main}
+                    size={24}
+                    style={styles.icon}
+                  />
+                </View>
+                <View style={styles.menuTextContainer}>
+                  <Text style={[styles.menuLabel, { color: colors.text.primary }]}>
+                    {item.label}
+                  </Text>
+                  <Text style={[styles.menuSubtitle, { color: colors.text.secondary }]}>
+                    {item.subtitle}
+                  </Text>
+                </View>
+                <IconButton
+                  icon="chevron-right"
+                  iconColor={colors.text.tertiary}
+                  size={24}
+                  style={styles.chevron}
+                />
+              </Pressable>
+            ))}
+          </View>
         ))}
 
         <View style={styles.footer}>
@@ -152,7 +179,16 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
-    gap: spacing.sm,
+  },
+  section: {
+    marginBottom: spacing.lg,
+  },
+  sectionTitle: {
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.semibold,
+    letterSpacing: typography.letterSpacing.widest,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.xs,
   },
   menuItem: {
     flexDirection: 'row',
@@ -160,6 +196,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
+    marginBottom: spacing.sm,
+    ...shadows.sm,
   },
   iconContainer: {
     width: 48,
@@ -181,13 +219,15 @@ const styles = StyleSheet.create({
   },
   menuSubtitle: {
     fontSize: typography.size.sm,
-    marginTop: 2,
+    marginTop: spacing.xs,
+    lineHeight: typography.size.sm * 1.4,
   },
   chevron: {
     margin: 0,
   },
   footer: {
     marginTop: spacing.xl,
+    paddingTop: spacing.lg,
     alignItems: 'center',
   },
   footerText: {

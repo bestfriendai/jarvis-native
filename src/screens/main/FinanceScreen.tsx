@@ -277,41 +277,28 @@ export default function FinanceScreen() {
 
       {/* View Selector */}
       <View style={styles.viewSelectorContainer}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.viewSelectorScroll}
-          accessible
-          accessibilityLabel="Finance view selector"
-          accessibilityHint="Scroll to select between overview, transactions, or budgets view"
-        >
-          {(['overview', 'transactions', 'budgets'] as const).map((mode) => (
-            <TouchableOpacity
-              key={mode}
-              onPress={() => setViewMode(mode)}
-              style={[
-                styles.viewTab,
-                viewMode === mode && styles.viewTabActive,
-              ]}
-              {...makeRadio(
-                `${mode.charAt(0).toUpperCase() + mode.slice(1)} view`,
-                viewMode === mode,
-                `Switch to ${mode} view`
-              )}
-            >
-              <Text
-                style={[
-                  styles.viewTabText,
-                  viewMode === mode && styles.viewTabTextActive,
-                ]}
-                accessible={false}
-                importantForAccessibility="no-hide-descendants"
-              >
-                {mode.charAt(0).toUpperCase() + mode.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <SegmentedButtons
+          value={viewMode}
+          onValueChange={(value) => setViewMode(value as ViewMode)}
+          buttons={[
+            {
+              value: 'overview',
+              label: 'Overview',
+              icon: 'chart-line',
+            },
+            {
+              value: 'transactions',
+              label: 'Transactions',
+              icon: 'swap-horizontal',
+            },
+            {
+              value: 'budgets',
+              label: 'Budgets',
+              icon: 'wallet',
+            },
+          ]}
+          style={{ backgroundColor: colors.background.primary }}
+        />
       </View>
 
       {/* Content */}
@@ -1334,29 +1321,6 @@ const createStyles = (colors: ReturnType<typeof getColors>) => StyleSheet.create
   viewSelectorContainer: {
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
-  },
-  viewSelectorScroll: {
-    gap: spacing.sm,
-  },
-  viewTab: {
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.background.secondary,
-    borderWidth: 1,
-    borderColor: colors.border.default,
-  },
-  viewTabActive: {
-    backgroundColor: colors.primary.main,
-    borderColor: colors.primary.main,
-  },
-  viewTabText: {
-    fontSize: typography.size.sm,
-    fontWeight: typography.weight.medium,
-    color: colors.text.secondary,
-  },
-  viewTabTextActive: {
-    color: colors.primary.contrast,
   },
   content: {
     flex: 1,
