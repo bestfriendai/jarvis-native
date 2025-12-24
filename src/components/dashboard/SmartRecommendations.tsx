@@ -435,19 +435,22 @@ const createStyles = (colors: ReturnType<typeof getColors>) => StyleSheet.create
     fontSize: typography.size.sm,
     fontWeight: typography.weight.medium,
     color: colors.text.primary,
-    lineHeight: typography.lineHeight.tight,
+    lineHeight: typography.size.sm * typography.lineHeight.snug,
   },
   actionButton: {
     backgroundColor: colors.primary.main,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.md,
+    minHeight: 36,
+    justifyContent: 'center',
     ...shadows.xs,
   },
   actionButtonText: {
     fontSize: typography.size.sm,
     fontWeight: typography.weight.semibold,
     color: colors.primary.contrast,
+    lineHeight: typography.size.sm * typography.lineHeight.normal,
   },
   dismissButton: {
     margin: 0,
