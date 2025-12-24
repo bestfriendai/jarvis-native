@@ -8,7 +8,8 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { IconButton } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { TodaysFocus, TodaysFocusItem } from '../database/dashboard';
-import { colors, typography, spacing, borderRadius, shadows } from '../theme';
+import { typography, spacing, borderRadius, shadows, getColors } from '../theme';
+import { useTheme } from '../theme/ThemeProvider';
 import { AppCard } from './ui/AppCard';
 import { HIT_SLOP } from '../constants/ui';
 
@@ -27,6 +28,9 @@ export const TodaysFocusCard: React.FC<TodaysFocusCardProps> = ({
   onCompleteTask,
   onLogHabit,
 }) => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+
   const formatTime = (timeStr?: string) => {
     if (!timeStr) return '';
     const date = new Date(timeStr);
@@ -264,7 +268,7 @@ export const TodaysFocusCard: React.FC<TodaysFocusCardProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof getColors>) => StyleSheet.create({
   card: {
     marginBottom: spacing.lg,       // More space (was md)
   },

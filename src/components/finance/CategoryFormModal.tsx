@@ -23,11 +23,12 @@ import * as categoriesDB from '../../database/categories';
 import { AppButton } from '../ui';
 import { HIT_SLOP } from '../../constants/ui';
 import {
-  colors,
   typography,
   spacing,
   borderRadius,
+  getColors,
 } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
 
 interface CategoryFormModalProps {
   visible: boolean;
@@ -65,6 +66,9 @@ export const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+
   const insets = useSafeAreaInsets();
   const [name, setName] = useState('');
   const [selectedIcon, setSelectedIcon] = useState('wallet');
@@ -297,7 +301,7 @@ export const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof getColors>) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.75)',

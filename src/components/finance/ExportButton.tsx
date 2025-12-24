@@ -25,7 +25,8 @@ import {
   type ExportFilters,
 } from '../../services/export';
 import { AppButton } from '../ui';
-import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
+import { typography, spacing, borderRadius, shadows, getColors } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
 import { HIT_SLOP } from '../../constants/ui';
 
 interface ExportButtonProps {
@@ -34,6 +35,9 @@ interface ExportButtonProps {
 }
 
 export function ExportButton({ transactions, onExportComplete }: ExportButtonProps) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+
   const [showModal, setShowModal] = useState(false);
   const [selectedRange, setSelectedRange] = useState<DateRangeFilter>('thisMonth');
   const [customStartDate, setCustomStartDate] = useState('');
@@ -224,7 +228,7 @@ export function ExportButton({ transactions, onExportComplete }: ExportButtonPro
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof getColors>) => StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.75)',

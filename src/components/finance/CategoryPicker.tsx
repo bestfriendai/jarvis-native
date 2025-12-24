@@ -20,12 +20,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as categoriesDB from '../../database/categories';
 import { HIT_SLOP } from '../../constants/ui';
 import {
-  colors,
   typography,
   spacing,
   borderRadius,
   shadows,
+  getColors,
 } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
 
 interface CategoryPickerProps {
   visible: boolean;
@@ -50,6 +51,9 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
   onClose,
   onManageCategories,
 }) => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+
   const insets = useSafeAreaInsets();
   const [categories, setCategories] = useState<categoriesDB.Category[]>([]);
   const [filteredCategories, setFilteredCategories] = useState<categoriesDB.Category[]>([]);
@@ -215,7 +219,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof getColors>) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.75)',

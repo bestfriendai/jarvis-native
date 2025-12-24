@@ -8,7 +8,8 @@
 import React, { useEffect, useRef } from 'react';
 import { Text, StyleSheet, Animated, Dimensions } from 'react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
-import { getColors, typography, spacing, borderRadius, shadows } from '../../theme';
+import { typography, spacing, borderRadius, shadows, getColors } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
 
 interface CelebrationOverlayProps {
   visible: boolean;
@@ -23,7 +24,9 @@ export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
   message,
   onDismiss,
 }) => {
-  const colors = getColors();
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const confettiRef = useRef<any>(null);
@@ -126,7 +129,7 @@ export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof getColors>) => StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
@@ -134,7 +137,7 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   messageContainer: {
-    backgroundColor: getColors().background.secondary,
+    backgroundColor: colors.background.secondary,
     borderRadius: borderRadius.xl,
     padding: spacing['2xl'],
     alignItems: 'center',
@@ -148,7 +151,7 @@ const styles = StyleSheet.create({
   message: {
     fontSize: typography.size.xl,
     fontWeight: typography.weight.bold,
-    color: getColors().primary.main,
+    color: colors.primary.main,
     textAlign: 'center',
   },
 });

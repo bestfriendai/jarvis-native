@@ -6,7 +6,8 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, ViewStyle, DimensionValue } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, spacing, borderRadius } from '../../theme';
+import { spacing, borderRadius, getColors } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
 
 interface SkeletonProps {
   width?: DimensionValue;
@@ -23,6 +24,9 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   style,
   variant = 'shimmer',
 }) => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+
   const pulseAnimation = useRef(new Animated.Value(1)).current;
   const shimmerAnimation = useRef(new Animated.Value(0)).current;
 
@@ -154,6 +158,9 @@ export const SkeletonText: React.FC<SkeletonTextProps> = ({
   spacing: lineSpacing = 8,
   style,
 }) => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+
   if (lines === 1) {
     return <Skeleton width={width} height={lineHeight} style={style} />;
   }
@@ -172,7 +179,7 @@ export const SkeletonText: React.FC<SkeletonTextProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof getColors>) => StyleSheet.create({
   skeleton: {
     backgroundColor: colors.background.tertiary,
   },

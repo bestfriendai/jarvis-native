@@ -8,6 +8,8 @@ import { View, StyleSheet, TextInput, Modal, Animated, Alert } from 'react-nativ
 import { Button, Text, Card, IconButton } from 'react-native-paper';
 import { MacroGoal } from '../database/dashboard';
 import { HIT_SLOP } from '../constants/ui';
+import { getColors } from '../theme';
+import { useTheme } from '../theme/ThemeProvider';
 
 interface StartControlsProps {
   macroGoals: MacroGoal[];
@@ -20,6 +22,9 @@ export const StartControls: React.FC<StartControlsProps> = ({
   defaultDuration = 10,
   onStarted,
 }) => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+
   const [microWhy, setMicroWhy] = useState('');
   const [selectedMacroId, setSelectedMacroId] = useState('');
   const [activeStart, setActiveStart] = useState<{ id: string; durationSec: number } | null>(null);
@@ -96,7 +101,7 @@ export const StartControls: React.FC<StartControlsProps> = ({
             value={microWhy}
             onChangeText={setMicroWhy}
             placeholder="Why does this tiny start matter?"
-            placeholderTextColor="#64748B"
+            placeholderTextColor={colors.text.tertiary}
             style={styles.input}
             editable={!activeStart}
           />
@@ -168,7 +173,7 @@ export const StartControls: React.FC<StartControlsProps> = ({
               value={completionNote}
               onChangeText={setCompletionNote}
               placeholder="What shifted?"
-              placeholderTextColor="#64748B"
+              placeholderTextColor={colors.text.tertiary}
               style={styles.modalInput}
               multiline
               numberOfLines={4}
@@ -199,7 +204,7 @@ export const StartControls: React.FC<StartControlsProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof getColors>) => StyleSheet.create({
   container: {
     gap: 16,
   },
@@ -210,16 +215,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
-    color: '#94A3B8',
+    color: colors.text.tertiary,
     letterSpacing: 1,
   },
   input: {
-    backgroundColor: '#0F172A',
+    backgroundColor: colors.background.primary,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: colors.border.default,
     padding: 12,
-    color: '#FFFFFF',
+    color: colors.text.primary,
     fontSize: 14,
   },
   buttonRow: {
@@ -228,20 +233,20 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     flex: 1,
-    backgroundColor: '#10B981',
+    backgroundColor: colors.success,
     borderRadius: 24,
   },
   secondaryButton: {
     flex: 1,
     borderRadius: 24,
-    borderColor: '#334155',
+    borderColor: colors.border.default,
   },
   buttonLabel: {
     fontSize: 14,
     fontWeight: 'bold',
   },
   progressCard: {
-    backgroundColor: '#1E293B',
+    backgroundColor: colors.background.secondary,
     marginTop: 16,
   },
   progressContent: {
@@ -253,24 +258,24 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 8,
-    borderColor: '#10B981',
+    borderColor: colors.success,
     alignItems: 'center',
     justifyContent: 'center',
   },
   timerText: {
-    color: '#FFFFFF',
+    color: colors.text.primary,
     fontWeight: 'bold',
   },
   progressBarContainer: {
     width: '100%',
     height: 8,
-    backgroundColor: '#334155',
+    backgroundColor: colors.border.default,
     borderRadius: 4,
     overflow: 'hidden',
   },
   progressBar: {
     height: '100%',
-    backgroundColor: '#10B981',
+    backgroundColor: colors.success,
     borderRadius: 4,
   },
   modalOverlay: {
@@ -281,7 +286,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: '#1E293B',
+    backgroundColor: colors.background.secondary,
     borderRadius: 16,
     padding: 24,
     width: '100%',
@@ -289,16 +294,16 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   modalTitle: {
-    color: '#FFFFFF',
+    color: colors.text.primary,
     fontWeight: 'bold',
   },
   modalInput: {
-    backgroundColor: '#0F172A',
+    backgroundColor: colors.background.primary,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: colors.border.default,
     padding: 12,
-    color: '#FFFFFF',
+    color: colors.text.primary,
     fontSize: 14,
     textAlignVertical: 'top',
   },

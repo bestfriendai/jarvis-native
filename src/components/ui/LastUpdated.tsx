@@ -6,7 +6,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { colors, typography, spacing } from '../../theme';
+import { typography, spacing, getColors } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
 import { getRelativeTime } from '../../utils/dateUtils';
 
 interface LastUpdatedProps {
@@ -18,6 +19,9 @@ interface LastUpdatedProps {
  * Display last updated timestamp with auto-refresh
  */
 export function LastUpdated({ date, style }: LastUpdatedProps) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+
   const [relativeTime, setRelativeTime] = useState<string>('');
 
   // Update relative time display
@@ -50,7 +54,7 @@ export function LastUpdated({ date, style }: LastUpdatedProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof getColors>) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',

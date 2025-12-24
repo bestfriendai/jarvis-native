@@ -6,9 +6,13 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Skeleton, SkeletonCircle } from '../ui/Skeleton';
-import { colors, spacing, borderRadius, shadows } from '../../theme';
+import { spacing, borderRadius, shadows, getColors } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
 
 export const TransactionCardSkeleton: React.FC = () => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+
   return (
     <View style={styles.card}>
       {/* Category icon circle */}
@@ -35,7 +39,7 @@ export const TransactionCardSkeleton: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof getColors>) => StyleSheet.create({
   card: {
     backgroundColor: colors.background.secondary,
     borderRadius: borderRadius.lg,

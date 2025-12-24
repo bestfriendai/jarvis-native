@@ -7,7 +7,8 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle, TouchableOpacity } from 'react-native';
-import { colors, typography, spacing, borderRadius, shadows } from '../theme';
+import { typography, spacing, borderRadius, shadows, getColors } from '../theme';
+import { useTheme } from '../theme/ThemeProvider';
 import { Sparkline, SparklineTrend } from './charts/Sparkline';
 import { PercentageChange } from './charts/PercentageChange';
 
@@ -44,6 +45,9 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   accessibilityHint,
   accessibilityRole,
 }) => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+
   const getAccentColor = () => {
     switch (variant) {
       case 'success':
@@ -186,7 +190,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof getColors>) => StyleSheet.create({
   card: {
     backgroundColor: colors.background.secondary,
     borderRadius: borderRadius.xl,      // More rounded (was lg)

@@ -6,8 +6,8 @@
 
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
-import { getColors } from '../../theme';
 import { typography, spacing } from '../../theme';
+import { useTheme } from '../../theme/ThemeProvider';
 
 interface StreakBadgeProps {
   streakDays: number;
@@ -20,7 +20,7 @@ export const StreakBadge: React.FC<StreakBadgeProps> = ({
   size = 'default',
   showLabel = true,
 }) => {
-  const colors = getColors();
+  const { colors } = useTheme();
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   // Get streak color based on length
