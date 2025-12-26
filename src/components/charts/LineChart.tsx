@@ -1,14 +1,22 @@
 /**
- * Generic LineChart Component
- * Reusable line chart using react-native-chart-kit
+ * LineChart Component - Victory Native Implementation
+ *
+ * IMPROVEMENT: Migrated from deprecated react-native-chart-kit to Victory Native
+ * - Better maintenance and support
+ * - More customization options
+ * - Better TypeScript support
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Dimensions } from 'react-native';
-import { LineChart as RNLineChart } from 'react-native-chart-kit';
+import { CartesianChart, Line, useChartPressState } from 'victory-native';
+import { Circle, useFont } from '@shopify/react-native-skia';
 import { useTheme } from '../../hooks/useTheme';
 import { BaseChart } from './BaseChart';
-import { getChartDescription, ChartDataPoint } from '../../utils/chartAccessibility';
+import { getChartDescription, ChartDataPoint as AccessibilityDataPoint } from '../../utils/chartAccessibility';
+
+// Use a system font or bundle a font file
+const FONT_SIZE = 10;
 
 export interface LineChartData {
   labels: string[];
@@ -37,6 +45,24 @@ interface LineChartProps {
   accessibilityLabel?: string;
 }
 
+// Transform data for Victory Native format
+function transformData(data: LineChartData): Array<{ x: number; y: number; label: string }> {
+  if (!data.labels.length || !data.datasets.length || !data.datasets[0]?.data.length) {
+    return [];
+  }
+
+  return data.labels.map((label, index) => ({
+    x: index,
+    y: data.datasets[0].data[index] ?? 0,
+    label,
+  }));
+}
+
+// Active point indicator component
+function ActivePointIndicator({ x, y, color }: { x: number; y: number; color: string }) {
+  return <Circle cx={x} cy={y} r={6} color={color} />;
+}
+
 export const LineChart: React.FC<LineChartProps> = ({
   data,
   width = Dimensions.get('window').width - 40,
@@ -49,25 +75,34 @@ export const LineChart: React.FC<LineChartProps> = ({
   yAxisSuffix = '',
   yAxisLabel = '',
   fromZero = true,
-  fillShadowGradient = true,
   title = 'Line Chart',
   accessibilityLabel,
 }) => {
   const { colors } = useTheme();
+  const { state, isActive } = useChartPressState({ x: 0, y: { y: 0 } });
 
-  const isEmpty = !data.labels.length || !data.datasets.length || data.datasets[0].data.length === 0;
+  const chartData = useMemo(() => transformData(data), [data]);
+  const isEmpty = chartData.length === 0;
 
   // Generate accessibility description
-  const chartDataPoints: ChartDataPoint[] = data.labels.map((label, index) => ({
+  const chartDataPoints: AccessibilityDataPoint[] = data.labels.map((label, index) => ({
     label,
     value: data.datasets[0]?.data[index] || 0,
   }));
 
-  const description = accessibilityLabel || getChartDescription(chartDataPoints, {
-    title,
-    type: 'line',
-    unit: yAxisSuffix,
-  });
+  const description =
+    accessibilityLabel ||
+    getChartDescription(chartDataPoints, {
+      title,
+      type: 'line',
+      unit: yAxisSuffix,
+    });
+
+  // Calculate domain
+  const yValues = chartData.map((d) => d.y);
+  const minY = fromZero ? 0 : Math.min(...yValues);
+  const maxY = Math.max(...yValues, 1);
+  const yDomain: [number, number] = [minY, maxY * 1.1]; // 10% padding
 
   return (
     <BaseChart
@@ -82,51 +117,55 @@ export const LineChart: React.FC<LineChartProps> = ({
         accessibilityLabel={description}
         accessibilityRole="image"
         accessibilityHint="Double tap to view trend details and data table"
+        style={{ width, height }}
       >
-        <RNLineChart
-        data={data}
-        width={width}
-        height={height}
-        yAxisLabel={yAxisLabel}
-        yAxisSuffix={yAxisSuffix}
-        fromZero={fromZero}
-        bezier={bezier}
-        withDots={showDots}
-        withInnerLines={true}
-        withOuterLines={true}
-        withVerticalLines={false}
-        withHorizontalLines={true}
-        withVerticalLabels={true}
-        withHorizontalLabels={true}
-        withShadow={fillShadowGradient}
-        chartConfig={{
-          backgroundColor: colors.background.secondary,
-          backgroundGradientFrom: colors.background.secondary,
-          backgroundGradientTo: colors.background.secondary,
-          decimalPlaces: 0,
-          color: () => colors.primary.main,
-          labelColor: () => colors.text.tertiary,
-          style: {
-            borderRadius: 16,
-          },
-          propsForDots: {
-            r: '4',
-            strokeWidth: '2',
-            stroke: colors.primary.main,
-          },
-          propsForLabels: {
-            fontSize: 10,
-          },
-          propsForBackgroundLines: {
-            stroke: colors.border.subtle,
-            strokeWidth: 1,
-            strokeDasharray: '0',
-          },
-        }}
-        style={{
-          borderRadius: 16,
-        }}
-      />
+        <CartesianChart
+          data={chartData}
+          xKey="x"
+          yKeys={['y']}
+          domain={{ y: yDomain }}
+          axisOptions={{
+            formatXLabel: (value) => {
+              const index = Math.round(value);
+              return data.labels[index] || '';
+            },
+            formatYLabel: (value) => `${yAxisLabel}${Math.round(value)}${yAxisSuffix}`,
+            labelColor: colors.text.tertiary,
+            lineColor: colors.border.subtle,
+          }}
+          chartPressState={state}
+        >
+          {({ points, chartBounds }) => (
+            <>
+              <Line
+                points={points.y}
+                color={colors.primary.main}
+                strokeWidth={2}
+                curveType={bezier ? 'natural' : 'linear'}
+                animate={{ type: 'timing', duration: 300 }}
+              />
+              {showDots &&
+                points.y
+                  .filter((point) => point.y !== undefined)
+                  .map((point, index) => (
+                    <Circle
+                      key={index}
+                      cx={point.x}
+                      cy={point.y as number}
+                      r={4}
+                      color={colors.primary.main}
+                    />
+                  ))}
+              {isActive && (
+                <ActivePointIndicator
+                  x={state.x.position.value}
+                  y={state.y.y.position.value}
+                  color={colors.accent.cyan}
+                />
+              )}
+            </>
+          )}
+        </CartesianChart>
       </View>
     </BaseChart>
   );

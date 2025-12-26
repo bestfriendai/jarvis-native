@@ -1,14 +1,19 @@
 /**
- * Generic BarChart Component
- * Reusable bar chart using react-native-chart-kit
+ * BarChart Component - Victory Native Implementation
+ *
+ * IMPROVEMENT: Migrated from deprecated react-native-chart-kit to Victory Native
+ * - Better maintenance and support
+ * - More customization options
+ * - Better TypeScript support
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Dimensions } from 'react-native';
-import { BarChart as RNBarChart } from 'react-native-chart-kit';
+import { CartesianChart, Bar, useChartPressState } from 'victory-native';
+import { Text as SkiaText, useFont } from '@shopify/react-native-skia';
 import { useTheme } from '../../hooks/useTheme';
 import { BaseChart } from './BaseChart';
-import { getChartDescription, ChartDataPoint } from '../../utils/chartAccessibility';
+import { getChartDescription, ChartDataPoint as AccessibilityDataPoint } from '../../utils/chartAccessibility';
 
 export interface BarChartData {
   labels: string[];
@@ -33,6 +38,19 @@ interface BarChartProps {
   accessibilityLabel?: string;
 }
 
+// Transform data for Victory Native format
+function transformData(data: BarChartData): Array<{ x: number; y: number; label: string }> {
+  if (!data.labels.length || !data.datasets.length || !data.datasets[0]?.data.length) {
+    return [];
+  }
+
+  return data.labels.map((label, index) => ({
+    x: index,
+    y: data.datasets[0].data[index] ?? 0,
+    label,
+  }));
+}
+
 export const BarChart: React.FC<BarChartProps> = ({
   data,
   width = Dimensions.get('window').width - 40,
@@ -48,20 +66,30 @@ export const BarChart: React.FC<BarChartProps> = ({
   accessibilityLabel,
 }) => {
   const { colors } = useTheme();
+  const { state } = useChartPressState({ x: 0, y: { y: 0 } });
 
-  const isEmpty = !data.labels.length || !data.datasets.length || data.datasets[0].data.length === 0;
+  const chartData = useMemo(() => transformData(data), [data]);
+  const isEmpty = chartData.length === 0;
 
   // Generate accessibility description
-  const chartDataPoints: ChartDataPoint[] = data.labels.map((label, index) => ({
+  const chartDataPoints: AccessibilityDataPoint[] = data.labels.map((label, index) => ({
     label,
     value: data.datasets[0]?.data[index] || 0,
   }));
 
-  const description = accessibilityLabel || getChartDescription(chartDataPoints, {
-    title,
-    type: 'bar',
-    unit: yAxisSuffix,
-  });
+  const description =
+    accessibilityLabel ||
+    getChartDescription(chartDataPoints, {
+      title,
+      type: 'bar',
+      unit: yAxisSuffix,
+    });
+
+  // Calculate domain
+  const yValues = chartData.map((d) => d.y);
+  const minY = fromZero ? 0 : Math.min(...yValues);
+  const maxY = Math.max(...yValues, 1);
+  const yDomain: [number, number] = [minY, maxY * 1.1]; // 10% padding
 
   return (
     <BaseChart
@@ -76,38 +104,37 @@ export const BarChart: React.FC<BarChartProps> = ({
         accessibilityLabel={description}
         accessibilityRole="image"
         accessibilityHint="Double tap to view data table"
+        style={{ width, height }}
       >
-        <RNBarChart
-          data={data}
-          width={width}
-          height={height}
-          yAxisLabel={yAxisLabel}
-          yAxisSuffix={yAxisSuffix}
-          fromZero={fromZero}
-          showValuesOnTopOfBars={showValues}
-          chartConfig={{
-            backgroundColor: colors.background.secondary,
-            backgroundGradientFrom: colors.background.secondary,
-            backgroundGradientTo: colors.background.secondary,
-            decimalPlaces: 0,
-            color: () => colors.primary.main,
-            labelColor: () => colors.text.tertiary,
-            style: {
-              borderRadius: 16,
+        <CartesianChart
+          data={chartData}
+          xKey="x"
+          yKeys={['y']}
+          domain={{ y: yDomain }}
+          domainPadding={{ left: 20, right: 20 }}
+          axisOptions={{
+            formatXLabel: (value) => {
+              const index = Math.round(value);
+              return data.labels[index] || '';
             },
-            propsForLabels: {
-              fontSize: 10,
-            },
-            propsForBackgroundLines: {
-              stroke: colors.border.subtle,
-              strokeWidth: 1,
-              strokeDasharray: '0',
-            },
+            formatYLabel: (value) => `${yAxisLabel}${Math.round(value)}${yAxisSuffix}`,
+            labelColor: colors.text.tertiary,
+            lineColor: colors.border.subtle,
           }}
-          style={{
-            borderRadius: 16,
-          }}
-        />
+          chartPressState={state}
+        >
+          {({ points, chartBounds }) => (
+            <>
+              <Bar
+                points={points.y}
+                chartBounds={chartBounds}
+                color={colors.primary.main}
+                roundedCorners={{ topLeft: 4, topRight: 4 }}
+                animate={{ type: 'timing', duration: 300 }}
+              />
+            </>
+          )}
+        </CartesianChart>
       </View>
     </BaseChart>
   );

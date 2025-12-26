@@ -7,7 +7,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, ActivityIndicator, Text, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { PaperProvider } from 'react-native-paper';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+// Note: React Query removed - using direct database queries with Repository Pattern
+// import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainerRef } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
@@ -22,16 +23,8 @@ import { getColors, spacing, typography } from './src/theme';
 import * as notificationService from './src/services/notifications';
 import { toastConfig } from './src/components/ui/UndoToast';
 
-// Create React Query client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 2,
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      gcTime: 1000 * 60 * 30, // 30 minutes (formerly cacheTime)
-    },
-  },
-});
+// Note: QueryClient removed - using Repository Pattern with SQLite
+// React Query can be re-added when implementing API sync layer
 
 export default function App() {
   const [isReady, setIsReady] = useState(false);
@@ -125,16 +118,14 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <ThemeProvider>
-            <PaperProvider>
-              <StatusBar style={resolvedMode === 'dark' ? 'light' : 'dark'} />
-              <RootNavigator navigationRef={navigationRef} />
-              <Toast config={toastConfig} />
+        <ThemeProvider>
+          <PaperProvider>
+            <StatusBar style={resolvedMode === 'dark' ? 'light' : 'dark'} />
+            <RootNavigator navigationRef={navigationRef} />
+            <Toast config={toastConfig} />
           </PaperProvider>
         </ThemeProvider>
-      </QueryClientProvider>
-    </SafeAreaProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

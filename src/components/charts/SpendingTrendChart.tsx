@@ -106,7 +106,7 @@ export const SpendingTrendChart: React.FC<SpendingTrendChartProps> = ({
                   yAxisLabel="$"
                   yAxisSuffix=""
                   yAxisInterval={1}
-                  formatYLabel={(value) => {
+                  formatYLabel={(value: string) => {
                     const num = parseFloat(value);
                     if (num >= 1000) {
                       return `${(num / 1000).toFixed(1)}k`;

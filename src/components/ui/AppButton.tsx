@@ -2,9 +2,11 @@
  * AppButton - Professional button component with proper states
  * Supports: primary, secondary, outline, ghost, danger variants
  * Features: loading state, disabled state, pressed animation
+ *
+ * IMPROVEMENT: Fixed static theme colors - now uses dynamic theme via useTheme()
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import {
   TouchableOpacity,
   Text,
@@ -16,8 +18,8 @@ import {
   TextStyle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { typography, spacing, borderRadius, shadows, animation, getColors } from '../../theme';
-import { useTheme } from '../../theme/ThemeProvider';
+import { typography, spacing, borderRadius, shadows, animation } from '../../theme';
+import { useTheme } from '../../hooks/useTheme';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 type ButtonSize = 'small' | 'medium' | 'large';
@@ -37,7 +39,113 @@ interface AppButtonProps {
   textStyle?: TextStyle;
   accessibilityLabel?: string;
   accessibilityHint?: string;
+  testID?: string;
 }
+
+// Create dynamic styles based on current theme colors
+const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
+  StyleSheet.create({
+    touchable: {
+      // Wrapper for touch handling
+    },
+    button: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: borderRadius.md,
+    },
+    gradientButton: {
+      // Additional styles for gradient buttons - no backgroundColor needed
+    },
+    // Size variants
+    small: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      minHeight: 36,
+    },
+    medium: {
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      minHeight: 48,
+    },
+    large: {
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.base,
+      minHeight: 56,
+    },
+    // Variant styles - NOW DYNAMIC
+    primaryButton: {
+      // Gradient handles background - just add glow shadow
+      ...shadows.glowPrimary,
+    },
+    secondaryButton: {
+      backgroundColor: colors.background.tertiary,
+    },
+    outlineButton: {
+      backgroundColor: 'transparent',
+      borderWidth: 1.5,
+      borderColor: colors.border.default,
+    },
+    ghostButton: {
+      backgroundColor: 'transparent',
+    },
+    dangerButton: {
+      // Gradient handles background - standard shadow
+      ...shadows.sm,
+    },
+    // Disabled state
+    disabled: {
+      opacity: 0.5,
+    },
+    fullWidth: {
+      width: '100%',
+    },
+    // Content layout
+    content: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    iconLeft: {
+      marginRight: spacing.sm,
+    },
+    iconRight: {
+      marginLeft: spacing.sm,
+    },
+    // Text styles
+    text: {
+      fontWeight: typography.weight.semibold,
+      letterSpacing: typography.letterSpacing.wide,
+    },
+    smallText: {
+      fontSize: typography.size.sm,
+    },
+    mediumText: {
+      fontSize: typography.size.base,
+    },
+    largeText: {
+      fontSize: typography.size.md,
+    },
+    // Text variant colors - NOW DYNAMIC
+    primaryText: {
+      color: colors.primary.contrast,
+    },
+    secondaryText: {
+      color: colors.text.primary,
+    },
+    outlineText: {
+      color: colors.text.primary,
+    },
+    ghostText: {
+      color: colors.primary.main,
+    },
+    dangerText: {
+      color: colors.primary.contrast,
+    },
+    disabledText: {
+      color: colors.text.disabled,
+    },
+  });
 
 export const AppButton: React.FC<AppButtonProps> = ({
   title,
@@ -54,8 +162,13 @@ export const AppButton: React.FC<AppButtonProps> = ({
   textStyle,
   accessibilityLabel,
   accessibilityHint,
+  testID,
 }) => {
   const { colors } = useTheme();
+
+  // Memoize styles to prevent unnecessary recalculations
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   // Support both title prop and children
   const buttonText = title || children;
   const [scaleValue] = useState(new Animated.Value(1));
@@ -147,14 +260,20 @@ export const AppButton: React.FC<AppButtonProps> = ({
 
   // Determine if this button should use a gradient
   const useGradient = variant === 'primary' || variant === 'danger';
-  const gradientColors = (variant === 'primary'
-    ? colors.gradient.primary
-    : ['#EF4444', '#DC2626'] as const) as any; // Danger gradient
+  const gradientColors = (
+    variant === 'primary'
+      ? colors.gradient.primary
+      : (['#EF4444', '#DC2626'] as const)
+  ) as [string, string]; // Danger gradient
 
   const buttonContent = (
     <>
       {loading ? (
-        <ActivityIndicator size="small" color={getLoaderColor()} />
+        <ActivityIndicator
+          size="small"
+          color={getLoaderColor()}
+          testID={testID ? `${testID}-loader` : undefined}
+        />
       ) : (
         <View style={styles.content}>
           {icon && iconPosition === 'left' && (
@@ -180,12 +299,15 @@ export const AppButton: React.FC<AppButtonProps> = ({
         style={[styles.touchable, fullWidth && styles.fullWidth, style]}
         accessible
         accessibilityRole="button"
-        accessibilityLabel={accessibilityLabel || (typeof buttonText === 'string' ? buttonText : undefined)}
+        accessibilityLabel={
+          accessibilityLabel || (typeof buttonText === 'string' ? buttonText : undefined)
+        }
         accessibilityHint={accessibilityHint}
         accessibilityState={{
           disabled: disabled || loading,
           busy: loading,
         }}
+        testID={testID}
       >
         {useGradient ? (
           <LinearGradient
@@ -197,117 +319,11 @@ export const AppButton: React.FC<AppButtonProps> = ({
             {buttonContent}
           </LinearGradient>
         ) : (
-          <View style={getButtonStyles()}>
-            {buttonContent}
-          </View>
+          <View style={getButtonStyles()}>{buttonContent}</View>
         )}
       </TouchableOpacity>
     </Animated.View>
   );
 };
-
-const colors = getColors();
-
-const styles = StyleSheet.create({
-  touchable: {
-    // Wrapper for touch handling
-  },
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: borderRadius.md,
-  },
-  gradientButton: {
-    // Additional styles for gradient buttons - no backgroundColor needed
-  },
-  // Size variants
-  small: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    minHeight: 36,
-  },
-  medium: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    minHeight: 48,
-  },
-  large: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.base,
-    minHeight: 56,
-  },
-  // Variant styles
-  primaryButton: {
-    // Gradient handles background - just add glow shadow
-    ...shadows.glowPrimary,
-  },
-  secondaryButton: {
-    backgroundColor: colors.background.tertiary,
-  },
-  outlineButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: colors.border.default,
-  },
-  ghostButton: {
-    backgroundColor: 'transparent',
-  },
-  dangerButton: {
-    // Gradient handles background - standard shadow
-    ...shadows.sm,
-  },
-  // Disabled state
-  disabled: {
-    opacity: 0.5,
-  },
-  fullWidth: {
-    width: '100%',
-  },
-  // Content layout
-  content: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconLeft: {
-    marginRight: spacing.sm,
-  },
-  iconRight: {
-    marginLeft: spacing.sm,
-  },
-  // Text styles
-  text: {
-    fontWeight: typography.weight.semibold,
-    letterSpacing: typography.letterSpacing.wide,
-  },
-  smallText: {
-    fontSize: typography.size.sm,
-  },
-  mediumText: {
-    fontSize: typography.size.base,
-  },
-  largeText: {
-    fontSize: typography.size.md,
-  },
-  primaryText: {
-    color: colors.primary.contrast,
-  },
-  secondaryText: {
-    color: colors.text.primary,
-  },
-  outlineText: {
-    color: colors.text.primary,
-  },
-  ghostText: {
-    color: colors.primary.main,
-  },
-  dangerText: {
-    color: colors.primary.contrast,
-  },
-  disabledText: {
-    color: colors.text.disabled,
-  },
-});
 
 export default AppButton;

@@ -24,9 +24,10 @@ import { IconButton, Checkbox, Badge, SegmentedButtons, Menu } from 'react-nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import * as tasksDB from '../../database/tasks';
+import * as tasksDB from '../../database/tasks'; // Keep for undo service type compatibility
 import * as projectsDB from '../../database/projects';
 import * as undoService from '../../services/undo';
+import { useTaskRepository } from '../../repositories';
 import type { Project } from '../../database/projects';
 import { ProjectTasksGroup } from '../../components/tasks/ProjectTasksGroup';
 import { ProjectFormModal } from '../../components/ProjectFormModal';
@@ -108,6 +109,7 @@ export default function TasksScreen() {
   const { colors } = useTheme();
   const route = useRoute();
   const navigation = useNavigation();
+  const taskRepo = useTaskRepository(); // IMPROVEMENT: Use Repository Pattern
   const params = route.params as { highlightId?: string; scrollTo?: boolean } | undefined;
   const viewMode: ViewMode = 'list'; // Only list view is implemented
   const layoutConfig = getLayoutConfig();
@@ -150,13 +152,14 @@ export default function TasksScreen() {
     filterStore.loadFilters().then(setFilters);
   }, []);
 
-  // Load tasks from local database with filters
+  // Load tasks from repository with filters
+  // IMPROVEMENT: Using Repository Pattern for data access abstraction
   // Note: Filtering is done at the database level for performance
   // The taskFiltering utilities in src/utils/taskFiltering.ts are available
   // for client-side filtering when needed (e.g., in-memory filter changes)
   const loadTasks = useCallback(async () => {
     try {
-      const loadedTasks = await tasksDB.getTasks(filters);
+      const loadedTasks = await taskRepo.getAll(filters);
       // Apply intelligent sorting: status > overdue > priority > due date > created date
       const sortedTasks = sortTasks(loadedTasks);
       setTasks(sortedTasks);
@@ -166,7 +169,7 @@ export default function TasksScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [filters]);
+  }, [filters, taskRepo]);
 
   useEffect(() => {
     loadTasks();
@@ -255,16 +258,16 @@ export default function TasksScreen() {
       () => setTasks(updatedTasks),
       // Async operation
       async () => {
-        await tasksDB.updateTask(taskId, {
+        await taskRepo.update(taskId, {
           status: newStatus,
           completedAt: newStatus === 'completed' ? new Date().toISOString() : undefined,
         });
-        // Reload to get fresh data from DB
+        // Reload to get fresh data from repository
         await loadTasks();
 
         // Check for completion milestones
         if (newStatus === 'completed') {
-          const allTasks = await tasksDB.getTasks({
+          const allTasks = await taskRepo.getAll({
             sortField: 'createdAt',
             sortDirection: 'desc',
           });
@@ -373,12 +376,12 @@ export default function TasksScreen() {
     setSelectedTaskIds(new Set());
   };
 
-  // Bulk operations
+  // Bulk operations - Using Repository Pattern
   const handleBulkComplete = async () => {
     try {
       const taskIdsArray = Array.from(selectedTaskIds);
       haptic.taskComplete();
-      await tasksDB.bulkCompleteTasks(taskIdsArray);
+      await taskRepo.bulkComplete(taskIdsArray);
       await loadTasks();
       setBulkSelectMode(false);
       setSelectedTaskIds(new Set());
@@ -425,7 +428,7 @@ export default function TasksScreen() {
     try {
       const taskIdsArray = Array.from(selectedTaskIds);
       haptic.taskStatusChange();
-      await tasksDB.bulkUpdateTasks(taskIdsArray, {
+      await taskRepo.bulkUpdate(taskIdsArray, {
         status,
         completedAt: status === 'completed' ? new Date().toISOString() : undefined,
       });
@@ -443,7 +446,7 @@ export default function TasksScreen() {
     try {
       const taskIdsArray = Array.from(selectedTaskIds);
       haptic.selection();
-      await tasksDB.bulkUpdateTasks(taskIdsArray, { priority });
+      await taskRepo.bulkUpdate(taskIdsArray, { priority });
       await loadTasks();
       setBulkSelectMode(false);
       setSelectedTaskIds(new Set());
@@ -458,7 +461,7 @@ export default function TasksScreen() {
     try {
       const taskIdsArray = Array.from(selectedTaskIds);
       haptic.medium();
-      await tasksDB.bulkUpdateTasks(taskIdsArray, { projectId: projectId || undefined });
+      await taskRepo.bulkUpdate(taskIdsArray, { projectId: projectId || undefined });
       await loadTasks();
       setBulkSelectMode(false);
       setSelectedTaskIds(new Set());

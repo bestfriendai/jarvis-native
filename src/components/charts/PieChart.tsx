@@ -1,14 +1,20 @@
 /**
- * Generic PieChart Component
- * Reusable pie chart using react-native-chart-kit
+ * PieChart Component - Victory Native Implementation
+ *
+ * IMPROVEMENT: Migrated from deprecated react-native-chart-kit to Victory Native
+ * - Better maintenance and support
+ * - More customization options
+ * - Better TypeScript support
+ * - Hardware-accelerated via Skia
  */
 
-import React from 'react';
-import { View, Dimensions } from 'react-native';
-import { PieChart as RNPieChart } from 'react-native-chart-kit';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { PolarChart, Pie } from 'victory-native';
 import { useTheme } from '../../hooks/useTheme';
 import { BaseChart } from './BaseChart';
 import { getChartDescription, ChartDataPoint } from '../../utils/chartAccessibility';
+import { spacing, typography } from '../../theme';
 
 export interface PieChartDataItem {
   name: string;
@@ -32,87 +38,20 @@ interface PieChartProps {
   paddingLeft?: string;
   title?: string;
   accessibilityLabel?: string;
+  innerRadius?: number | string; // For donut charts
 }
 
-export const PieChart: React.FC<PieChartProps> = ({
-  data,
-  width = Dimensions.get('window').width - 40,
-  height = 220,
-  isLoading = false,
-  error = null,
-  emptyMessage = 'No data to display',
-  showLegend = true,
-  accessor = 'value',
-  centerLabelComponent: _centerLabelComponent,
-  hasLegend = true,
-  paddingLeft = '15',
-  title = 'Pie Chart',
-  accessibilityLabel,
-}) => {
-  const { colors } = useTheme();
-
-  const isEmpty = !data.length || data.every(item => item.value === 0);
-
-  // Apply default colors if not provided
-  const chartData = data.map((item, index) => ({
-    ...item,
-    color: item.color || getDefaultColor(index, colors),
-    legendFontColor: item.legendFontColor || colors.text.tertiary,
-    legendFontSize: item.legendFontSize || 12,
-  }));
-
-  // Generate accessibility description
-  const chartDataPoints: ChartDataPoint[] = data.map((item) => ({
+// Transform data for Victory Native format
+function transformData(
+  data: PieChartDataItem[],
+  colors: any
+): Array<{ label: string; value: number; color: string }> {
+  return data.map((item, index) => ({
     label: item.name,
     value: item.value,
+    color: item.color || getDefaultColor(index, colors),
   }));
-
-  const description = accessibilityLabel || getChartDescription(chartDataPoints, {
-    title,
-    type: 'pie',
-  });
-
-  return (
-    <BaseChart
-      isLoading={isLoading}
-      error={error}
-      isEmpty={isEmpty}
-      emptyMessage={emptyMessage}
-      height={height}
-    >
-      <View
-        accessible={true}
-        accessibilityLabel={description}
-        accessibilityRole="image"
-        accessibilityHint="Double tap to view distribution breakdown"
-      >
-        <RNPieChart
-        data={chartData}
-        width={width}
-        height={height}
-        chartConfig={{
-          backgroundColor: colors.background.secondary,
-          backgroundGradientFrom: colors.background.secondary,
-          backgroundGradientTo: colors.background.secondary,
-          color: () => colors.primary.main,
-          labelColor: () => colors.text.tertiary,
-          style: {
-            borderRadius: 16,
-          },
-        }}
-        accessor={accessor}
-        backgroundColor="transparent"
-        paddingLeft={paddingLeft}
-        center={[0, 0]}
-        hasLegend={hasLegend && showLegend}
-        style={{
-          borderRadius: 16,
-        }}
-      />
-      </View>
-    </BaseChart>
-  );
-};
+}
 
 // Helper function to generate default colors
 function getDefaultColor(index: number, colors: any): string {
@@ -130,5 +69,164 @@ function getDefaultColor(index: number, colors: any): string {
   ];
   return palette[index % palette.length];
 }
+
+export const PieChart: React.FC<PieChartProps> = ({
+  data,
+  width = Dimensions.get('window').width - 40,
+  height = 220,
+  isLoading = false,
+  error = null,
+  emptyMessage = 'No data to display',
+  showLegend = true,
+  hasLegend = true,
+  title = 'Pie Chart',
+  accessibilityLabel,
+  innerRadius,
+}) => {
+  const { colors } = useTheme();
+
+  const isEmpty = !data.length || data.every((item) => item.value === 0);
+
+  // Transform data for Victory Native
+  const chartData = useMemo(() => transformData(data, colors), [data, colors]);
+
+  // Calculate total for percentage display
+  const total = useMemo(
+    () => chartData.reduce((sum, item) => sum + item.value, 0),
+    [chartData]
+  );
+
+  // Generate accessibility description
+  const chartDataPoints: ChartDataPoint[] = data.map((item) => ({
+    label: item.name,
+    value: item.value,
+  }));
+
+  const description =
+    accessibilityLabel ||
+    getChartDescription(chartDataPoints, {
+      title,
+      type: 'pie',
+    });
+
+  // Create styles with current theme colors
+  const styles = createStyles(colors);
+
+  // Calculate chart width (leave space for legend if showing)
+  const chartWidth = showLegend && hasLegend ? width * 0.55 : width;
+  const legendWidth = showLegend && hasLegend ? width * 0.45 : 0;
+
+  return (
+    <BaseChart
+      isLoading={isLoading}
+      error={error}
+      isEmpty={isEmpty}
+      emptyMessage={emptyMessage}
+      height={height}
+    >
+      <View
+        accessible={true}
+        accessibilityLabel={description}
+        accessibilityRole="image"
+        accessibilityHint="Double tap to view distribution breakdown"
+        style={styles.container}
+      >
+        {/* Pie Chart */}
+        <View style={[styles.chartContainer, { width: chartWidth, height }]}>
+          <PolarChart
+            data={chartData}
+            labelKey="label"
+            valueKey="value"
+            colorKey="color"
+          >
+            <Pie.Chart innerRadius={innerRadius}>
+              {() => <Pie.Slice />}
+            </Pie.Chart>
+          </PolarChart>
+        </View>
+
+        {/* Legend */}
+        {showLegend && hasLegend && (
+          <View style={[styles.legendContainer, { width: legendWidth }]}>
+            {chartData.map((item, index) => {
+              const percent = total > 0 ? (item.value / total) * 100 : 0;
+              return (
+                <View key={`legend-${index}`} style={styles.legendItem}>
+                  <View
+                    style={[styles.legendDot, { backgroundColor: item.color }]}
+                  />
+                  <View style={styles.legendTextContainer}>
+                    <Text
+                      style={[
+                        styles.legendLabel,
+                        {
+                          color:
+                            data[index]?.legendFontColor ||
+                            colors.text.secondary,
+                        },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {item.label}
+                    </Text>
+                    <Text style={styles.legendValue}>
+                      {item.value.toLocaleString()}{' '}
+                      <Text style={styles.legendPercent}>
+                        ({percent.toFixed(0)}%)
+                      </Text>
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </View>
+    </BaseChart>
+  );
+};
+
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    chartContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    legendContainer: {
+      paddingLeft: spacing.md,
+    },
+    legendItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
+    legendDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      marginRight: spacing.sm,
+    },
+    legendTextContainer: {
+      flex: 1,
+    },
+    legendLabel: {
+      fontSize: typography.size.xs,
+      marginBottom: 2,
+    },
+    legendValue: {
+      fontSize: typography.size.xs,
+      fontWeight: typography.weight.semibold,
+      color: colors.text.primary,
+    },
+    legendPercent: {
+      fontSize: typography.size.xs,
+      fontWeight: typography.weight.medium,
+      color: colors.text.tertiary,
+    },
+  });
 
 export default PieChart;
