@@ -9,14 +9,16 @@
  */
 
 import React, { createContext, useContext, useMemo } from 'react';
-import type { ITaskRepository, Repositories } from './interfaces';
+import type { ITaskRepository, IHabitRepository, Repositories } from './interfaces';
 import { SQLiteTaskRepository, taskRepository } from './TaskRepository';
+import { SQLiteHabitRepository, habitRepository } from './HabitRepository';
 
 // Re-export interfaces
 export * from './interfaces';
 
 // Re-export implementations
 export { SQLiteTaskRepository, taskRepository } from './TaskRepository';
+export { SQLiteHabitRepository, habitRepository } from './HabitRepository';
 
 // ============================================================================
 // Repository Context
@@ -41,8 +43,8 @@ export function RepositoryProvider({
   const repositories = useMemo<Repositories>(
     () => ({
       tasks: customRepositories?.tasks || new SQLiteTaskRepository(),
+      habits: customRepositories?.habits || new SQLiteHabitRepository(),
       // Future repositories will be added here
-      habits: customRepositories?.habits || (null as any),
       finance: customRepositories?.finance || (null as any),
       calendar: customRepositories?.calendar || (null as any),
       projects: customRepositories?.projects || (null as any),
@@ -66,7 +68,7 @@ export function useRepositories(): Repositories {
     // Fallback to default implementations if not in provider
     return {
       tasks: new SQLiteTaskRepository(),
-      habits: null as any,
+      habits: new SQLiteHabitRepository(),
       finance: null as any,
       calendar: null as any,
       projects: null as any,
@@ -83,6 +85,14 @@ export function useTaskRepository(): ITaskRepository {
   return repos.tasks;
 }
 
+/**
+ * Hook to access habit repository
+ */
+export function useHabitRepository(): IHabitRepository {
+  const repos = useRepositories();
+  return repos.habits;
+}
+
 // ============================================================================
 // Factory Function
 // ============================================================================
@@ -96,7 +106,7 @@ export function createRepositories(
 ): Repositories {
   return {
     tasks: overrides?.tasks || new SQLiteTaskRepository(),
-    habits: overrides?.habits || (null as any),
+    habits: overrides?.habits || new SQLiteHabitRepository(),
     finance: overrides?.finance || (null as any),
     calendar: overrides?.calendar || (null as any),
     projects: overrides?.projects || (null as any),
@@ -107,5 +117,6 @@ export default {
   RepositoryProvider,
   useRepositories,
   useTaskRepository,
+  useHabitRepository,
   createRepositories,
 };

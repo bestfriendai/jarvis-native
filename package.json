@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
-    "start": "expo start",
+    "start": "expo start --localhost",
+    "start:lan": "expo start --lan",
     "tunnel": "expo start --tunnel",
     "android": "expo run:android",
     "ios": "expo run:ios",
@@ -15,7 +16,8 @@
     "test:unit": "jest src/**/*.test.ts src/**/*.test.tsx",
     "test:coverage": "jest --coverage",
     "validate": "npm run type-check && npm run lint && npm run test",
-    "prepare": "git config core.hooksPath .husky || true"
+    "prepare": "git config core.hooksPath .husky || true",
+    "security:audit": "npm audit --audit-level=high"
   },
   "dependencies": {
     "@notifee/react-native": "^8.0.0",
